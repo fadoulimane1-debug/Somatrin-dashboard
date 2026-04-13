@@ -1,0 +1,241 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Sorties Gasoil — SOMATRIN{% endblock %}
+
+{% block nav_gasoil %}active{% endblock %}
+
+{% block breadcrumb %}
+  <a href="{% url 'accueil' %}">Accueil</a> &rsaquo;
+  <a href="{% url 'gasoil_sorties' %}">Gasoil</a> &rsaquo;
+  <span style="color: #1A3353; font-weight: 600;">Sorties</span>
+{% endblock %}
+
+{% block content %}
+
+<span class="page-title">Sorties gasoil</span>
+
+{% if error %}
+<div class="alert-odoo">
+  <i class="bi bi-exclamation-triangle me-2"></i>{{ error }}
+</div>
+{% endif %}
+
+<!-- ══════════════════════════════
+     FILTRES
+══════════════════════════════ -->
+<div class="filters-card">
+  <form method="GET">
+
+    <!-- Ligne 1 : date, site, catégorie, anomalie -->
+    <div class="row g-3 align-items-end">
+
+      <div class="col-auto">
+        <label class="filter-label">Date début</label>
+        <input type="date" name="date_debut" class="form-control"
+               value="{{ date_debut }}">
+      </div>
+
+      <div class="col-auto">
+        <label class="filter-label">Date fin</label>
+        <input type="date" name="date_fin" class="form-control"
+               value="{{ date_fin }}">
+      </div>
+
+      <div class="col-auto">
+        <label class="filter-label">Site</label>
+        <select name="site" class="form-select">
+          <option value="">Tous les sites</option>
+          <option value="LHOUJ" {% if site == 'LHOUJ' %}selected{% endif %}>LHOUJ/Stock</option>
+          <option value="LHMEK" {% if site == 'LHMEK' %}selected{% endif %}>LHMEK/Stock</option>
+        </select>
+      </div>
+
+      <div class="col-auto">
+        <label class="filter-label">Catégorie</label>
+        <select name="categorie" class="form-select">
+          <option value="">Toutes</option>
+          <option value="H" {% if categorie == 'H' %}selected{% endif %}>H</option>
+        </select>
+      </div>
+
+      <div class="col-auto">
+        <label class="filter-label">Anomalie</label>
+        <select name="anomalie" class="form-select">
+          <option value="">Toutes</option>
+          <option value="OK"       {% if anomalie == 'OK' %}selected{% endif %}>OK</option>
+          <option value="Anomalie" {% if anomalie == 'Anomalie' %}selected{% endif %}>Anomalie</option>
+        </select>
+      </div>
+
+    </div>
+
+    <div class="filters-sep"></div>
+
+    <!-- Ligne 2 : chauffeur, ouvrage, n° bon + boutons -->
+    <div class="row g-3 align-items-end">
+
+      <div class="col-auto">
+        <label class="filter-label">
+          <i class="bi bi-person me-1"></i>Chauffeur
+        </label>
+        <input type="text" name="chauffeur" class="form-control"
+               style="min-width: 180px;"
+               placeholder="Nom du chauffeur..."
+               value="{{ chauffeur }}">
+      </div>
+
+      <div class="col-auto">
+        <label class="filter-label">
+          <i class="bi bi-geo-alt me-1"></i>Ouvrage / Affectation
+        </label>
+        <input type="text" name="ouvrage" class="form-control"
+               style="min-width: 180px;"
+               placeholder="Ex: 3401-B-33, SC 14..."
+               value="{{ ouvrage }}">
+      </div>
+
+      <div class="col-auto ms-auto d-flex gap-2 align-items-end">
+        <button type="submit" class="btn-filtrer">
+          <i class="bi bi-search me-1"></i>Filtrer
+        </button>
+        <a href="{% url 'gasoil_sorties' %}" class="btn-reset">
+          <i class="bi bi-x-circle me-1"></i>Réinitialiser
+        </a>
+      </div>
+
+    </div>
+
+  </form>
+</div>
+
+<!-- Tags filtres actifs -->
+{% if chauffeur or ouvrage or site or anomalie %}
+<div class="d-flex align-items-center gap-2 flex-wrap mb-3" style="font-size:12px;">
+  <span style="color:#6b7280;">Filtres actifs :</span>
+  {% if chauffeur %}
+    <span style="background:#fff4ef;color:#7a2e0a;border:0.5px solid #f5c4a0;border-radius:99px;padding:2px 12px;font-size:11px;font-weight:600;">
+      Chauffeur : {{ chauffeur }}
+    </span>
+  {% endif %}
+  {% if ouvrage %}
+    <span style="background:#eff6ff;color:#1e3a8a;border:0.5px solid #bfdbfe;border-radius:99px;padding:2px 12px;font-size:11px;font-weight:600;">
+      Ouvrage : {{ ouvrage }}
+    </span>
+  {% endif %}
+  {% if site %}
+    <span style="background:#f0fdf4;color:#14532d;border:0.5px solid #bbf7d0;border-radius:99px;padding:2px 12px;font-size:11px;font-weight:600;">
+      Site : {{ site }}
+    </span>
+  {% endif %}
+  {% if anomalie %}
+    <span style="background:#fef2f2;color:#7f1d1d;border:0.5px solid #fecaca;border-radius:99px;padding:2px 12px;font-size:11px;font-weight:600;">
+      Anomalie : {{ anomalie }}
+    </span>
+  {% endif %}
+</div>
+{% endif %}
+
+<!-- ══════════════════════════════
+     KPI CARDS
+══════════════════════════════ -->
+<div class="kpi-grid">
+  <div class="kpi-card">
+    <div class="kpi-label"><i class="bi bi-file-text me-1"></i>Total bons</div>
+    <div class="kpi-value kpi-orange" style="color: #D4500A;">{{ total_bons }}</div>
+    <div class="kpi-unit">bons de sortie</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label"><i class="bi bi-droplet me-1"></i>Total litres</div>
+    <div class="kpi-value">{{ total_litres }}</div>
+    <div class="kpi-unit">litres consommés</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label"><i class="bi bi-speedometer2 me-1"></i>Conso. moyenne</div>
+    <div class="kpi-value">{{ conso_moyenne }}</div>
+    <div class="kpi-unit">L/h moyenne</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label"><i class="bi bi-exclamation-triangle me-1"></i>Anomalies</div>
+    <div class="kpi-value" style="{% if nb_anomalies > 0 %}color: #dc2626;{% else %}color: #059669;{% endif %}">
+      {{ nb_anomalies }}
+    </div>
+    <div class="kpi-unit">bons en anomalie</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════
+     TABLEAU
+══════════════════════════════ -->
+<div class="summary-bar">
+  <span>
+    Total : <strong>{{ total_bons }} bons</strong>
+    {% if date_debut and date_fin %}
+      — du {{ date_debut }} au {{ date_fin }}
+    {% endif %}
+  </span>
+</div>
+
+<div class="table-card">
+  <div style="overflow-x: auto;">
+    <table class="table table-somatrin">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>N° Bon</th>
+          <th>Site</th>
+          <th>Ouvrage</th>
+          <th>Chauffeur</th>
+          <th>UDM</th>
+          <th class="text-end">Cpt. init.</th>
+          <th class="text-end">Cpt. act.</th>
+          <th class="text-end">Écart</th>
+          <th class="text-end">Qté (L)</th>
+          <th class="text-end">Consommation</th>
+          <th class="text-center">Anomalie</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if bons %}
+          {% for bon in bons %}
+          <tr {% if bon.x_anomalie and bon.x_anomalie|lower != 'ok' %}class="row-anomalie"{% endif %}>
+            <td class="td-date">{{ bon.date|slice:":10" }}</td>
+            <td class="td-bon">{{ bon.name }}</td>
+            <td>{{ bon.location_id.1|default:"-" }}</td>
+            <td class="td-ouvrage">{{ bon.x_affectation|default:"-" }}</td>
+            <td>{{ bon.x_chauffeur|default:"-" }}</td>
+            <td class="text-center">{{ bon.product_uom_id.1|default:"-" }}</td>
+            <td class="td-num">{{ bon.x_cpt_initial|default:"-" }}</td>
+            <td class="td-num">{{ bon.x_cpt_actuel|default:"-" }}</td>
+            <td class="td-num">{{ bon.x_ecart|default:"-" }}</td>
+            <td class="td-num">{{ bon.product_qty|floatformat:1 }}</td>
+            <td class="td-conso">
+              {% if bon.x_consommation %}
+                {{ bon.x_consommation|floatformat:2 }} L/h
+              {% else %}—{% endif %}
+            </td>
+            <td class="text-center">
+              {% if bon.x_anomalie and bon.x_anomalie|lower == 'ok' %}
+                <span class="badge-ok">OK</span>
+              {% elif bon.x_anomalie %}
+                <span class="badge-anomalie">Anomalie</span>
+              {% else %}
+                <span style="color:#9ca3af;">—</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="12" class="text-center py-5" style="color:#9ca3af;">
+              <i class="bi bi-inbox" style="font-size:32px;display:block;margin-bottom:8px;"></i>
+              Aucun résultat pour ces filtres.
+            </td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}
