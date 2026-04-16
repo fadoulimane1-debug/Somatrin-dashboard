@@ -1,0 +1,519 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}SOMATRIN{% endblock %}</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy:      #1a2c4e;
+      --navy-dark: #111e35;
+      --navy-mid:  #223461;
+      --orange:    #E87722;
+      --orange-lt: #f5a24b;
+      --sidebar-w: 248px;
+      --topbar-h:  56px;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: #f0f2f5;
+      color: #212529;
+      min-height: 100vh;
+    }
+
+    /* ══════════════════════════════════════════
+       TOP BAR
+    ══════════════════════════════════════════ */
+    .topbar {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: var(--topbar-h);
+      background: var(--navy-dark);
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      z-index: 200;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+    .topbar-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: var(--sidebar-w);
+      flex-shrink: 0;
+    }
+    .topbar-brand img { height: 34px; object-fit: contain; }
+
+    .topbar-right {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .topbar-user {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #c8d3e0;
+      font-size: 13px;
+    }
+    .topbar-user .avatar {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: var(--orange);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700; color: #fff;
+      flex-shrink: 0;
+    }
+    .badge-role {
+      font-size: 10px; font-weight: 600;
+      padding: 2px 7px; border-radius: 10px;
+      background: rgba(232,119,34,0.2);
+      color: var(--orange-lt);
+      border: 1px solid rgba(232,119,34,0.3);
+    }
+    .btn-logout {
+      display: flex; align-items: center; gap: 6px;
+      padding: 6px 14px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 6px;
+      color: #c8d3e0; font-size: 13px;
+      text-decoration: none;
+      transition: background 0.2s, color 0.2s;
+    }
+    .btn-logout:hover {
+      background: rgba(232,119,34,0.2);
+      color: var(--orange-lt);
+      border-color: rgba(232,119,34,0.3);
+    }
+
+    /* ══════════════════════════════════════════
+       SIDEBAR
+    ══════════════════════════════════════════ */
+    .sidebar {
+      position: fixed;
+      top: var(--topbar-h); left: 0; bottom: 0;
+      width: var(--sidebar-w);
+      background: var(--navy);
+      overflow-y: auto;
+      z-index: 100;
+      padding: 12px 0 24px;
+      display: flex;
+      flex-direction: column;
+    }
+    .sidebar::-webkit-scrollbar { width: 3px; }
+    .sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+
+    /* Section label */
+    .nav-section { padding: 0 10px; margin-bottom: 2px; }
+    .nav-section-title {
+      font-size: 9.5px; font-weight: 700; letter-spacing: 1.3px;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.3);
+      padding: 14px 10px 5px;
+    }
+
+    /* Nav items */
+    .nav-item {
+      display: flex; align-items: center; gap: 9px;
+      padding: 8px 12px;
+      border-radius: 7px;
+      color: rgba(255,255,255,0.65);
+      text-decoration: none;
+      font-size: 13px; font-weight: 500;
+      transition: background 0.15s, color 0.15s;
+      margin-bottom: 1px;
+      cursor: pointer;
+    }
+    .nav-item i { font-size: 15px; width: 18px; text-align: center; flex-shrink: 0; }
+    .nav-item:hover { background: rgba(255,255,255,0.08); color: #fff; }
+    .nav-item.active { background: var(--orange); color: #fff; font-weight: 600; }
+    .nav-item.active i { color: #fff; }
+
+    /* Chevron for collapsible */
+    .nav-chevron {
+      margin-left: auto; font-size: 10px;
+      transition: transform 0.2s;
+      color: rgba(255,255,255,0.35);
+    }
+    .nav-item[aria-expanded="true"] .nav-chevron { transform: rotate(180deg); }
+    .nav-item[aria-expanded="true"] { color: #fff; background: rgba(255,255,255,0.06); }
+
+    /* Sub-items */
+    .nav-sub {
+      padding: 6px 12px 6px 34px;
+      font-size: 12px;
+      color: rgba(255,255,255,0.5);
+      border-left: 2px solid transparent;
+      border-radius: 0 6px 6px 0;
+      margin-left: 4px;
+    }
+    .nav-sub:hover { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.85); border-left-color: rgba(232,119,34,0.4); }
+    .nav-sub.active { color: var(--orange-lt); border-left-color: var(--orange); background: rgba(232,119,34,0.1); font-weight: 600; }
+    .nav-sub i { font-size: 12px; }
+
+    .nav-divider { height: 1px; background: rgba(255,255,255,0.06); margin: 6px 16px; }
+
+    .sidebar-footer {
+      margin-top: auto; padding: 12px 20px 0;
+      font-size: 10px; color: rgba(255,255,255,0.2); text-align: center;
+    }
+
+    /* ══════════════════════════════════════════
+       MAIN
+    ══════════════════════════════════════════ */
+    .main {
+      margin-left: var(--sidebar-w);
+      margin-top: var(--topbar-h);
+      min-height: calc(100vh - var(--topbar-h));
+      padding: 28px 32px;
+    }
+    .breadcrumb-bar {
+      font-size: 13px; color: #6c757d;
+      margin-bottom: 20px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .breadcrumb-bar a { color: #6c757d; text-decoration: none; }
+    .breadcrumb-bar a:hover { color: var(--orange); }
+    .breadcrumb-bar i { font-size: 10px; color: #adb5bd; }
+
+    .page-title {
+      font-size: 22px; font-weight: 700;
+      color: var(--navy); display: block; margin-bottom: 24px;
+    }
+    .card {
+      background: #fff; border-radius: 12px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08); padding: 24px;
+    }
+    .filters-card {
+      background: #fff; border-radius: 12px;
+      padding: 20px 24px; margin-bottom: 24px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+    }
+    .alert-odoo {
+      display: flex; align-items: center; gap: 10px;
+      background: #fff8f3;
+      border: 1px solid #f5c6a0;
+      border-left: 3px solid var(--orange);
+      border-radius: 8px;
+      padding: 10px 16px; margin-bottom: 20px;
+      font-size: 13px; color: #7a3b10;
+    }
+    .alert-odoo i { font-size: 15px; color: var(--orange); flex-shrink: 0; }
+
+    @media (max-width: 768px) {
+      .sidebar { display: none; }
+      .main { margin-left: 0; padding: 16px; }
+      .topbar-brand { width: auto; }
+    }
+  </style>
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+<!-- ══ TOP BAR ══════════════════════════════════════════ -->
+<header class="topbar">
+  <div class="topbar-brand">
+    <img src="{% static 'images/logo_somatrin.png' %}" alt="SOMATRIN">
+  </div>
+
+  <div class="topbar-right">
+    {% if user.is_authenticated %}
+    <div class="topbar-user">
+      <div class="avatar">{{ user.username|slice:":1"|upper }}</div>
+      <div>
+        <div style="color:#fff; font-weight:600; line-height:1.2;">{{ user.get_full_name|default:user.username }}</div>
+        {% if user.is_superuser %}
+          <span class="badge-role">Super Admin</span>
+        {% elif user.is_staff or "pilotage" in user_groups or "si" in user_groups %}
+          <span class="badge-role">Pilotage</span>
+        {% elif "transport" in user_groups %}
+          <span class="badge-role">Transport</span>
+        {% elif "production" in user_groups %}
+          <span class="badge-role">Production</span>
+        {% elif "parc_materiel" in user_groups %}
+          <span class="badge-role">Parc matériel</span>
+        {% elif "achat" in user_groups %}
+          <span class="badge-role">Achats</span>
+        {% elif "rh" in user_groups %}
+          <span class="badge-role">Ressources humaines</span>
+        {% elif "finance" in user_groups %}
+          <span class="badge-role">Finance</span>
+        {% elif "hse" in user_groups or "smq" in user_groups %}
+          <span class="badge-role">QHSE</span>
+        {% else %}
+          <span class="badge-role">Utilisateur</span>
+        {% endif %}
+      </div>
+    </div>
+    <form method="post" action="{% url 'logout' %}" style="display:inline;">
+      {% csrf_token %}
+      <button type="submit" class="btn-logout">
+        <i class="bi bi-box-arrow-right"></i> Déconnexion
+      </button>
+    </form>
+    {% endif %}
+  </div>
+</header>
+
+<!-- ══ SIDEBAR ════════════════════════════════════════════
+     Visibilité des modules :
+       all_access  = superuser | is_staff | pilotage | si
+       transport   = transport
+       production  = production
+       maintenance = production | parc_materiel
+       gasoil      = TOUS
+       achats      = achat
+       rh          = rh
+       finance     = finance
+       qhse        = hse | smq
+══════════════════════════════════════════════════════════ -->
+{% if user.is_authenticated %}
+<nav class="sidebar">
+
+  <!-- Accueil -->
+  <div class="nav-section">
+    <a href="{% url 'accueil' %}"
+       class="nav-item {% if request.path == '/' or request.path == '/accueil/' %}active{% endif %}">
+      <i class="bi bi-house-fill"></i> Accueil
+    </a>
+  </div>
+
+  <div class="nav-divider"></div>
+
+  <!-- ── GASOIL — visible par tous ── -->
+  <div class="nav-section">
+    <div class="nav-section-title">Gasoil</div>
+    <a class="nav-item" data-bs-toggle="collapse" href="#menu-gasoil"
+       aria-expanded="{% if '/gasoil/' in request.path %}true{% else %}false{% endif %}">
+      <i class="bi bi-fuel-pump-fill"></i> Gasoil
+      <i class="bi bi-chevron-down nav-chevron"></i>
+    </a>
+    <div class="collapse {% if '/gasoil/' in request.path %}show{% endif %}" id="menu-gasoil">
+      <a href="/gasoil/entrees/"  class="nav-item nav-sub {% if request.path == '/gasoil/entrees/' %}active{% endif %}">
+        <i class="bi bi-arrow-down-circle"></i> Entrées
+      </a>
+      <a href="/gasoil/sorties/"  class="nav-item nav-sub {% if request.path == '/gasoil/sorties/' %}active{% endif %}">
+        <i class="bi bi-arrow-up-circle"></i> Sorties
+      </a>
+      <a href="/gasoil/bilan/"    class="nav-item nav-sub {% if request.path == '/gasoil/bilan/' %}active{% endif %}">
+        <i class="bi bi-bar-chart-fill"></i> Bilan
+      </a>
+    </div>
+  </div>
+
+  <!-- ── TRANSPORT ── -->
+  {% if user.is_superuser or user.is_staff or "pilotage" in user_groups or "si" in user_groups or "transport" in user_groups %}
+  <div class="nav-divider"></div>
+  <div class="nav-section">
+    <div class="nav-section-title">Transport</div>
+    <a class="nav-item" data-bs-toggle="collapse" href="#menu-transport"
+       aria-expanded="{% if '/transport/' in request.path %}true{% else %}false{% endif %}">
+      <i class="bi bi-truck-front-fill"></i> Transport
+      <i class="bi bi-chevron-down nav-chevron"></i>
+    </a>
+    <div class="collapse {% if '/transport/' in request.path %}show{% endif %}" id="menu-transport">
+      <a href="/transport/entrees/" class="nav-item nav-sub {% if request.path == '/transport/entrees/' %}active{% endif %}">
+        <i class="bi bi-arrow-down-circle"></i> Entrées
+      </a>
+      <a href="/transport/sorties/" class="nav-item nav-sub {% if request.path == '/transport/sorties/' %}active{% endif %}">
+        <i class="bi bi-arrow-up-circle"></i> Sorties
+      </a>
+      <a href="/transport/bilan/"   class="nav-item nav-sub {% if request.path == '/transport/bilan/' %}active{% endif %}">
+        <i class="bi bi-bar-chart-fill"></i> Bilan
+      </a>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ── PRODUCTION ── -->
+  {% if user.is_superuser or user.is_staff or "pilotage" in user_groups or "si" in user_groups or "production" in user_groups %}
+  <div class="nav-divider"></div>
+  <div class="nav-section">
+    <div class="nav-section-title">Production</div>
+    <a class="nav-item" data-bs-toggle="collapse" href="#menu-production"
+       aria-expanded="{% if '/production/' in request.path %}true{% else %}false{% endif %}">
+      <i class="bi bi-gear-wide-connected"></i> Production
+      <i class="bi bi-chevron-down nav-chevron"></i>
+    </a>
+    <div class="collapse {% if '/production/' in request.path %}show{% endif %}" id="menu-production">
+      <a href="/production/entrees/" class="nav-item nav-sub {% if request.path == '/production/entrees/' %}active{% endif %}">
+        <i class="bi bi-arrow-down-circle"></i> Entrées
+      </a>
+      <a href="/production/sorties/" class="nav-item nav-sub {% if request.path == '/production/sorties/' %}active{% endif %}">
+        <i class="bi bi-arrow-up-circle"></i> Sorties
+      </a>
+      <a href="/production/bilan/"   class="nav-item nav-sub {% if request.path == '/production/bilan/' %}active{% endif %}">
+        <i class="bi bi-bar-chart-fill"></i> Bilan
+      </a>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ── MAINTENANCE (Parc matériel) ── -->
+  {% if user.is_superuser or user.is_staff or "pilotage" in user_groups or "si" in user_groups or "production" in user_groups or "parc_materiel" in user_groups %}
+  <div class="nav-divider"></div>
+  <div class="nav-section">
+    <div class="nav-section-title">Parc matériel</div>
+    <a class="nav-item" data-bs-toggle="collapse" href="#menu-maintenance"
+       aria-expanded="{% if '/maintenance/' in request.path %}true{% else %}false{% endif %}">
+      <i class="bi bi-wrench-adjustable-circle-fill"></i> Maintenance
+      <i class="bi bi-chevron-down nav-chevron"></i>
+    </a>
+    <div class="collapse {% if '/maintenance/' in request.path %}show{% endif %}" id="menu-maintenance">
+      <a href="/maintenance/entrees/" class="nav-item nav-sub {% if request.path == '/maintenance/entrees/' %}active{% endif %}">
+        <i class="bi bi-arrow-down-circle"></i> Entrées
+      </a>
+      <a href="/maintenance/sorties/" class="nav-item nav-sub {% if request.path == '/maintenance/sorties/' %}active{% endif %}">
+        <i class="bi bi-arrow-up-circle"></i> Sorties
+      </a>
+      <a href="/maintenance/bilan/"   class="nav-item nav-sub {% if request.path == '/maintenance/bilan/' %}active{% endif %}">
+        <i class="bi bi-bar-chart-fill"></i> Bilan
+      </a>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ── ACHATS ── -->
+  {% if user.is_superuser or user.is_staff or "pilotage" in user_groups or "si" in user_groups or "achat" in user_groups %}
+  <div class="nav-divider"></div>
+  <div class="nav-section">
+    <div class="nav-section-title">Achats</div>
+    <a class="nav-item" data-bs-toggle="collapse" href="#menu-achats"
+       aria-expanded="{% if '/achats/' in request.path %}true{% else %}false{% endif %}">
+      <i class="bi bi-cart-fill"></i> Achats
+      <i class="bi bi-chevron-down nav-chevron"></i>
+    </a>
+    <div class="collapse {% if '/achats/' in request.path %}show{% endif %}" id="menu-achats">
+      <a href="/achats/entrees/" class="nav-item nav-sub {% if request.path == '/achats/entrees/' %}active{% endif %}">
+        <i class="bi bi-arrow-down-circle"></i> Entrées
+      </a>
+      <a href="/achats/sorties/" class="nav-item nav-sub {% if request.path == '/achats/sorties/' %}active{% endif %}">
+        <i class="bi bi-arrow-up-circle"></i> Sorties
+      </a>
+      <a href="/achats/bilan/"   class="nav-item nav-sub {% if request.path == '/achats/bilan/' %}active{% endif %}">
+        <i class="bi bi-bar-chart-fill"></i> Bilan
+      </a>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ── RH ── -->
+  {% if user.is_superuser or user.is_staff or "pilotage" in user_groups or "si" in user_groups or "rh" in user_groups %}
+  <div class="nav-divider"></div>
+  <div class="nav-section">
+    <div class="nav-section-title">Ressources humaines</div>
+    <a class="nav-item" data-bs-toggle="collapse" href="#menu-rh"
+       aria-expanded="{% if '/rh/' in request.path %}true{% else %}false{% endif %}">
+      <i class="bi bi-people-fill"></i> RH
+      <i class="bi bi-chevron-down nav-chevron"></i>
+    </a>
+    <div class="collapse {% if '/rh/' in request.path %}show{% endif %}" id="menu-rh">
+      <a href="/rh/entrees/" class="nav-item nav-sub {% if request.path == '/rh/entrees/' %}active{% endif %}">
+        <i class="bi bi-arrow-down-circle"></i> Entrées
+      </a>
+      <a href="/rh/sorties/" class="nav-item nav-sub {% if request.path == '/rh/sorties/' %}active{% endif %}">
+        <i class="bi bi-arrow-up-circle"></i> Sorties
+      </a>
+      <a href="/rh/bilan/"   class="nav-item nav-sub {% if request.path == '/rh/bilan/' %}active{% endif %}">
+        <i class="bi bi-bar-chart-fill"></i> Bilan
+      </a>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ── COMPTABILITÉ ── -->
+  {% if user.is_superuser or user.is_staff or "pilotage" in user_groups or "si" in user_groups or "finance" in user_groups %}
+  <div class="nav-divider"></div>
+  <div class="nav-section">
+    <div class="nav-section-title">Finance</div>
+    <a class="nav-item" data-bs-toggle="collapse" href="#menu-compta"
+       aria-expanded="{% if '/comptabilite/' in request.path %}true{% else %}false{% endif %}">
+      <i class="bi bi-calculator-fill"></i> Comptabilité
+      <i class="bi bi-chevron-down nav-chevron"></i>
+    </a>
+    <div class="collapse {% if '/comptabilite/' in request.path %}show{% endif %}" id="menu-compta">
+      <a href="/comptabilite/entrees/" class="nav-item nav-sub {% if request.path == '/comptabilite/entrees/' %}active{% endif %}">
+        <i class="bi bi-arrow-down-circle"></i> Entrées
+      </a>
+      <a href="/comptabilite/sorties/" class="nav-item nav-sub {% if request.path == '/comptabilite/sorties/' %}active{% endif %}">
+        <i class="bi bi-arrow-up-circle"></i> Sorties
+      </a>
+      <a href="/comptabilite/bilan/"   class="nav-item nav-sub {% if request.path == '/comptabilite/bilan/' %}active{% endif %}">
+        <i class="bi bi-bar-chart-fill"></i> Bilan
+      </a>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ── QHSE ── -->
+  {% if user.is_superuser or user.is_staff or "pilotage" in user_groups or "si" in user_groups or "hse" in user_groups or "smq" in user_groups %}
+  <div class="nav-divider"></div>
+  <div class="nav-section">
+    <div class="nav-section-title">QHSE</div>
+    <a class="nav-item" data-bs-toggle="collapse" href="#menu-qhse"
+       aria-expanded="{% if '/qhse/' in request.path %}true{% else %}false{% endif %}">
+      <i class="bi bi-shield-fill-check"></i> QHSE
+      <i class="bi bi-chevron-down nav-chevron"></i>
+    </a>
+    <div class="collapse {% if '/qhse/' in request.path %}show{% endif %}" id="menu-qhse">
+      <a href="/qhse/entrees/" class="nav-item nav-sub {% if request.path == '/qhse/entrees/' %}active{% endif %}">
+        <i class="bi bi-arrow-down-circle"></i> Entrées
+      </a>
+      <a href="/qhse/sorties/" class="nav-item nav-sub {% if request.path == '/qhse/sorties/' %}active{% endif %}">
+        <i class="bi bi-arrow-up-circle"></i> Sorties
+      </a>
+      <a href="/qhse/bilan/"   class="nav-item nav-sub {% if request.path == '/qhse/bilan/' %}active{% endif %}">
+        <i class="bi bi-bar-chart-fill"></i> Bilan
+      </a>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ── ADMINISTRATION — superuser/staff uniquement ── -->
+  {% if user.is_superuser or user.is_staff %}
+  <div class="nav-divider"></div>
+  <div class="nav-section">
+    <div class="nav-section-title">Administration</div>
+    <a href="{% url 'admin:index' %}" class="nav-item {% if '/admin/' in request.path %}active{% endif %}">
+      <i class="bi bi-shield-lock-fill"></i> Panneau admin
+    </a>
+    <a href="{% url 'admin:auth_user_changelist' %}" class="nav-item">
+      <i class="bi bi-people-fill"></i> Utilisateurs
+    </a>
+    <a href="{% url 'admin:auth_group_changelist' %}" class="nav-item">
+      <i class="bi bi-diagram-3-fill"></i> Groupes
+    </a>
+  </div>
+  {% endif %}
+
+  <div class="sidebar-footer">&copy; {% now "Y" %} SOMATRIN</div>
+
+</nav>
+{% endif %}{# end is_authenticated #}
+
+<!-- ══ MAIN ════════════════════════════════════════════ -->
+<main class="main">
+  {% if user.is_authenticated %}
+  <div class="breadcrumb-bar">
+    <i class="bi bi-house" style="font-size:12px;"></i>
+    {% block breadcrumb %}
+      <span style="color:#1a2c4e; font-weight:600;">Accueil</span>
+    {% endblock %}
+  </div>
+  {% endif %}
+
+  {% block content %}{% endblock %}
+</main>
+
+{% block extra_js %}{% endblock %}
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

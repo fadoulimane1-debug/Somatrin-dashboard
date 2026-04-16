@@ -41,6 +41,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'core.context_processors.user_groups',
             ],
         },
     },
@@ -64,7 +65,13 @@ USE_TZ = True
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Odoo connexion
-ODOO_URL  = 'http://127.0.0.1:8001'
-ODOO_DB   = 'somatrin'
-ODOO_USER = 'admin'
-ODOO_PASS = 'admin'
+ODOO_URL  = 'https://somatrin.karizma.one'
+ODOO_DB   = 'somatrin_PROD'
+ODOO_USER = 'bouaraoua.mustapha@somatrin.ma'
+ODOO_PASS = 'Bm141174'
+
+# Authentification
+LOGIN_URL = '/login/'
+LOGIN_REDIRECT_URL = '/redirect/'
+LOGOUT_REDIRECT_URL = '/login/'
+SESSION_COOKIE_AGE = 28800

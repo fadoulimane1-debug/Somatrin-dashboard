@@ -1,0 +1,391 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Accueil — SOMATRIN{% endblock %}
+{% block nav_accueil %}active{% endblock %}
+
+{% block breadcrumb %}
+  <span style="color:#1a2c4e; font-weight:600;">Tableau de bord</span>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ── Welcome banner ─────────────────────────────── */
+.wb {
+  background: linear-gradient(135deg, #0f1e38 0%, #1a2c4e 50%, #1e3460 100%);
+  border-radius: 16px;
+  padding: 32px 36px 28px;
+  margin-bottom: 32px;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+.wb-deco {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+}
+.wb-deco-1 { width:280px; height:280px; right:-70px;  top:-90px;  background:rgba(232,119,34,.08); }
+.wb-deco-2 { width:160px; height:160px; right:100px;  bottom:-80px; background:rgba(255,255,255,.03); }
+.wb-deco-3 { width:90px;  height:90px;  left:38%;     top:-28px;  background:rgba(232,119,34,.05); }
+
+.wb-content { position:relative; z-index:1; }
+.wb-eyebrow {
+  font-size:11px; font-weight:600; letter-spacing:1.8px;
+  text-transform:uppercase; color:rgba(255,255,255,.40);
+  margin-bottom:6px;
+  display:flex; align-items:center; gap:8px;
+}
+.wb-pulse {
+  width:7px; height:7px; border-radius:50%; background:#4ade80;
+  box-shadow:0 0 0 3px rgba(74,222,128,.22);
+  animation:pulse 2.2s infinite;
+}
+@keyframes pulse {
+  0%,100%{ box-shadow:0 0 0 3px rgba(74,222,128,.22); }
+  50%    { box-shadow:0 0 0 7px rgba(74,222,128,.08); }
+}
+.wb-greeting {
+  font-size:27px; font-weight:800; color:#fff; line-height:1.2;
+  margin-bottom:6px;
+}
+.wb-greeting span { color:#E87722; }
+.wb-date {
+  font-size:13px; color:rgba(255,255,255,.42);
+  display:flex; align-items:center; gap:6px;
+}
+.wb-date i { font-size:13px; }
+
+.wb-right { position:relative; z-index:1; text-align:right; flex-shrink:0; }
+.wb-logo-ghost {
+  font-size:46px; font-weight:900; letter-spacing:7px;
+  color:rgba(255,255,255,.06); user-select:none; line-height:1;
+}
+.wb-badge {
+  display:inline-flex; align-items:center; gap:6px;
+  background:rgba(232,119,34,.18); border:1px solid rgba(232,119,34,.32);
+  color:#f5a24b; border-radius:99px;
+  padding:5px 16px; font-size:11px; font-weight:600; letter-spacing:.4px;
+  margin-top:8px;
+}
+
+@media(max-width:640px){
+  .wb { padding:22px 20px; }
+  .wb-right { display:none; }
+  .wb-greeting { font-size:20px; }
+}
+
+/* ── Section header ─────────────────────────────── */
+.sec-hd {
+  display:flex; align-items:center; gap:8px;
+  font-size:11px; font-weight:700; letter-spacing:1.3px;
+  text-transform:uppercase; color:#9ca3af;
+  margin-bottom:16px;
+}
+.sec-hd i { color:#E87722; font-size:13px; }
+.sec-hd::after { content:''; flex:1; height:1px; background:#eef0f3; }
+
+/* ── Actions rapides ────────────────────────────── */
+.aq-wrap {
+  display:flex; flex-wrap:wrap; gap:10px;
+  margin-bottom:32px;
+}
+.aq {
+  display:inline-flex; align-items:center; gap:8px;
+  padding:9px 18px; border-radius:9px;
+  font-size:13px; font-weight:600;
+  text-decoration:none; white-space:nowrap;
+  border:1.5px solid transparent;
+  transition:all .18s;
+}
+.aq-primary {
+  background:#1a2c4e; color:#fff; border-color:#1a2c4e;
+}
+.aq-primary:hover {
+  background:#E87722; border-color:#E87722; color:#fff;
+  box-shadow:0 4px 16px rgba(232,119,34,.30);
+  transform:translateY(-1px);
+}
+.aq-ghost {
+  background:#fff; color:#374151; border-color:#e5e7eb;
+}
+.aq-ghost:hover {
+  border-color:#E87722; color:#E87722;
+  box-shadow:0 3px 12px rgba(232,119,34,.14);
+  transform:translateY(-1px);
+}
+.aq-soon {
+  background:#f9fafb; color:#c4c9d4;
+  border-color:#eef0f3; cursor:not-allowed; pointer-events:none;
+}
+.aq-soon-pill {
+  background:#eef0f3; color:#b0b7c3;
+  border-radius:99px; padding:1px 8px;
+  font-size:10px; font-weight:600;
+}
+
+/* ── Module cards ───────────────────────────────── */
+.mod-grid {
+  display:grid;
+  grid-template-columns:repeat(auto-fill, minmax(210px,1fr));
+  gap:16px;
+  margin-bottom:32px;
+}
+
+.mod {
+  background:#fff;
+  border-radius:14px;
+  padding:22px 20px 18px;
+  box-shadow:0 1px 3px rgba(0,0,0,.05), 0 2px 10px rgba(0,0,0,.04);
+  text-decoration:none;
+  display:flex; flex-direction:column; gap:11px;
+  border:1.5px solid #f0f2f5;
+  position:relative; overflow:hidden;
+  transition:all .2s;
+}
+/* barre top animée */
+.mod::before {
+  content:'';
+  position:absolute; top:0; left:0; right:0; height:3px;
+  background:linear-gradient(90deg, #1a2c4e, #E87722);
+  transform:scaleX(0); transform-origin:left;
+  transition:transform .25s;
+}
+.mod:hover {
+  border-color:rgba(232,119,34,.40);
+  box-shadow:0 8px 32px rgba(232,119,34,.14);
+  transform:translateY(-3px);
+}
+.mod:hover::before { transform:scaleX(1); }
+
+/* Variante "Bientôt" — grisée, non-cliquable */
+.mod.mod-soon {
+  opacity:.55;
+  cursor:not-allowed;
+  pointer-events:none;
+  filter:grayscale(30%);
+}
+.mod.mod-soon::before { display:none; }
+
+.mod-ico {
+  width:48px; height:48px; border-radius:12px; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  font-size:21px;
+}
+.mod-title { font-size:14px; font-weight:700; color:#1a2c4e; }
+.mod-desc  { font-size:12px; color:#6b7280; line-height:1.55; flex:1; }
+.mod-foot  {
+  display:flex; align-items:center; justify-content:space-between;
+  padding-top:4px;
+}
+.badge-on {
+  background:#dcfce7; color:#15803d; border:1px solid #bbf7d0;
+  border-radius:99px; padding:2px 11px; font-size:10px; font-weight:700;
+}
+.badge-off {
+  background:#f3f4f6; color:#9ca3af; border:1px solid #e5e7eb;
+  border-radius:99px; padding:2px 11px; font-size:10px; font-weight:700;
+}
+.mod-arrow {
+  color:#d1d5db; font-size:13px;
+  transition:color .2s, transform .2s;
+}
+.mod:hover .mod-arrow { color:#E87722; transform:translateX(4px); }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- ══ WELCOME BANNER ══════════════════════════════════════ -->
+<div class="wb">
+  <div class="wb-deco wb-deco-1"></div>
+  <div class="wb-deco wb-deco-2"></div>
+  <div class="wb-deco wb-deco-3"></div>
+
+  <div class="wb-content">
+    <div class="wb-eyebrow">
+      <span class="wb-pulse"></span>Tableau de bord SOMATRIN
+    </div>
+    <div class="wb-greeting">
+      Bonjour, <span>{{ user.get_full_name|default:user.username }}</span>
+    </div>
+    <div class="wb-date">
+      <i class="bi bi-calendar3"></i>{{ date_affichee }}
+    </div>
+  </div>
+
+  <div class="wb-right">
+    <div class="wb-logo-ghost">SOMATRIN</div>
+    <div>
+      <span class="wb-badge">
+        <i class="bi bi-bar-chart-line-fill"></i>Reporting &amp; Analyse
+      </span>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ACTIONS RAPIDES ══════════════════════════════════════ -->
+<div class="sec-hd">
+  <i class="bi bi-lightning-charge-fill"></i>Actions rapides
+</div>
+
+<div class="aq-wrap">
+
+  {# ── Gasoil ── #}
+  {% if user.is_superuser or user.is_staff or "pilotage" in user_groups or "si" in user_groups or "transport" in user_groups or "parc_materiel" in user_groups %}
+    <a href="{% url 'gasoil_sorties' %}"        class="aq aq-primary"><i class="bi bi-fuel-pump-fill"></i>Sorties gasoil</a>
+    <a href="{% url 'gasoil_entrees' %}"        class="aq aq-ghost"><i class="bi bi-arrow-down-circle-fill"></i>Entrées gasoil</a>
+    <a href="{% url 'gasoil_bilan' %}"          class="aq aq-ghost"><i class="bi bi-bar-chart-fill"></i>Bilan gasoil</a>
+    <a href="{% url 'gasoil_sorties_export' %}" class="aq aq-ghost"><i class="bi bi-file-earmark-excel-fill" style="color:#16a34a;"></i>Export Excel</a>
+  {% endif %}
+
+  {# ── Modules à venir (bientôt) ── #}
+  {% if user.is_superuser or user.is_staff or "pilotage" in user_groups or "si" in user_groups or "transport" in user_groups %}
+    <span class="aq aq-soon"><i class="bi bi-truck-front-fill"></i>Transport <span class="aq-soon-pill">Bientôt</span></span>
+  {% endif %}
+  {% if user.is_superuser or user.is_staff or "pilotage" in user_groups or "si" in user_groups or "production" in user_groups %}
+    <span class="aq aq-soon"><i class="bi bi-gear-wide-connected"></i>Production <span class="aq-soon-pill">Bientôt</span></span>
+  {% endif %}
+  {% if user.is_superuser or user.is_staff or "pilotage" in user_groups or "si" in user_groups or "parc_materiel" in user_groups %}
+    <span class="aq aq-soon"><i class="bi bi-tools"></i>Maintenance <span class="aq-soon-pill">Bientôt</span></span>
+  {% endif %}
+  {% if user.is_superuser or user.is_staff or "rh" in user_groups %}
+    <span class="aq aq-soon"><i class="bi bi-person-lines-fill"></i>RH <span class="aq-soon-pill">Bientôt</span></span>
+  {% endif %}
+  {% if user.is_superuser or user.is_staff or "finance" in user_groups %}
+    <span class="aq aq-soon"><i class="bi bi-graph-up-arrow"></i>Comptabilité <span class="aq-soon-pill">Bientôt</span></span>
+  {% endif %}
+
+  {# ── Administration ── #}
+  {% if user.is_superuser or user.is_staff %}
+    <a href="{% url 'admin:index' %}"                  class="aq aq-ghost"><i class="bi bi-shield-lock-fill"></i>Administration</a>
+    <a href="{% url 'admin:auth_user_changelist' %}"   class="aq aq-ghost"><i class="bi bi-people-fill"></i>Utilisateurs</a>
+  {% endif %}
+
+</div>
+
+<!-- ══ MODULES ══════════════════════════════════════════════ -->
+<div class="sec-hd">
+  <i class="bi bi-grid-1x2"></i>Mes modules
+</div>
+
+<div class="mod-grid">
+
+  {# ── Gasoil — actif, toujours visible ── #}
+  <a href="{% url 'gasoil_sorties' %}" class="mod">
+    <div class="mod-ico" style="background:#fff4ec; color:#E87722;">
+      <i class="bi bi-fuel-pump-fill"></i>
+    </div>
+    <div class="mod-title">Gasoil</div>
+    <div class="mod-desc">Suivi des entrées, sorties et bilan de consommation carburant.</div>
+    <div class="mod-foot">
+      <span class="badge-on">Actif</span>
+      <i class="bi bi-arrow-right mod-arrow"></i>
+    </div>
+  </a>
+
+  {# ── Transport ── #}
+  {% if user.is_superuser or user.is_staff or "pilotage" in user_groups or "si" in user_groups or "transport" in user_groups %}
+  <span class="mod mod-soon">
+    <div class="mod-ico" style="background:#eff6ff; color:#3b82f6;">
+      <i class="bi bi-truck-front-fill"></i>
+    </div>
+    <div class="mod-title">Transport</div>
+    <div class="mod-desc">Bons de transport, planification des rotations et suivi kilométrique.</div>
+    <div class="mod-foot"><span class="badge-off">Bientôt</span></div>
+  </span>
+  {% endif %}
+
+  {# ── Production ── #}
+  {% if user.is_superuser or user.is_staff or "pilotage" in user_groups or "si" in user_groups or "production" in user_groups %}
+  <span class="mod mod-soon">
+    <div class="mod-ico" style="background:#f0fdf4; color:#16a34a;">
+      <i class="bi bi-gear-wide-connected"></i>
+    </div>
+    <div class="mod-title">Production</div>
+    <div class="mod-desc">Tableaux de bord de production, tonnages et rendements opérationnels.</div>
+    <div class="mod-foot"><span class="badge-off">Bientôt</span></div>
+  </span>
+  {% endif %}
+
+  {# ── Maintenance / Parc matériel ── #}
+  {% if user.is_superuser or user.is_staff or "pilotage" in user_groups or "si" in user_groups or "production" in user_groups or "parc_materiel" in user_groups %}
+  <span class="mod mod-soon">
+    <div class="mod-ico" style="background:#fefce8; color:#ca8a04;">
+      <i class="bi bi-tools"></i>
+    </div>
+    <div class="mod-title">Maintenance</div>
+    <div class="mod-desc">Ordres de travail, disponibilité des équipements et historique.</div>
+    <div class="mod-foot"><span class="badge-off">Bientôt</span></div>
+  </span>
+  {% endif %}
+
+  {# ── Achats ── #}
+  {% if user.is_superuser or user.is_staff or "pilotage" in user_groups or "si" in user_groups or "achat" in user_groups %}
+  <span class="mod mod-soon">
+    <div class="mod-ico" style="background:#fdf4ff; color:#a855f7;">
+      <i class="bi bi-bag-check-fill"></i>
+    </div>
+    <div class="mod-title">Achats</div>
+    <div class="mod-desc">Bons de commande, fournisseurs et analyse des dépenses.</div>
+    <div class="mod-foot"><span class="badge-off">Bientôt</span></div>
+  </span>
+  {% endif %}
+
+  {# ── RH ── #}
+  {% if user.is_superuser or user.is_staff or "pilotage" in user_groups or "si" in user_groups or "rh" in user_groups %}
+  <span class="mod mod-soon">
+    <div class="mod-ico" style="background:#fff1f2; color:#e11d48;">
+      <i class="bi bi-people-fill"></i>
+    </div>
+    <div class="mod-title">Ressources Humaines</div>
+    <div class="mod-desc">Effectifs, absences, pointage et suivi des formations.</div>
+    <div class="mod-foot"><span class="badge-off">Bientôt</span></div>
+  </span>
+  {% endif %}
+
+  {# ── Finance / Comptabilité ── #}
+  {% if user.is_superuser or user.is_staff or "pilotage" in user_groups or "si" in user_groups or "finance" in user_groups %}
+  <span class="mod mod-soon">
+    <div class="mod-ico" style="background:#ecfdf5; color:#059669;">
+      <i class="bi bi-graph-up-arrow"></i>
+    </div>
+    <div class="mod-title">Comptabilité</div>
+    <div class="mod-desc">Indicateurs financiers, analytique et suivi des coûts de revient.</div>
+    <div class="mod-foot"><span class="badge-off">Bientôt</span></div>
+  </span>
+  {% endif %}
+
+  {# ── QHSE / SMQ ── #}
+  {% if user.is_superuser or user.is_staff or "pilotage" in user_groups or "si" in user_groups or "hse" in user_groups or "smq" in user_groups %}
+  <span class="mod mod-soon">
+    <div class="mod-ico" style="background:#f0fdf4; color:#16a34a;">
+      <i class="bi bi-shield-check"></i>
+    </div>
+    <div class="mod-title">QHSE / SMQ</div>
+    <div class="mod-desc">Indicateurs HSE, gestion des non-conformités et suivi qualité.</div>
+    <div class="mod-foot"><span class="badge-off">Bientôt</span></div>
+  </span>
+  {% endif %}
+
+  {# ── Administration ── #}
+  {% if user.is_superuser or user.is_staff %}
+  <a href="{% url 'admin:index' %}" class="mod">
+    <div class="mod-ico" style="background:#eef1f7; color:#1a2c4e;">
+      <i class="bi bi-shield-lock-fill"></i>
+    </div>
+    <div class="mod-title">Administration</div>
+    <div class="mod-desc">Gestion des utilisateurs, des groupes et configuration du système.</div>
+    <div class="mod-foot">
+      <span class="badge-on">Actif</span>
+      <i class="bi bi-arrow-right mod-arrow"></i>
+    </div>
+  </a>
+  {% endif %}
+
+</div>
+
+{% endblock %}

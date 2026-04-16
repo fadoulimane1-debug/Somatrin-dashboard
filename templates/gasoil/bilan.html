@@ -1,0 +1,389 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Bilan Gasoil — SOMATRIN{% endblock %}
+
+{% block breadcrumb %}
+  <a href="{% url 'accueil' %}">Accueil</a>
+  <i class="bi bi-chevron-right"></i>
+  <span style="color:#1a2c4e; font-weight:600;">Gasoil — Bilan</span>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* KPI */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 16px; margin-bottom: 28px;
+  }
+  @media (max-width: 1200px) { .kpi-grid { grid-template-columns: repeat(3,1fr); } }
+  @media (max-width: 768px)  { .kpi-grid { grid-template-columns: repeat(2,1fr); } }
+  @media (max-width: 480px)  { .kpi-grid { grid-template-columns: 1fr; } }
+
+  .kpi-card {
+    background: #fff; border-radius: 12px; padding: 18px 20px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+    display: flex; align-items: center; gap: 14px;
+    border-top: 3px solid transparent;
+    transition: box-shadow 0.2s, transform 0.15s;
+  }
+  .kpi-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.10); transform: translateY(-1px); }
+  .kpi-icon {
+    width: 44px; height: 44px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; flex-shrink: 0;
+  }
+  .kpi-value { font-size: 22px; font-weight: 800; line-height: 1.1; color: #1a2c4e; }
+  .kpi-label { font-size: 11px; color: #6c757d; font-weight: 500; margin-top: 2px; }
+
+  /* Filters */
+  .filters-card {
+    background: #fff; border-radius: 12px;
+    padding: 18px 22px; margin-bottom: 24px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+  }
+  .filter-label { font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 5px; display: block; }
+  .filters-card .form-control,
+  .filters-card .form-select {
+    font-size: 13px; border-color: #d1d5db; border-radius: 7px; padding: 7px 10px;
+  }
+  .filters-card .form-control:focus,
+  .filters-card .form-select:focus {
+    border-color: #E87722; box-shadow: 0 0 0 3px rgba(232,119,34,0.12);
+  }
+  .btn-filtrer {
+    padding: 8px 20px; background: #1a2c4e; color: #fff;
+    border: none; border-radius: 7px; font-size: 13px; font-weight: 600;
+    cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+    transition: background 0.2s;
+  }
+  .btn-filtrer:hover { background: #E87722; }
+  .btn-reset {
+    padding: 8px 14px; background: #f3f4f6; color: #374151;
+    border: 1px solid #d1d5db; border-radius: 7px; font-size: 13px;
+    text-decoration: none; display: inline-flex; align-items: center; gap: 6px;
+  }
+  .btn-reset:hover { background: #e5e7eb; }
+
+  /* Charts */
+  .charts-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 20px; margin-bottom: 24px;
+  }
+  @media (max-width: 900px) { .charts-grid { grid-template-columns: 1fr; } }
+
+  .chart-card {
+    background: #fff; border-radius: 12px;
+    padding: 22px 24px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+  }
+  .chart-title {
+    font-size: 14px; font-weight: 700; color: #1a2c4e;
+    margin-bottom: 18px; display: flex; align-items: center; gap: 8px;
+  }
+  .chart-title i { color: #E87722; }
+
+  /* Recap table */
+  .table-card {
+    background: #fff; border-radius: 12px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.07); overflow: hidden;
+  }
+  .table-card-header {
+    padding: 16px 20px; font-size: 14px; font-weight: 700;
+    color: #1a2c4e; border-bottom: 1px solid #f1f3f5;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .table-card-header i { color: #E87722; }
+  .table-recap { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .table-recap thead tr { background: #1a2c4e; color: #fff; }
+  .table-recap thead th { padding: 11px 16px; font-weight: 600; font-size: 12px; border: none; }
+  .table-recap tbody tr { border-bottom: 1px solid #f1f3f5; transition: background 0.1s; }
+  .table-recap tbody tr:nth-child(even) { background: #f8f9fb; }
+  .table-recap tbody tr:hover { background: #fff4ec; }
+  .table-recap td { padding: 10px 16px; color: #374151; border: none; }
+  .td-num { text-align: right; font-variant-numeric: tabular-nums; }
+  .td-pct { text-align: right; }
+
+  .progress-bar-wrap {
+    background: #f1f3f5; border-radius: 99px; height: 6px;
+    overflow: hidden; margin-top: 4px; min-width: 80px;
+  }
+  .progress-bar-fill {
+    height: 100%; border-radius: 99px;
+    background: linear-gradient(90deg, #1a2c4e, #E87722);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <span class="page-title mb-0" style="margin-bottom:0!important;">Bilan gasoil</span>
+</div>
+
+{% if error %}
+<div class="alert-odoo">
+  <i class="bi bi-exclamation-triangle-fill"></i>
+  <span>{{ error }}</span>
+</div>
+{% endif %}
+
+<!-- ══ FILTRES ══════════════════════════ -->
+<div class="filters-card">
+  <form method="GET">
+    <div class="row g-3 align-items-end">
+
+      <div class="col-auto">
+        <label class="filter-label"><i class="bi bi-calendar3 me-1"></i>Année</label>
+        <select name="annee" class="form-select" style="min-width:120px;">
+          <option value="">Toutes les années</option>
+          {% for y in "2022 2023 2024 2025 2026"|split:" " %}
+            <option value="{{ y }}" {% if annee == y %}selected{% endif %}>{{ y }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-auto">
+        <label class="filter-label"><i class="bi bi-geo-alt me-1"></i>Site</label>
+        <select name="site" class="form-select">
+          <option value="">Tous les sites</option>
+          <option value="LHOUJ" {% if site == 'LHOUJ' %}selected{% endif %}>LHOUJ/Stock</option>
+          <option value="LHMEK" {% if site == 'LHMEK' %}selected{% endif %}>LHMEK/Stock</option>
+        </select>
+      </div>
+
+      <div class="col-auto ms-auto d-flex gap-2 align-items-end">
+        <button type="submit" class="btn-filtrer">
+          <i class="bi bi-search"></i>Calculer
+        </button>
+        <a href="{% url 'gasoil_bilan' %}" class="btn-reset">
+          <i class="bi bi-x-circle"></i>Réinitialiser
+        </a>
+      </div>
+
+    </div>
+  </form>
+</div>
+
+<!-- ══ KPI ══════════════════════════════ -->
+<div class="kpi-grid">
+
+  <div class="kpi-card" style="border-top-color:#16a34a;">
+    <div class="kpi-icon" style="background:#f0fdf4; color:#16a34a;">
+      <i class="bi bi-arrow-down-circle-fill"></i>
+    </div>
+    <div>
+      <div class="kpi-value">{{ total_entrees|floatformat:0 }}</div>
+      <div class="kpi-label">Total entrées (L)</div>
+    </div>
+  </div>
+
+  <div class="kpi-card" style="border-top-color:#E87722;">
+    <div class="kpi-icon" style="background:#fff4ec; color:#E87722;">
+      <i class="bi bi-arrow-up-circle-fill"></i>
+    </div>
+    <div>
+      <div class="kpi-value">{{ total_sorties|floatformat:0 }}</div>
+      <div class="kpi-label">Total sorties (L)</div>
+    </div>
+  </div>
+
+  <div class="kpi-card" style="border-top-color:{% if stock_estime >= 0 %}#0ea5e9{% else %}#dc2626{% endif %};">
+    <div class="kpi-icon" style="background:{% if stock_estime >= 0 %}#e0f2fe{% else %}#fef2f2{% endif %}; color:{% if stock_estime >= 0 %}#0ea5e9{% else %}#dc2626{% endif %};">
+      <i class="bi bi-fuel-pump-fill"></i>
+    </div>
+    <div>
+      <div class="kpi-value" style="color:{% if stock_estime >= 0 %}#0ea5e9{% else %}#dc2626{% endif %};">
+        {{ stock_estime|floatformat:0 }}
+      </div>
+      <div class="kpi-label">Stock estimé (L)</div>
+    </div>
+  </div>
+
+  <div class="kpi-card" style="border-top-color:#1a2c4e;">
+    <div class="kpi-icon" style="background:#eef1f7; color:#1a2c4e;">
+      <i class="bi bi-cash-coin"></i>
+    </div>
+    <div>
+      <div class="kpi-value" style="font-size:18px;">{{ total_cout|floatformat:0 }}</div>
+      <div class="kpi-label">Coût total (MAD)</div>
+    </div>
+  </div>
+
+  <div class="kpi-card" style="border-top-color:{% if nb_anomalies > 0 %}#dc2626{% else %}#16a34a{% endif %};">
+    <div class="kpi-icon" style="background:{% if nb_anomalies > 0 %}#fef2f2{% else %}#f0fdf4{% endif %}; color:{% if nb_anomalies > 0 %}#dc2626{% else %}#16a34a{% endif %};">
+      <i class="bi bi-{% if nb_anomalies > 0 %}exclamation-triangle-fill{% else %}check-circle-fill{% endif %}"></i>
+    </div>
+    <div>
+      <div class="kpi-value" style="color:{% if nb_anomalies > 0 %}#dc2626{% else %}#16a34a{% endif %};">
+        {{ nb_anomalies }}
+      </div>
+      <div class="kpi-label">Anomalies sorties</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══ GRAPHIQUES ══════════════════════ -->
+<div class="charts-grid">
+
+  <!-- Graphique barres mensuel -->
+  <div class="chart-card">
+    <div class="chart-title">
+      <i class="bi bi-bar-chart-fill"></i> Consommation mensuelle (litres)
+    </div>
+    <canvas id="chartMensuel" height="220"></canvas>
+  </div>
+
+  <!-- Camembert par site -->
+  <div class="chart-card">
+    <div class="chart-title">
+      <i class="bi bi-pie-chart-fill"></i> Répartition par site
+    </div>
+    <canvas id="chartSites" height="220"></canvas>
+  </div>
+
+</div>
+
+<!-- ══ TABLEAU RÉCAP PAR SITE ══════════ -->
+<div class="table-card">
+  <div class="table-card-header">
+    <i class="bi bi-table"></i> Récapitulatif par site
+  </div>
+  <div style="overflow-x:auto;">
+    <table class="table-recap">
+      <thead>
+        <tr>
+          <th>Site</th>
+          <th class="td-num">Sorties (L)</th>
+          <th class="td-pct">Part (%)</th>
+          <th>Répartition</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if recap_sites %}
+          {% for row in recap_sites %}
+          <tr>
+            <td><i class="bi bi-geo-alt-fill" style="color:#E87722; margin-right:6px;"></i>{{ row.site }}</td>
+            <td class="td-num"><strong>{{ row.litres|floatformat:1 }}</strong></td>
+            <td class="td-pct" style="color:#6c757d;">{{ row.pct }} %</td>
+            <td style="min-width:120px;">
+              <div class="progress-bar-wrap">
+                <div class="progress-bar-fill" style="width:{{ row.pct }}%;"></div>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+          <tr style="background:#f8f9fb; font-weight:700;">
+            <td>Total</td>
+            <td class="td-num" style="color:#1a2c4e;">{{ total_sorties|floatformat:1 }}</td>
+            <td class="td-pct">100 %</td>
+            <td></td>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="4" style="text-align:center; padding:32px; color:#9ca3af;">
+              <i class="bi bi-inbox" style="font-size:28px; display:block; margin-bottom:8px;"></i>
+              Aucune donnée disponible.
+            </td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+const NAVY   = '#1a2c4e';
+const ORANGE = '#E87722';
+const GREEN  = '#16a34a';
+const SKY    = '#0ea5e9';
+
+// ── Graphique barres mensuel ──────────────────
+const ctxBar = document.getElementById('chartMensuel').getContext('2d');
+new Chart(ctxBar, {
+  type: 'bar',
+  data: {
+    labels: {{ chart_labels|safe }},
+    datasets: [
+      {
+        label: 'Sorties (L)',
+        data: {{ chart_sorties_data|safe }},
+        backgroundColor: ORANGE,
+        borderRadius: 5,
+        borderSkipped: false,
+      },
+      {
+        label: 'Entrées (L)',
+        data: {{ chart_entrees_data|safe }},
+        backgroundColor: GREEN,
+        borderRadius: 5,
+        borderSkipped: false,
+      },
+    ]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: true,
+    plugins: {
+      legend: { position: 'top', labels: { font: { size: 12 }, boxWidth: 12 } },
+      tooltip: {
+        callbacks: {
+          label: ctx => ` ${ctx.dataset.label} : ${ctx.parsed.y.toLocaleString('fr-FR')} L`
+        }
+      }
+    },
+    scales: {
+      x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+      y: {
+        grid: { color: '#f1f3f5' },
+        ticks: {
+          font: { size: 11 },
+          callback: v => v.toLocaleString('fr-FR') + ' L'
+        }
+      }
+    }
+  }
+});
+
+// ── Graphique camembert sites ─────────────────
+const ctxPie = document.getElementById('chartSites').getContext('2d');
+const siteLabels = {{ site_labels|safe }};
+const siteValues = {{ site_values|safe }};
+
+const palette = [NAVY, ORANGE, SKY, GREEN, '#7c3aed', '#db2777', '#d97706', '#059669'];
+
+new Chart(ctxPie, {
+  type: 'doughnut',
+  data: {
+    labels: siteLabels,
+    datasets: [{
+      data: siteValues,
+      backgroundColor: palette.slice(0, siteLabels.length),
+      borderWidth: 2,
+      borderColor: '#fff',
+      hoverOffset: 6,
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: true,
+    cutout: '62%',
+    plugins: {
+      legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 12, padding: 12 } },
+      tooltip: {
+        callbacks: {
+          label: ctx => ` ${ctx.label} : ${ctx.parsed.toLocaleString('fr-FR')} L`
+        }
+      }
+    }
+  }
+});
+</script>
+{% endblock %}

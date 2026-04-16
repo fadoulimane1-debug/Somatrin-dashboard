@@ -1,0 +1,245 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Connexion — SOMATRIN</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #1A3353 0%, #0d1f33 60%, #1a2a40 100%);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    }
+
+    /* ── Decorative background shapes ── */
+    body::before, body::after {
+      content: '';
+      position: fixed;
+      border-radius: 50%;
+      opacity: 0.07;
+      pointer-events: none;
+    }
+    body::before {
+      width: 600px; height: 600px;
+      background: #E87722;
+      top: -150px; right: -150px;
+    }
+    body::after {
+      width: 400px; height: 400px;
+      background: #E87722;
+      bottom: -100px; left: -100px;
+    }
+
+    /* ── Card ── */
+    .login-card {
+      background: #fff;
+      border-radius: 16px;
+      padding: 48px 44px 40px;
+      width: 100%;
+      max-width: 420px;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.35);
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ── Top accent bar ── */
+    .login-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 5px;
+      background: linear-gradient(90deg, #E87722, #f5a24b);
+      border-radius: 16px 16px 0 0;
+    }
+
+    /* ── Logo & header ── */
+    .login-header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    .login-header img {
+      height: 64px;
+      object-fit: contain;
+      margin-bottom: 20px;
+      display: block;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .login-header h1 {
+      font-size: 22px;
+      font-weight: 700;
+      color: #1A3353;
+      letter-spacing: 0.5px;
+    }
+    .login-header p {
+      font-size: 13px;
+      color: #6c757d;
+      margin-top: 4px;
+    }
+
+    /* ── Form elements ── */
+    .form-group {
+      margin-bottom: 20px;
+    }
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: #1A3353;
+      margin-bottom: 6px;
+    }
+    .input-wrapper {
+      position: relative;
+    }
+    .input-wrapper i {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #adb5bd;
+      font-size: 16px;
+      pointer-events: none;
+      transition: color 0.2s;
+    }
+    input[type="text"],
+    input[type="password"] {
+      width: 100%;
+      padding: 11px 14px 11px 40px;
+      border: 1.5px solid #dee2e6;
+      border-radius: 8px;
+      font-size: 14px;
+      color: #212529;
+      background: #f8f9fa;
+      transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+      outline: none;
+    }
+    input[type="text"]:focus,
+    input[type="password"]:focus {
+      border-color: #E87722;
+      background: #fff;
+      box-shadow: 0 0 0 3px rgba(232,119,34,0.12);
+    }
+    input[type="text"]:focus + i,
+    input[type="password"]:focus + i {
+      color: #E87722;
+    }
+    .input-wrapper input:focus ~ i {
+      color: #E87722;
+    }
+
+    /* ── Error messages ── */
+    .error-box {
+      background: #fff3cd;
+      border: 1px solid #ffc107;
+      border-left: 4px solid #E87722;
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-bottom: 20px;
+      font-size: 13px;
+      color: #664d03;
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+    }
+    .error-box i { font-size: 16px; color: #E87722; flex-shrink: 0; margin-top: 1px; }
+
+    /* ── Submit button ── */
+    .btn-login {
+      width: 100%;
+      padding: 13px;
+      background: linear-gradient(135deg, #1A3353, #1e3d66);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      letter-spacing: 0.4px;
+      transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+      margin-top: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .btn-login:hover {
+      background: linear-gradient(135deg, #E87722, #d06a18);
+      box-shadow: 0 6px 20px rgba(232,119,34,0.35);
+      transform: translateY(-1px);
+    }
+    .btn-login:active { transform: translateY(0); }
+
+    /* ── Footer ── */
+    .login-footer {
+      text-align: center;
+      margin-top: 28px;
+      font-size: 12px;
+      color: #adb5bd;
+    }
+    .login-footer span {
+      color: #E87722;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+
+<div class="login-card">
+  <div class="login-header">
+    <img src="{% static 'images/logo_somatrin.png' %}" alt="SOMATRIN">
+    <h1>Connexion</h1>
+    <p>Plateforme de gestion SOMATRIN</p>
+  </div>
+
+  {% if form.errors %}
+  <div class="error-box">
+    <i class="bi bi-exclamation-triangle-fill"></i>
+    <div>Identifiant ou mot de passe incorrect. Veuillez réessayer.</div>
+  </div>
+  {% endif %}
+
+  <form method="post" action="{% url 'login' %}">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ next }}">
+
+    <div class="form-group">
+      <label for="id_username">Nom d'utilisateur</label>
+      <div class="input-wrapper">
+        <input type="text" id="id_username" name="username"
+               value="{{ form.username.value|default:'' }}"
+               placeholder="Entrez votre identifiant"
+               autocomplete="username" autofocus>
+        <i class="bi bi-person"></i>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="id_password">Mot de passe</label>
+      <div class="input-wrapper">
+        <input type="password" id="id_password" name="password"
+               placeholder="Entrez votre mot de passe"
+               autocomplete="current-password">
+        <i class="bi bi-lock"></i>
+      </div>
+    </div>
+
+    <button type="submit" class="btn-login">
+      <i class="bi bi-box-arrow-in-right"></i>
+      Se connecter
+    </button>
+  </form>
+
+  <div class="login-footer">
+    &copy; {% now "Y" %} <span>SOMATRIN</span> — Tous droits réservés
+  </div>
+</div>
+
+</body>
+</html>
