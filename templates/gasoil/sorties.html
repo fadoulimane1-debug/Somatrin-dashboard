@@ -6,236 +6,546 @@
 {% block nav_gasoil %}active{% endblock %}
 
 {% block breadcrumb %}
-  <a href="{% url 'accueil' %}">Accueil</a> &rsaquo;
-  <a href="{% url 'gasoil_sorties' %}">Gasoil</a> &rsaquo;
-  <span style="color: #1A3353; font-weight: 600;">Sorties</span>
+  <a href="{% url 'accueil' %}">Accueil</a>
+  <i class="bi bi-chevron-right"></i>
+  <a href="{% url 'gasoil_sorties' %}">Gasoil</a>
+  <i class="bi bi-chevron-right"></i>
+  <span style="color:#1a2c4e; font-weight:600;">Sorties</span>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* ── KPI Cards ── */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  @media (max-width: 1100px) { .kpi-grid { grid-template-columns: repeat(2,1fr); } }
+  @media (max-width: 576px)  { .kpi-grid { grid-template-columns: 1fr; } }
+
+  .kpi-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 20px 22px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    border-top: 3px solid transparent;
+    transition: box-shadow 0.2s, transform 0.15s;
+  }
+  .kpi-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.10); transform: translateY(-1px); }
+
+  .kpi-card-bons    { border-top-color: #E87722; }
+  .kpi-card-litres  { border-top-color: #1a2c4e; }
+  .kpi-card-conso   { border-top-color: #0ea5e9; }
+  .kpi-card-anomal  { border-top-color: #dc2626; }
+  .kpi-card-anomal-ok { border-top-color: #16a34a; }
+
+  .kpi-icon {
+    width: 48px; height: 48px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+  }
+  .kpi-icon-orange { background: #fff4ec; color: #E87722; }
+  .kpi-icon-navy   { background: #eef1f7; color: #1a2c4e; }
+  .kpi-icon-sky    { background: #e0f2fe; color: #0ea5e9; }
+  .kpi-icon-red    { background: #fef2f2; color: #dc2626; }
+  .kpi-icon-green  { background: #f0fdf4; color: #16a34a; }
+
+  .kpi-body {}
+  .kpi-value {
+    font-size: 26px;
+    font-weight: 800;
+    line-height: 1.1;
+    color: #1a2c4e;
+  }
+  .kpi-label {
+    font-size: 12px;
+    color: #6c757d;
+    font-weight: 500;
+    margin-top: 2px;
+  }
+
+  /* ── Filters card ── */
+  .filters-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+  }
+  .filters-card .filter-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 5px;
+    display: block;
+  }
+  .filters-card .form-control,
+  .filters-card .form-select {
+    font-size: 13px;
+    border-color: #d1d5db;
+    border-radius: 7px;
+    padding: 7px 10px;
+  }
+  .filters-card .form-control:focus,
+  .filters-card .form-select:focus {
+    border-color: #E87722;
+    box-shadow: 0 0 0 3px rgba(232,119,34,0.12);
+  }
+  .btn-filtrer {
+    padding: 8px 20px;
+    background: #1a2c4e;
+    color: #fff;
+    border: none;
+    border-radius: 7px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: background 0.2s, box-shadow 0.2s;
+  }
+  .btn-filtrer:hover { background: #E87722; box-shadow: 0 4px 12px rgba(232,119,34,0.3); }
+
+  .btn-reset {
+    padding: 8px 16px;
+    background: #f3f4f6;
+    color: #374151;
+    border: 1px solid #d1d5db;
+    border-radius: 7px;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: background 0.2s;
+  }
+  .btn-reset:hover { background: #e5e7eb; color: #111827; }
+
+  .filters-sep { height: 1px; background: #f3f4f6; margin: 16px 0; }
+
+  /* ── Active filter tags ── */
+  .filter-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    border-radius: 99px;
+    padding: 3px 12px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .tag-orange { background:#fff4ec; color:#92400e; border:1px solid #fbd5b0; }
+  .tag-blue   { background:#eff6ff; color:#1e3a8a; border:1px solid #bfdbfe; }
+  .tag-green  { background:#f0fdf4; color:#14532d; border:1px solid #bbf7d0; }
+  .tag-red    { background:#fef2f2; color:#7f1d1d; border:1px solid #fecaca; }
+
+  /* ── Summary bar ── */
+  .summary-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    font-size: 13px;
+    color: #6c757d;
+  }
+  .summary-bar strong { color: #1a2c4e; }
+
+  /* ── Table ── */
+  .table-card {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+    overflow: hidden;
+  }
+  .table-somatrin {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    margin: 0;
+  }
+  .table-somatrin thead tr {
+    background: #1a2c4e;
+    color: #fff;
+  }
+  .table-somatrin thead th {
+    padding: 12px 14px;
+    font-weight: 600;
+    font-size: 12px;
+    letter-spacing: 0.4px;
+    white-space: nowrap;
+    border: none;
+  }
+  .table-somatrin tbody tr {
+    border-bottom: 1px solid #f1f3f5;
+    transition: background 0.1s;
+  }
+  .table-somatrin tbody tr:nth-child(even) { background: #f8f9fb; }
+  .table-somatrin tbody tr:hover { background: #fff4ec; }
+  .table-somatrin tbody tr.row-anomalie { background: #fff5f5 !important; }
+  .table-somatrin tbody tr.row-anomalie:hover { background: #ffe4e4 !important; }
+  .table-somatrin td {
+    padding: 10px 14px;
+    color: #374151;
+    vertical-align: middle;
+    border: none;
+  }
+  .td-date  { font-family: monospace; font-size: 12px; white-space: nowrap; color: #6b7280; }
+  .td-bon   { font-weight: 600; color: #1a2c4e; white-space: nowrap; }
+  .td-num   { text-align: right; font-variant-numeric: tabular-nums; }
+  .td-conso { text-align: right; font-variant-numeric: tabular-nums; color: #0ea5e9; font-weight: 500; }
+  .td-ouvrage { max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* ── Badges anomalie ── */
+  .badge-ok {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: #dcfce7; color: #15803d;
+    border: 1px solid #bbf7d0;
+    border-radius: 99px;
+    padding: 2px 10px;
+    font-size: 11px; font-weight: 700;
+  }
+  .badge-anomalie {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: #fee2e2; color: #b91c1c;
+    border: 1px solid #fecaca;
+    border-radius: 99px;
+    padding: 2px 10px;
+    font-size: 11px; font-weight: 700;
+  }
+
+  .btn-export {
+    padding: 8px 16px;
+    background: #16a34a;
+    color: #fff;
+    border: none;
+    border-radius: 7px;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: background 0.2s;
+  }
+  .btn-export:hover { background: #15803d; color: #fff; }
+
+  /* ── Pagination ── */
+  .pagination-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
+    border-top: 1px solid #f1f3f5;
+    font-size: 13px;
+    color: #6b7280;
+  }
+  .pagination-bar .page-info { font-size: 13px; }
+  .pagination-bar .page-links { display: flex; gap: 4px; }
+  .page-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 34px; height: 34px;
+    border-radius: 7px;
+    border: 1px solid #e5e7eb;
+    background: #fff;
+    color: #374151;
+    font-size: 13px;
+    text-decoration: none;
+    transition: all 0.15s;
+  }
+  .page-btn:hover { background: #f3f4f6; color: #111827; }
+  .page-btn.active { background: #1a2c4e; border-color: #1a2c4e; color: #fff; font-weight: 700; }
+  .page-btn.disabled { color: #d1d5db; pointer-events: none; }
+
+  /* ── Empty state ── */
+  .empty-state {
+    text-align: center;
+    padding: 52px 20px;
+    color: #9ca3af;
+  }
+  .empty-state i { font-size: 40px; display: block; margin-bottom: 10px; }
+  .empty-state p { font-size: 14px; }
+</style>
 {% endblock %}
 
 {% block content %}
 
-<span class="page-title">Sorties gasoil</span>
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <span class="page-title mb-0" style="margin-bottom:0!important;">Sorties gasoil</span>
+</div>
 
 {% if error %}
 <div class="alert-odoo">
-  <i class="bi bi-exclamation-triangle me-2"></i>{{ error }}
+  <i class="bi bi-exclamation-triangle-fill"></i>
+  <span>{{ error }}</span>
 </div>
 {% endif %}
 
-<!-- ══════════════════════════════
-     FILTRES
-══════════════════════════════ -->
+<!-- ══ KPI CARDS ══════════════════════════════ -->
+<div class="kpi-grid">
+
+  <div class="kpi-card kpi-card-bons">
+    <div class="kpi-icon kpi-icon-orange"><i class="bi bi-file-earmark-text"></i></div>
+    <div class="kpi-body">
+      <div class="kpi-value">{{ total_bons }}</div>
+      <div class="kpi-label">Total bons de sortie</div>
+    </div>
+  </div>
+
+  <div class="kpi-card kpi-card-litres">
+    <div class="kpi-icon kpi-icon-navy"><i class="bi bi-droplet-fill"></i></div>
+    <div class="kpi-body">
+      <div class="kpi-value">{{ total_litres|floatformat:0 }}</div>
+      <div class="kpi-label">Total litres consommés</div>
+    </div>
+  </div>
+
+  <div class="kpi-card kpi-card-conso">
+    <div class="kpi-icon kpi-icon-sky"><i class="bi bi-speedometer2"></i></div>
+    <div class="kpi-body">
+      <div class="kpi-value">{{ conso_moyenne }}</div>
+      <div class="kpi-label">Consommation moyenne L/h</div>
+    </div>
+  </div>
+
+  <div class="kpi-card {% if nb_anomalies > 0 %}kpi-card-anomal{% else %}kpi-card-anomal-ok{% endif %}">
+    <div class="kpi-icon {% if nb_anomalies > 0 %}kpi-icon-red{% else %}kpi-icon-green{% endif %}">
+      <i class="bi bi-{% if nb_anomalies > 0 %}exclamation-triangle-fill{% else %}check-circle-fill{% endif %}"></i>
+    </div>
+    <div class="kpi-body">
+      <div class="kpi-value" style="color:{% if nb_anomalies > 0 %}#dc2626{% else %}#16a34a{% endif %};">
+        {{ nb_anomalies }}
+      </div>
+      <div class="kpi-label">Bons en anomalie</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══ FILTRES ══════════════════════════════ -->
 <div class="filters-card">
   <form method="GET">
 
-    <!-- Ligne 1 : date, site, catégorie, anomalie -->
     <div class="row g-3 align-items-end">
-
       <div class="col-auto">
         <label class="filter-label">Date début</label>
-        <input type="date" name="date_debut" class="form-control"
-               value="{{ date_debut }}">
+        <input type="date" name="date_debut" class="form-control" value="{{ date_debut }}">
       </div>
 
       <div class="col-auto">
         <label class="filter-label">Date fin</label>
-        <input type="date" name="date_fin" class="form-control"
-               value="{{ date_fin }}">
+        <input type="date" name="date_fin" class="form-control" value="{{ date_fin }}">
       </div>
 
       <div class="col-auto">
-        <label class="filter-label">Site</label>
+        <label class="filter-label"><i class="bi bi-building me-1"></i>Société</label>
+        <select name="societe" class="form-select">
+          <option value="">Toutes les sociétés</option>
+          <option value="SOMATRIN" {% if societe == 'SOMATRIN' %}selected{% endif %}>SOMATRIN</option>
+          <option value="OTEC"     {% if societe == 'OTEC'     %}selected{% endif %}>OTEC</option>
+        </select>
+      </div>
+
+      <div class="col-auto">
+        <label class="filter-label"><i class="bi bi-geo-alt me-1"></i>Site</label>
         <select name="site" class="form-select">
           <option value="">Tous les sites</option>
-          <option value="LHOUJ" {% if site == 'LHOUJ' %}selected{% endif %}>LHOUJ/Stock</option>
-          <option value="LHMEK" {% if site == 'LHMEK' %}selected{% endif %}>LHMEK/Stock</option>
+          <optgroup label="SOMATRIN">
+            <option value="LHOUJ" {% if site == 'LHOUJ' %}selected{% endif %}>LHOUJ</option>
+            <option value="SOMBE" {% if site == 'SOMBE' %}selected{% endif %}>SOMBE</option>
+            <option value="CONAB" {% if site == 'CONAB' %}selected{% endif %}>CONAB</option>
+            <option value="STCHS" {% if site == 'STCHS' %}selected{% endif %}>STCHS</option>
+            <option value="MDEN"  {% if site == 'MDEN'  %}selected{% endif %}>MDEN</option>
+            <option value="S.LAA" {% if site == 'S.LAA' %}selected{% endif %}>S.LAA</option>
+            <option value="GRABE" {% if site == 'GRABE' %}selected{% endif %}>GRABE</option>
+            <option value="CIMAM" {% if site == 'CIMAM' %}selected{% endif %}>CIMAM</option>
+          </optgroup>
+          <optgroup label="OTEC">
+            <option value="OTAG"  {% if site == 'OTAG'  %}selected{% endif %}>OTAG</option>
+            <option value="CIMBM" {% if site == 'CIMBM' %}selected{% endif %}>CIMBM</option>
+            <option value="SETTA" {% if site == 'SETTA' %}selected{% endif %}>SETTA</option>
+            <option value="LHM"   {% if site == 'LHM'   %}selected{% endif %}>LHM</option>
+            <option value="STCHO" {% if site == 'STCHO' %}selected{% endif %}>STCHO</option>
+          </optgroup>
         </select>
       </div>
 
       <div class="col-auto">
-        <label class="filter-label">Catégorie</label>
-        <select name="categorie" class="form-select">
-          <option value="">Toutes</option>
-          <option value="H" {% if categorie == 'H' %}selected{% endif %}>H</option>
-        </select>
-      </div>
-
-      <div class="col-auto">
-        <label class="filter-label">Anomalie</label>
+        <label class="filter-label"><i class="bi bi-exclamation-circle me-1"></i>Anomalie</label>
         <select name="anomalie" class="form-select">
           <option value="">Toutes</option>
           <option value="OK"       {% if anomalie == 'OK' %}selected{% endif %}>OK</option>
           <option value="Anomalie" {% if anomalie == 'Anomalie' %}selected{% endif %}>Anomalie</option>
         </select>
       </div>
-
     </div>
 
     <div class="filters-sep"></div>
 
-    <!-- Ligne 2 : chauffeur, ouvrage, n° bon + boutons -->
     <div class="row g-3 align-items-end">
-
       <div class="col-auto">
-        <label class="filter-label">
-          <i class="bi bi-person me-1"></i>Chauffeur
-        </label>
-        <input type="text" name="chauffeur" class="form-control"
-               style="min-width: 180px;"
-               placeholder="Nom du chauffeur..."
-               value="{{ chauffeur }}">
+        <label class="filter-label"><i class="bi bi-person me-1"></i>Chauffeur</label>
+        <input type="text" name="chauffeur" class="form-control" style="min-width:180px;"
+               placeholder="Nom du chauffeur…" value="{{ chauffeur }}">
       </div>
 
       <div class="col-auto">
-        <label class="filter-label">
-          <i class="bi bi-geo-alt me-1"></i>Ouvrage / Affectation
-        </label>
-        <input type="text" name="ouvrage" class="form-control"
-               style="min-width: 180px;"
-               placeholder="Ex: 3401-B-33, SC 14..."
-               value="{{ ouvrage }}">
+        <label class="filter-label"><i class="bi bi-diagram-3 me-1"></i>Ouvrage / Analytique</label>
+        <input type="text" name="ouvrage" class="form-control" style="min-width:180px;"
+               placeholder="Ex : S00012, Transport…" value="{{ ouvrage }}">
       </div>
 
       <div class="col-auto ms-auto d-flex gap-2 align-items-end">
         <button type="submit" class="btn-filtrer">
-          <i class="bi bi-search me-1"></i>Filtrer
+          <i class="bi bi-search"></i>Filtrer
         </button>
         <a href="{% url 'gasoil_sorties' %}" class="btn-reset">
-          <i class="bi bi-x-circle me-1"></i>Réinitialiser
+          <i class="bi bi-x-circle"></i>Réinitialiser
+        </a>
+        <a href="{% url 'gasoil_sorties_export' %}?date_debut={{ date_debut }}&date_fin={{ date_fin }}&societe={{ societe }}&site={{ site }}&chauffeur={{ chauffeur }}&ouvrage={{ ouvrage }}&anomalie={{ anomalie }}"
+           class="btn-export">
+          <i class="bi bi-file-earmark-excel-fill"></i>Excel
         </a>
       </div>
-
     </div>
 
   </form>
 </div>
 
 <!-- Tags filtres actifs -->
-{% if chauffeur or ouvrage or site or anomalie %}
-<div class="d-flex align-items-center gap-2 flex-wrap mb-3" style="font-size:12px;">
-  <span style="color:#6b7280;">Filtres actifs :</span>
-  {% if chauffeur %}
-    <span style="background:#fff4ef;color:#7a2e0a;border:0.5px solid #f5c4a0;border-radius:99px;padding:2px 12px;font-size:11px;font-weight:600;">
-      Chauffeur : {{ chauffeur }}
-    </span>
-  {% endif %}
-  {% if ouvrage %}
-    <span style="background:#eff6ff;color:#1e3a8a;border:0.5px solid #bfdbfe;border-radius:99px;padding:2px 12px;font-size:11px;font-weight:600;">
-      Ouvrage : {{ ouvrage }}
-    </span>
-  {% endif %}
-  {% if site %}
-    <span style="background:#f0fdf4;color:#14532d;border:0.5px solid #bbf7d0;border-radius:99px;padding:2px 12px;font-size:11px;font-weight:600;">
-      Site : {{ site }}
-    </span>
-  {% endif %}
-  {% if anomalie %}
-    <span style="background:#fef2f2;color:#7f1d1d;border:0.5px solid #fecaca;border-radius:99px;padding:2px 12px;font-size:11px;font-weight:600;">
-      Anomalie : {{ anomalie }}
-    </span>
-  {% endif %}
+{% if chauffeur or ouvrage or societe or site or anomalie or date_debut or date_fin %}
+<div class="d-flex align-items-center gap-2 flex-wrap mb-3">
+  <span style="font-size:12px; color:#6b7280;">Filtres actifs :</span>
+  {% if date_debut %}<span class="filter-tag tag-blue"><i class="bi bi-calendar2"></i>Début : {{ date_debut }}</span>{% endif %}
+  {% if date_fin   %}<span class="filter-tag tag-blue"><i class="bi bi-calendar2"></i>Fin : {{ date_fin }}</span>{% endif %}
+  {% if societe    %}<span class="filter-tag tag-blue"><i class="bi bi-building"></i>{{ societe }}</span>{% endif %}
+  {% if site       %}<span class="filter-tag tag-green"><i class="bi bi-geo-alt"></i>{{ site }}</span>{% endif %}
+  {% if chauffeur  %}<span class="filter-tag tag-orange"><i class="bi bi-person"></i>{{ chauffeur }}</span>{% endif %}
+  {% if ouvrage    %}<span class="filter-tag tag-blue"><i class="bi bi-diagram-3"></i>{{ ouvrage }}</span>{% endif %}
+  {% if anomalie   %}<span class="filter-tag tag-red"><i class="bi bi-exclamation-triangle"></i>{{ anomalie }}</span>{% endif %}
 </div>
 {% endif %}
 
-<!-- ══════════════════════════════
-     KPI CARDS
-══════════════════════════════ -->
-<div class="kpi-grid">
-  <div class="kpi-card">
-    <div class="kpi-label"><i class="bi bi-file-text me-1"></i>Total bons</div>
-    <div class="kpi-value kpi-orange" style="color: #D4500A;">{{ total_bons }}</div>
-    <div class="kpi-unit">bons de sortie</div>
-  </div>
-  <div class="kpi-card">
-    <div class="kpi-label"><i class="bi bi-droplet me-1"></i>Total litres</div>
-    <div class="kpi-value">{{ total_litres }}</div>
-    <div class="kpi-unit">litres consommés</div>
-  </div>
-  <div class="kpi-card">
-    <div class="kpi-label"><i class="bi bi-speedometer2 me-1"></i>Conso. moyenne</div>
-    <div class="kpi-value">{{ conso_moyenne }}</div>
-    <div class="kpi-unit">L/h moyenne</div>
-  </div>
-  <div class="kpi-card">
-    <div class="kpi-label"><i class="bi bi-exclamation-triangle me-1"></i>Anomalies</div>
-    <div class="kpi-value" style="{% if nb_anomalies > 0 %}color: #dc2626;{% else %}color: #059669;{% endif %}">
-      {{ nb_anomalies }}
-    </div>
-    <div class="kpi-unit">bons en anomalie</div>
-  </div>
-</div>
-
-<!-- ══════════════════════════════
-     TABLEAU
-══════════════════════════════ -->
+<!-- ══ TABLEAU ══════════════════════════════ -->
 <div class="summary-bar">
-  <span>
-    Total : <strong>{{ total_bons }} bons</strong>
-    {% if date_debut and date_fin %}
-      — du {{ date_debut }} au {{ date_fin }}
-    {% endif %}
+  <span><strong>{{ total_bons }}</strong> bon{{ total_bons|pluralize }} trouvé{{ total_bons|pluralize }}
+    {% if date_debut and date_fin %} — du <strong>{{ date_debut }}</strong> au <strong>{{ date_fin }}</strong>{% endif %}
   </span>
+  {% if page_obj.paginator.num_pages > 1 %}
+  <span>Page <strong>{{ page_obj.number }}</strong> / {{ page_obj.paginator.num_pages }}</span>
+  {% endif %}
 </div>
 
 <div class="table-card">
-  <div style="overflow-x: auto;">
-    <table class="table table-somatrin">
+  <div style="overflow-x:auto;">
+    <table class="table-somatrin">
       <thead>
         <tr>
           <th>Date</th>
           <th>N° Bon</th>
+          <th>Société</th>
           <th>Site</th>
-          <th>Ouvrage</th>
+          <th>Ouvrage / Analytique</th>
+          <th>Engin</th>
           <th>Chauffeur</th>
-          <th>UDM</th>
           <th class="text-end">Cpt. init.</th>
           <th class="text-end">Cpt. act.</th>
           <th class="text-end">Écart</th>
           <th class="text-end">Qté (L)</th>
-          <th class="text-end">Consommation</th>
-          <th class="text-center">Anomalie</th>
+          <th class="text-end">Conso.</th>
+          <th class="text-center">Statut</th>
         </tr>
       </thead>
       <tbody>
-        {% if bons %}
-          {% for bon in bons %}
-          <tr {% if bon.x_anomalie and bon.x_anomalie|lower != 'ok' %}class="row-anomalie"{% endif %}>
-            <td class="td-date">{{ bon.date|slice:":10" }}</td>
+        {% if page_obj.object_list %}
+          {% for bon in page_obj %}
+          <tr {% if bon.anomalie == 'Anomalie' %}class="row-anomalie"{% endif %}>
+            <td class="td-date">{{ bon.date }}</td>
             <td class="td-bon">{{ bon.name }}</td>
-            <td>{{ bon.location_id.1|default:"-" }}</td>
-            <td class="td-ouvrage">{{ bon.x_affectation|default:"-" }}</td>
-            <td>{{ bon.x_chauffeur|default:"-" }}</td>
-            <td class="text-center">{{ bon.product_uom_id.1|default:"-" }}</td>
-            <td class="td-num">{{ bon.x_cpt_initial|default:"-" }}</td>
-            <td class="td-num">{{ bon.x_cpt_actuel|default:"-" }}</td>
-            <td class="td-num">{{ bon.x_ecart|default:"-" }}</td>
-            <td class="td-num">{{ bon.product_qty|floatformat:1 }}</td>
+            <td>{{ bon.societe }}</td>
+            <td>{{ bon.site }}</td>
+            <td class="td-ouvrage" title="{{ bon.ouvrage }}">{{ bon.ouvrage }}</td>
+            <td>{{ bon.engin }}</td>
+            <td>{{ bon.chauffeur }}</td>
+            <td class="td-num">{{ bon.cpt_initial|floatformat:0 }}</td>
+            <td class="td-num">{{ bon.cpt_actuel|floatformat:0 }}</td>
+            <td class="td-num">{{ bon.ecart|floatformat:1 }}</td>
+            <td class="td-num"><strong>{{ bon.product_qty|floatformat:1 }}</strong></td>
             <td class="td-conso">
-              {% if bon.x_consommation %}
-                {{ bon.x_consommation|floatformat:2 }} L/h
-              {% else %}—{% endif %}
+              {% if bon.consommation %}{{ bon.consommation|floatformat:2 }} L/h{% else %}—{% endif %}
             </td>
             <td class="text-center">
-              {% if bon.x_anomalie and bon.x_anomalie|lower == 'ok' %}
-                <span class="badge-ok">OK</span>
-              {% elif bon.x_anomalie %}
-                <span class="badge-anomalie">Anomalie</span>
+              {% if bon.anomalie == 'OK' %}
+                <span class="badge-ok"><i class="bi bi-check-circle-fill"></i>OK</span>
               {% else %}
-                <span style="color:#9ca3af;">—</span>
+                <span class="badge-anomalie"><i class="bi bi-exclamation-circle-fill"></i>Hors affect.</span>
               {% endif %}
             </td>
           </tr>
           {% endfor %}
         {% else %}
           <tr>
-            <td colspan="12" class="text-center py-5" style="color:#9ca3af;">
-              <i class="bi bi-inbox" style="font-size:32px;display:block;margin-bottom:8px;"></i>
-              Aucun résultat pour ces filtres.
+            <td colspan="13">
+              <div class="empty-state">
+                <i class="bi bi-inbox"></i>
+                <p>Aucun résultat pour ces filtres.</p>
+              </div>
             </td>
           </tr>
         {% endif %}
       </tbody>
     </table>
   </div>
+
+  <!-- ── Pagination ─────────────────────────────────────────── -->
+  {% if page_obj.paginator.num_pages > 1 %}
+  <div class="pagination-bar">
+    <span class="page-info">
+      Affichage {{ page_obj.start_index }}–{{ page_obj.end_index }} sur {{ total_bons }}
+    </span>
+    <div class="page-links">
+      {% if page_obj.has_previous %}
+        <a class="page-btn" href="?page=1&date_debut={{ date_debut }}&date_fin={{ date_fin }}&societe={{ societe }}&site={{ site }}&chauffeur={{ chauffeur }}&ouvrage={{ ouvrage }}&anomalie={{ anomalie }}">
+          <i class="bi bi-chevron-double-left"></i>
+        </a>
+        <a class="page-btn" href="?page={{ page_obj.previous_page_number }}&date_debut={{ date_debut }}&date_fin={{ date_fin }}&societe={{ societe }}&site={{ site }}&chauffeur={{ chauffeur }}&ouvrage={{ ouvrage }}&anomalie={{ anomalie }}">
+          <i class="bi bi-chevron-left"></i>
+        </a>
+      {% else %}
+        <span class="page-btn disabled"><i class="bi bi-chevron-double-left"></i></span>
+        <span class="page-btn disabled"><i class="bi bi-chevron-left"></i></span>
+      {% endif %}
+
+      {% for num in page_obj.paginator.page_range %}
+        {% if num == page_obj.number %}
+          <span class="page-btn active">{{ num }}</span>
+        {% elif num >= page_obj.number|add:"-3" and num <= page_obj.number|add:"3" %}
+          <a class="page-btn" href="?page={{ num }}&date_debut={{ date_debut }}&date_fin={{ date_fin }}&societe={{ societe }}&site={{ site }}&chauffeur={{ chauffeur }}&ouvrage={{ ouvrage }}&anomalie={{ anomalie }}">{{ num }}</a>
+        {% endif %}
+      {% endfor %}
+
+      {% if page_obj.has_next %}
+        <a class="page-btn" href="?page={{ page_obj.next_page_number }}&date_debut={{ date_debut }}&date_fin={{ date_fin }}&societe={{ societe }}&site={{ site }}&chauffeur={{ chauffeur }}&ouvrage={{ ouvrage }}&anomalie={{ anomalie }}">
+          <i class="bi bi-chevron-right"></i>
+        </a>
+        <a class="page-btn" href="?page={{ page_obj.paginator.num_pages }}&date_debut={{ date_debut }}&date_fin={{ date_fin }}&societe={{ societe }}&site={{ site }}&chauffeur={{ chauffeur }}&ouvrage={{ ouvrage }}&anomalie={{ anomalie }}">
+          <i class="bi bi-chevron-double-right"></i>
+        </a>
+      {% else %}
+        <span class="page-btn disabled"><i class="bi bi-chevron-right"></i></span>
+        <span class="page-btn disabled"><i class="bi bi-chevron-double-right"></i></span>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
 </div>
 
 {% endblock %}

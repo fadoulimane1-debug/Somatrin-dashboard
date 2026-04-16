@@ -1,0 +1,285 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Entrées Gasoil — SOMATRIN{% endblock %}
+
+{% block breadcrumb %}
+  <a href="{% url 'accueil' %}">Accueil</a>
+  <i class="bi bi-chevron-right"></i>
+  <span style="color:#1a2c4e; font-weight:600;">Gasoil — Entrées</span>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  @media (max-width: 900px)  { .kpi-grid { grid-template-columns: repeat(2,1fr); } }
+  @media (max-width: 576px)  { .kpi-grid { grid-template-columns: 1fr; } }
+
+  .kpi-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 20px 22px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+    display: flex; align-items: center; gap: 16px;
+    border-top: 3px solid transparent;
+    transition: box-shadow 0.2s, transform 0.15s;
+  }
+  .kpi-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.10); transform: translateY(-1px); }
+  .kpi-card-bons   { border-top-color: #E87722; }
+  .kpi-card-litres { border-top-color: #16a34a; }
+  .kpi-card-cout   { border-top-color: #1a2c4e; }
+
+  .kpi-icon {
+    width: 48px; height: 48px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; flex-shrink: 0;
+  }
+  .kpi-icon-orange { background: #fff4ec; color: #E87722; }
+  .kpi-icon-green  { background: #f0fdf4; color: #16a34a; }
+  .kpi-icon-navy   { background: #eef1f7; color: #1a2c4e; }
+
+  .kpi-value { font-size: 26px; font-weight: 800; line-height: 1.1; color: #1a2c4e; }
+  .kpi-label { font-size: 12px; color: #6c757d; font-weight: 500; margin-top: 2px; }
+
+  /* Filters */
+  .filters-card {
+    background: #fff; border-radius: 12px;
+    padding: 20px 24px; margin-bottom: 20px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+  }
+  .filter-label { font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 5px; display: block; }
+  .filters-card .form-control,
+  .filters-card .form-select {
+    font-size: 13px; border-color: #d1d5db; border-radius: 7px; padding: 7px 10px;
+  }
+  .filters-card .form-control:focus,
+  .filters-card .form-select:focus {
+    border-color: #16a34a; box-shadow: 0 0 0 3px rgba(22,163,74,0.12);
+  }
+  .btn-filtrer {
+    padding: 8px 20px; background: #1a2c4e; color: #fff;
+    border: none; border-radius: 7px; font-size: 13px; font-weight: 600;
+    cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+    transition: background 0.2s, box-shadow 0.2s;
+  }
+  .btn-filtrer:hover { background: #16a34a; box-shadow: 0 4px 12px rgba(22,163,74,0.3); }
+  .btn-reset {
+    padding: 8px 16px; background: #f3f4f6; color: #374151;
+    border: 1px solid #d1d5db; border-radius: 7px; font-size: 13px; font-weight: 600;
+    text-decoration: none; display: inline-flex; align-items: center; gap: 6px;
+    transition: background 0.2s;
+  }
+  .btn-reset:hover { background: #e5e7eb; color: #111827; }
+  .filters-sep { height: 1px; background: #f3f4f6; margin: 16px 0; }
+
+  /* Filter tags */
+  .filter-tag {
+    display: inline-flex; align-items: center; gap: 5px;
+    border-radius: 99px; padding: 3px 12px;
+    font-size: 11px; font-weight: 600;
+  }
+  .tag-green { background:#f0fdf4; color:#14532d; border:1px solid #bbf7d0; }
+  .tag-blue  { background:#eff6ff; color:#1e3a8a; border:1px solid #bfdbfe; }
+
+  /* Summary */
+  .summary-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 10px; font-size: 13px; color: #6c757d;
+  }
+  .summary-bar strong { color: #1a2c4e; }
+
+  /* Table */
+  .table-card {
+    background: #fff; border-radius: 12px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.07); overflow: hidden;
+  }
+  .table-somatrin { width: 100%; border-collapse: collapse; font-size: 13px; margin: 0; }
+  .table-somatrin thead tr { background: #1a2c4e; color: #fff; }
+  .table-somatrin thead th {
+    padding: 12px 14px; font-weight: 600; font-size: 12px;
+    letter-spacing: 0.4px; white-space: nowrap; border: none;
+  }
+  .table-somatrin tbody tr { border-bottom: 1px solid #f1f3f5; transition: background 0.1s; }
+  .table-somatrin tbody tr:nth-child(even) { background: #f8f9fb; }
+  .table-somatrin tbody tr:hover { background: #f0fdf4; }
+  .table-somatrin td { padding: 10px 14px; color: #374151; vertical-align: middle; border: none; }
+
+  .td-date { font-family: monospace; font-size: 12px; white-space: nowrap; color: #6b7280; }
+  .td-bon  { font-weight: 600; color: #1a2c4e; white-space: nowrap; }
+  .td-num  { text-align: right; font-variant-numeric: tabular-nums; }
+  .td-total { text-align: right; font-weight: 700; color: #16a34a; }
+
+  .badge-entree {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: #dcfce7; color: #15803d;
+    border: 1px solid #bbf7d0; border-radius: 99px;
+    padding: 2px 10px; font-size: 11px; font-weight: 700;
+  }
+  .empty-state { text-align: center; padding: 52px 20px; color: #9ca3af; }
+  .empty-state i { font-size: 40px; display: block; margin-bottom: 10px; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <span class="page-title mb-0" style="margin-bottom:0!important;">Entrées gasoil</span>
+</div>
+
+{% if error %}
+<div class="alert-odoo">
+  <i class="bi bi-exclamation-triangle-fill"></i>
+  <span>{{ error }}</span>
+</div>
+{% endif %}
+
+<!-- ══ KPI ══════════════════════════════ -->
+<div class="kpi-grid">
+
+  <div class="kpi-card kpi-card-bons">
+    <div class="kpi-icon kpi-icon-orange"><i class="bi bi-receipt"></i></div>
+    <div>
+      <div class="kpi-value">{{ total_bons }}</div>
+      <div class="kpi-label">Total bons de réception</div>
+    </div>
+  </div>
+
+  <div class="kpi-card kpi-card-litres">
+    <div class="kpi-icon kpi-icon-green"><i class="bi bi-droplet-fill"></i></div>
+    <div>
+      <div class="kpi-value">{{ total_litres|floatformat:0 }}</div>
+      <div class="kpi-label">Total litres reçus</div>
+    </div>
+  </div>
+
+  <div class="kpi-card kpi-card-cout">
+    <div class="kpi-icon kpi-icon-navy"><i class="bi bi-cash-coin"></i></div>
+    <div>
+      <div class="kpi-value" style="font-size:20px;">{{ total_cout|floatformat:2 }}</div>
+      <div class="kpi-label">Coût total (MAD)</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══ FILTRES ══════════════════════════ -->
+<div class="filters-card">
+  <form method="GET">
+    <div class="row g-3 align-items-end">
+
+      <div class="col-auto">
+        <label class="filter-label">Date début</label>
+        <input type="date" name="date_debut" class="form-control" value="{{ date_debut }}">
+      </div>
+
+      <div class="col-auto">
+        <label class="filter-label">Date fin</label>
+        <input type="date" name="date_fin" class="form-control" value="{{ date_fin }}">
+      </div>
+
+      <div class="col-auto">
+        <label class="filter-label">Site de réception</label>
+        <select name="site" class="form-select">
+          <option value="">Tous les sites</option>
+          <option value="LHOUJ" {% if site == 'LHOUJ' %}selected{% endif %}>LHOUJ/Stock</option>
+          <option value="LHMEK" {% if site == 'LHMEK' %}selected{% endif %}>LHMEK/Stock</option>
+        </select>
+      </div>
+
+      <div class="col-auto">
+        <label class="filter-label"><i class="bi bi-building me-1"></i>Fournisseur</label>
+        <input type="text" name="fournisseur" class="form-control" style="min-width:180px;"
+               placeholder="Nom du fournisseur…" value="{{ fournisseur }}">
+      </div>
+
+      <div class="col-auto ms-auto d-flex gap-2 align-items-end">
+        <button type="submit" class="btn-filtrer">
+          <i class="bi bi-search"></i>Filtrer
+        </button>
+        <a href="{% url 'gasoil_entrees' %}" class="btn-reset">
+          <i class="bi bi-x-circle"></i>Réinitialiser
+        </a>
+      </div>
+
+    </div>
+  </form>
+</div>
+
+<!-- Tags filtres actifs -->
+{% if date_debut or date_fin or site or fournisseur %}
+<div class="d-flex align-items-center gap-2 flex-wrap mb-3">
+  <span style="font-size:12px; color:#6b7280;">Filtres actifs :</span>
+  {% if date_debut %}<span class="filter-tag tag-blue"><i class="bi bi-calendar2"></i>Début : {{ date_debut }}</span>{% endif %}
+  {% if date_fin   %}<span class="filter-tag tag-blue"><i class="bi bi-calendar2"></i>Fin : {{ date_fin }}</span>{% endif %}
+  {% if site       %}<span class="filter-tag tag-green"><i class="bi bi-geo-alt"></i>{{ site }}</span>{% endif %}
+  {% if fournisseur %}<span class="filter-tag tag-green"><i class="bi bi-building"></i>{{ fournisseur }}</span>{% endif %}
+</div>
+{% endif %}
+
+<!-- ══ TABLEAU ══════════════════════════ -->
+<div class="summary-bar">
+  <span><strong>{{ total_bons }}</strong> bon{{ total_bons|pluralize }} de réception</span>
+</div>
+
+<div class="table-card">
+  <div style="overflow-x:auto;">
+    <table class="table-somatrin">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>N° Bon</th>
+          <th>Fournisseur</th>
+          <th>Site de réception</th>
+          <th class="text-end">Quantité (L)</th>
+          <th class="text-end">Prix unitaire</th>
+          <th class="text-end">Total (MAD)</th>
+          <th class="text-center">Statut</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if bons %}
+          {% for bon in bons %}
+          <tr>
+            <td class="td-date">{{ bon.date|slice:":10" }}</td>
+            <td class="td-bon">{{ bon.name }}</td>
+            <td>
+              {% if bon.partner_id %}
+                {{ bon.partner_id.1|default:"—" }}
+              {% else %}—{% endif %}
+            </td>
+            <td>{{ bon.location_dest_id.1|default:"—" }}</td>
+            <td class="td-num"><strong>{{ bon.product_qty|floatformat:1 }}</strong></td>
+            <td class="td-num">
+              {% if bon.price_unit %}{{ bon.price_unit|floatformat:2 }}{% else %}—{% endif %}
+            </td>
+            <td class="td-total">
+              {% if bon.price_unit and bon.product_qty %}
+                {{ bon.product_qty|floatformat:0 }}
+              {% else %}—{% endif %}
+            </td>
+            <td class="text-center">
+              <span class="badge-entree"><i class="bi bi-arrow-down-circle-fill"></i>Reçu</span>
+            </td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="8">
+              <div class="empty-state">
+                <i class="bi bi-inbox"></i>
+                <p>Aucune entrée pour ces filtres.</p>
+              </div>
+            </td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}

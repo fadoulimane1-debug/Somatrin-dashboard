@@ -1,0 +1,24 @@
+{
+  "name": "somatrin_project2",
+  "version": "1.0.0",
+  "description": "``` D:\\projets\\Somatrin\\ │ ├── somatrin/ │   ├── __init__.py │   ├── urls.py │   └── settings_local.py │ ├── reporting/ │   ├── __init__.py │   ├── apps.py │   ├── urls.py │   └── views.py │ ├── templates/ │   ├── base.html │   ├── accueil.html │   └── gasoil/ │       └── sorties.html │ ├── static/ │   └── images/ │       └── logo_somatrin.png   ← mettre le vrai logo ici │ ├── requirements.txt └── manage.py ```",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fadoulimane1-debug/Somatrin-dashboard.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/fadoulimane1-debug/Somatrin-dashboard/issues"
+  },
+  "homepage": "https://github.com/fadoulimane1-debug/Somatrin-dashboard#readme",
+  "dependencies": {
+    "graphify": "^1.0.0"
+  }
+}
