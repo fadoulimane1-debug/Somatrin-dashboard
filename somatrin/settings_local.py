@@ -67,8 +67,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Odoo connexion
 ODOO_URL  = 'https://somatrin.karizma.one'
 ODOO_DB   = 'somatrin_PROD'
-ODOO_USER = 'bouaraoua.mustapha@somatrin.ma'
-ODOO_PASS = 'Bm141174'
+ODOO_USER = '....'
+ODOO_PASS = '......'
 
 # Authentification
 LOGIN_URL = '/login/'
