@@ -1,1 +1,4 @@
 somatrin/settings_local.py
+db.sqlite3
+__pycache__/
+*.pyc
