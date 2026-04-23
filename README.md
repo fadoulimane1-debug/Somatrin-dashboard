@@ -60,91 +60,80 @@ Ce projet répond à ce besoin en développant une application web Django connec
 
 ## Modules de l'application
 
-### ✅ Module 1 — Gasoil (pilote, en production)
+### ✅ Module 1 — Gasoil (terminé)
 
-Suivi de la consommation de carburant multi-sites.
-
-- Bons de sortie gasoil avec filtres (date, site, chauffeur, ouvrage, catégorie)
-- KPI : total bons, litres consommés, anomalies détectées, consommation moyenne
-- Détection automatique des écarts entre compteur initial et compteur actuel
-- Tableau avec mise en évidence des lignes anormales
+- Entrées
+- Sorties
+- Bilan
 
 ---
 
-### 🔧 Module 2 — Transport & Flotte
+### ✅ Module 2 — Transport & Logistique (terminé)
 
-Suivi des bons de transport et de l'activité des véhicules.
-
-- Liste des bons de transport par date, chauffeur, véhicule, destination
-- Tonnages transportés par site et par période
-- Suivi des chauffeurs : nombre de rotations, tonnage cumulé
-- KPI : total rotations, tonnage total, véhicules actifs
-
----
-
-### 🔧 Module 3 — Maintenance / GMAO
-
-Suivi des interventions de maintenance sur les équipements.
-
-- Liste des ordres de maintenance (préventive / corrective) par équipement
-- Suivi des interventions : durée, technicien, statut, coût estimé
-- Taux de disponibilité des équipements
-- KPI : interventions du mois, équipements en panne, délai moyen de résolution
+- Bons transport
+- Gasoil
+- Coûts par nature
+- Facturation client
+- Rentabilité
 
 ---
 
-### 🔧 Module 4 — Achats
+### 🔧 Module 3 — Production (en cours)
 
-Suivi des commandes fournisseurs et des délais de livraison.
-
-- Liste des bons de commande par fournisseur, date, statut
-- Analyse des délais : commande → livraison réelle vs prévue
-- Répartition des achats par catégorie de produit
-- KPI : commandes en cours, montant total achats, fournisseurs actifs, retards
-
----
-
-### 🔧 Module 5 — Comptabilité
-
-Suivi des dépenses et des clôtures mensuelles.
-
-- Dépenses par compte, par service, par mois
-- Suivi des factures fournisseurs : émises, validées, en attente
-- Évolution mensuelle des charges
-- KPI : total dépenses du mois, factures en attente, écart budget/réel
+- Gasoil
+- Coûts par nature
+- Facturation ventes
+- Rentabilité
+- Sites
 
 ---
 
-### 🔧 Module 6 — Production / MRP
+### 🔧 Module 4 — Parc & Maintenance
 
-Suivi des quantités produites par site et par période.
-
-- Production journalière et mensuelle par carrière
-- Comparatif objectif vs réalisé
-- Répartition par type de produit (granulats, concassés, etc.)
-- KPI : tonnage produit, taux de réalisation, sites actifs
+- Ordres de travail
+- Disponibilité équipements
+- Historique
 
 ---
 
-### 🔧 Module 7 — Qualité / QHSE
+### 🔧 Module 5 — Achats & Approvisionnement
 
-Suivi des incidents, non-conformités et contrôles qualité.
-
-- Enregistrement et suivi des incidents par site, type, gravité
-- Contrôles qualité : résultats des analyses sur les produits
-- Tableau de bord sécurité : fréquence des incidents, jours sans accident
-- KPI : incidents du mois, taux de conformité, actions correctives en cours
+- Bons de commande
+- Fournisseurs
+- Analyse des dépenses
 
 ---
 
-### 🔧 Module 8 — RH
+### 🔧 Module 6 — Comptabilité
 
-Suivi des effectifs, présences et éléments de paie.
+- Indicateurs financiers
+- Analytique
+- Coûts de revient
 
-- Effectifs par site et par département
-- Suivi des présences et absences par période
-- Éléments variables de paie (heures supplémentaires, primes)
-- KPI : effectif total, taux d'absentéisme, heures supplémentaires du mois
+---
+
+### 🔧 Module 7 — QHSE
+
+- Indicateurs HSE
+- Gestion alertes
+- Suivi qualité
+
+---
+
+### 🔧 Module 8 — Ressources Humaines
+
+- Effectifs
+- Absences
+- Pointage
+- Formations
+
+---
+
+### 🔧 Module 9 — Système d'Information
+
+- Projets SI
+- Parc informatique
+- Tickets incidents
 
 ---
 
@@ -211,10 +200,10 @@ ODOO_PASS = 'admin'
 
 # 4. Initialiser et lancer
 python manage.py migrate --settings=somatrin.settings_local
-python manage.py runserver 8090 --settings=somatrin.settings_local
+python manage.py runserver 8091 --settings=somatrin.settings_local
 ```
 
-Accès : [http://127.0.0.1:8090](http://127.0.0.1:8090)
+Accès : [http://127.0.0.1:8091](http://127.0.0.1:8091)
 
 ---
 
