@@ -1,0 +1,142 @@
+{% extends 'base.html' %}
+{% load vehicle_extras %}
+
+{% block title %}Production - Gasoil{% endblock %}
+
+{% block breadcrumb %}
+  <a href="{% url 'accueil' %}">Accueil</a>
+  <i class="bi bi-chevron-right"></i>
+  <span style="color:#1a2c4e; font-weight:600;">Production - Gasoil</span>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .loader-bar {
+    background: linear-gradient(90deg, #16a34a, #14532d) !important;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<span class="page-title">Gasoil</span>
+{% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+
+<div class="filters-card">
+  <form method="get" class="row g-3 align-items-end">
+    <div class="col-md-2"><label class="form-label">Date début</label><input type="date" name="date_debut" class="form-control" value="{{ date_debut }}"></div>
+    <div class="col-md-2"><label class="form-label">Date fin</label><input type="date" name="date_fin" class="form-control" value="{{ date_fin }}"></div>
+    <div class="col-md-3">
+      <label class="form-label">Société</label>
+      <select name="societe" class="form-select">
+        <option value="">Toutes</option>
+        {% for s in societes %}
+          <option value="{{ s }}" {% if societe == s %}selected{% endif %}>{{ s }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Site</label>
+      <select name="site" class="form-select">
+        <option value="">Tous</option>
+        {% for s in sites %}
+          <option value="{{ s }}" {% if site == s %}selected{% endif %}>{{ s }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-2">
+      <label class="form-label">Statut</label>
+      <select name="statut" class="form-select">
+        <option value="" {% if not statut %}selected{% endif %}>Tous</option>
+        <option value="ok" {% if statut == 'ok' %}selected{% endif %}>OK</option>
+        <option value="anomalie" {% if statut == 'anomalie' %}selected{% endif %}>Anomalie</option>
+      </select>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Chauffeur/Opérateur</label>
+      <select name="chauffeur" class="form-select">
+        <option value="">Tous</option>
+        {% for c in chauffeurs %}
+          <option value="{{ c }}" {% if chauffeur == c %}selected{% endif %}>{{ c }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Ouvrage / Analytique</label>
+      <select name="ouvrage" class="form-select">
+        <option value="">Tous</option>
+        {% for o in ouvrages %}
+          <option value="{{ o }}" {% if ouvrage == o %}selected{% endif %}>{{ o }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-2">
+      <label class="form-label">Activité</label>
+      <select name="activite" class="form-select">
+        <option value="production" selected>Production</option>
+      </select>
+    </div>
+    <div class="col-12 d-flex gap-2">
+      <button class="btn btn-primary btn-filtrer" type="submit">Filtrer</button>
+      <a class="btn btn-outline-secondary" href="{% url 'production_gasoil' %}">Réinitialiser</a>
+      <button class="btn btn-outline-success" type="submit" name="export" value="excel">Export Excel</button>
+      <button class="btn btn-outline-dark" type="submit" name="export" value="csv">Export CSV</button>
+    </div>
+  </form>
+</div>
+
+<div class="card">
+  <div class="mb-3">
+    <strong>{{ total_rows|num_plain:0 }}</strong> N° Bon |
+    Litres: <strong>{{ total_litres|num_plain:2 }}</strong> |
+    Conso moyenne: <strong>{{ conso_moyenne|num_plain:2 }}</strong> |
+    Bons en anomalie: <strong>{{ nb_anomalies|num_plain:0 }}</strong> |
+    Montant: <strong>{{ total_montant|num_plain:2 }}</strong>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-sm table-striped align-middle">
+      <thead class="table-dark">
+        <tr>
+          <th>Date</th>
+          <th>Véhicule</th>
+          <th>Chauffeur/Opérateur</th>
+          <th>Société</th>
+          <th>Site</th>
+          <th>Ouvrage</th>
+          <th class="text-end">Litres</th>
+          <th class="text-end">Montant</th>
+          <th class="text-end">Compteur</th>
+          <th>Statut</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for row in rows %}
+        <tr>
+          <td>{{ row.date }}</td>
+          <td>{{ row.vehicule|matricule_only }}</td>
+          <td>{{ row.conducteur }}</td>
+          <td>{{ row.societe }}</td>
+          <td>{{ row.site }}</td>
+          <td>{{ row.ouvrage }}</td>
+          <td class="text-end">{{ row.litres|num_plain:2 }}</td>
+          <td class="text-end">{{ row.montant|num_plain:2 }}</td>
+          <td class="text-end">{{ row.compteur|num_plain:0 }}</td>
+          <td>{{ row.anomalie }}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="10" class="text-center text-muted">Aucune donnée</td></tr>
+      {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr>
+          <th colspan="6">TOTAL</th>
+          <th class="text-end">{{ total_rows|num_plain:0 }}</th>
+          <th class="text-end">{{ total_litres|num_plain:2 }}</th>
+          <th class="text-end">{{ total_montant|num_plain:2 }}</th>
+          <th></th>
+          <th></th>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+{% endblock %}

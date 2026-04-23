@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+
+{% block title %}Production{% endblock %}
+
+{% block breadcrumb %}
+  <a href="{% url 'accueil' %}">Accueil</a>
+  <i class="bi bi-chevron-right"></i>
+  <span style="color:#1a2c4e; font-weight:600;">Production</span>
+{% endblock %}
+
+{% block content %}
+<span class="page-title">Production</span>
+
+<div class="row g-3 mt-1">
+  <div class="col-md-4">
+    <a href="{% url 'production_gasoil' %}" class="text-decoration-none">
+      <div class="card h-100 p-3">
+        <div class="fw-semibold mb-2"><i class="bi bi-fuel-pump me-2"></i>Gasoil</div>
+        <div class="text-muted small">Suivi consommation, montants, regroupements par mois, véhicule et conducteur.</div>
+      </div>
+    </a>
+  </div>
+  <div class="col-md-4">
+    <a href="{% url 'production_couts_nature' %}" class="text-decoration-none">
+      <div class="card h-100 p-3">
+        <div class="fw-semibold mb-2"><i class="bi bi-pie-chart me-2"></i>Coûts par nature</div>
+        <div class="text-muted small">Analyse des coûts analytiques par catégorie produit, mois et véhicule.</div>
+      </div>
+    </a>
+  </div>
+  <div class="col-md-4">
+    <a href="{% url 'production_facturation_ventes' %}" class="text-decoration-none">
+      <div class="card h-100 p-3">
+        <div class="fw-semibold mb-2"><i class="bi bi-receipt-cutoff me-2"></i>Facturation (Ventes)</div>
+        <div class="text-muted small">Factures de ventes production, regroupements et chiffre d'affaires par lieu.</div>
+      </div>
+    </a>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,124 @@
+{% extends 'base.html' %}
+{% load vehicle_extras %}
+
+{% block title %}Transport - Gasoil{% endblock %}
+
+{% block breadcrumb %}
+  <a href="{% url 'accueil' %}">Accueil</a>
+  <i class="bi bi-chevron-right"></i>
+  <span style="color:#1a2c4e; font-weight:600;">Transport - Gasoil</span>
+{% endblock %}
+
+{% block content %}
+<span class="page-title">Gasoil</span>
+{% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+
+<div class="filters-card">
+  <form method="get" class="row g-3 align-items-end">
+    <div class="col-md-3"><label class="form-label">Date début</label><input type="date" name="date_debut" class="form-control" value="{{ date_debut }}"></div>
+    <div class="col-md-3"><label class="form-label">Date fin</label><input type="date" name="date_fin" class="form-control" value="{{ date_fin }}"></div>
+    <div class="col-md-3">
+      <label class="form-label">Véhicule</label>
+      <select name="vehicule" class="form-select">
+        <option value="">Tous les véhicules</option>
+        {% for v in vehicules %}
+          <option value="{{ v.value }}" {% if vehicule == v.value %}selected{% endif %}>{{ v.label|matricule_only }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Conducteur</label>
+      <select name="conducteur_id" class="form-select">
+        <option value="">Tous les conducteurs</option>
+        {% for c in conducteurs %}
+          <option value="{{ c.id }}" {% if conducteur_id == c.id|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-12 d-flex gap-2">
+      <button class="btn btn-primary" type="submit">Filtrer</button>
+      <a class="btn btn-outline-secondary" href="{% url 'transport_gasoil' %}">Réinitialiser</a>
+    </div>
+
+    <div class="col-12">
+      <label class="form-label mb-1"><strong>Regroupement</strong></label>
+      <select name="group_by" class="form-select" style="max-width:320px;">
+        <option value="" {% if not group_by %}selected{% endif %}>Aucun regroupement</option>
+        <option value="mois" {% if group_by == 'mois' %}selected{% endif %}>Par Mois</option>
+        <option value="vehicule" {% if group_by == 'vehicule' %}selected{% endif %}>Par Véhicule (Matricule)</option>
+        <option value="conducteur" {% if group_by == 'conducteur' %}selected{% endif %}>Par Conducteur</option>
+        <option value="mois_vehicule" {% if group_by == 'mois_vehicule' %}selected{% endif %}>Par Mois + Véhicule</option>
+        <option value="mois_conducteur" {% if group_by == 'mois_conducteur' %}selected{% endif %}>Par Mois + Conducteur</option>
+      </select>
+    </div>
+  </form>
+</div>
+
+<div class="card">
+  <div class="mb-2">
+    <strong>{{ total_rows|num_plain:0 }}</strong> N° Bon |
+    Litres: <strong>{{ total_litres|num_plain:2 }}</strong> |
+    Montant: <strong>{{ total_montant|num_plain:2 }}</strong>
+  </div>
+  <div class="table-responsive">
+    {% if group_by %}
+    <table class="table table-sm table-striped align-middle">
+      <thead class="table-dark">
+        <tr>
+          {% for col in group_by_columns %}<th>{{ col }}</th>{% endfor %}
+          <th class="text-end">N° Bon</th>
+          <th class="text-end">Litres</th>
+          <th class="text-end">Montant</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for row in grouped_rows %}
+        <tr>
+          {% for key in row.keys %}<td>{{ key }}</td>{% endfor %}
+          <td class="text-end">{{ row.nb_lignes|num_plain:0 }}</td>
+          <td class="text-end">{{ row.litres|num_plain:2 }}</td>
+          <td class="text-end">{{ row.montant|num_plain:2 }}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="{% if group_by == 'mois_vehicule' or group_by == 'mois_conducteur' %}5{% else %}4{% endif %}" class="text-center text-muted">Aucune donnée</td></tr>
+      {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr>
+          <th colspan="{% if group_by == 'mois_vehicule' or group_by == 'mois_conducteur' %}2{% else %}1{% endif %}">TOTAL</th>
+          <th class="text-end">{{ total_rows|num_plain:0 }}</th>
+          <th class="text-end">{{ total_litres|num_plain:2 }}</th>
+          <th class="text-end">{{ total_montant|num_plain:2 }}</th>
+        </tr>
+      </tfoot>
+    </table>
+    {% else %}
+    <table class="table table-sm table-striped align-middle">
+      <thead class="table-dark">
+        <tr>
+          <th>Date</th><th>Véhicule</th><th>Conducteur</th><th class="text-end">Litres</th><th class="text-end">Montant</th><th class="text-end">Compteur</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for row in rows %}
+        <tr>
+          <td>{{ row.date }}</td><td>{{ row.vehicule_display|matricule_only }}</td><td>{{ row.conducteur }}</td>
+          <td class="text-end">{{ row.litres|num_plain:2 }}</td><td class="text-end">{{ row.montant|num_plain:2 }}</td><td class="text-end">{{ row.compteur|num_plain:0 }}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="6" class="text-center text-muted">Aucune donnée</td></tr>
+      {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr>
+          <th colspan="3">TOTAL</th>
+          <th class="text-end">{{ total_rows|num_plain:0 }}</th>
+          <th class="text-end">{{ total_litres|num_plain:2 }}</th>
+          <th class="text-end">{{ total_montant|num_plain:2 }}</th>
+        </tr>
+      </tfoot>
+    </table>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

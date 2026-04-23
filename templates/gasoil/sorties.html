@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load static vehicle_extras %}
 
 {% block title %}Sorties Gasoil — SOMATRIN{% endblock %}
 
@@ -234,8 +234,10 @@
     align-items: center;
     gap: 6px;
     transition: background 0.2s;
+    cursor: pointer;
   }
-  .btn-export:hover { background: #15803d; color: #fff; }
+  .btn-export:hover, .btn-export:focus { background: #15803d; color: #fff; }
+  .btn-export::after { display: none; }
 
   /* ── Pagination ── */
   .pagination-bar {
@@ -272,6 +274,52 @@
   }
   .empty-state i { font-size: 40px; display: block; margin-bottom: 10px; }
   .empty-state p { font-size: 14px; }
+
+  /* ── Checkbox sélection ── */
+  .th-cb, .td-cb {
+    width: 36px;
+    padding: 8px 6px 8px 14px !important;
+    white-space: nowrap;
+  }
+  .row-checkbox {
+    width: 16px; height: 16px;
+    cursor: pointer;
+    accent-color: #E87722;
+    border-radius: 3px;
+  }
+  .table-somatrin tbody tr.row-selected { background: #e6f1fb !important; }
+  .table-somatrin tbody tr.row-selected:hover { background: #d4e8f8 !important; }
+
+  /* ── Barre de sélection ── */
+  .selection-bar {
+    display: none;
+    align-items: center;
+    gap: 12px;
+    background: #fff8f2;
+    border: 1px solid #fbd5b0;
+    border-radius: 9px;
+    padding: 9px 16px;
+    margin-bottom: 10px;
+    font-size: 13px;
+    animation: slideDown 0.15s ease;
+  }
+  .selection-bar.visible { display: flex; }
+  @keyframes slideDown {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .sel-count-badge {
+    background: #E87722; color: #fff;
+    font-size: 12px; font-weight: 700;
+    padding: 2px 10px; border-radius: 99px;
+  }
+  .btn-clear-sel {
+    background: none; border: none;
+    color: #6b7280; font-size: 12px;
+    cursor: pointer; text-decoration: underline;
+    padding: 0;
+  }
+  .btn-clear-sel:hover { color: #dc2626; }
 </style>
 {% endblock %}
 
@@ -294,7 +342,7 @@
   <div class="kpi-card kpi-card-bons">
     <div class="kpi-icon kpi-icon-orange"><i class="bi bi-file-earmark-text"></i></div>
     <div class="kpi-body">
-      <div class="kpi-value">{{ total_bons }}</div>
+      <div class="kpi-value">{{ total_bons|num_plain:0 }}</div>
       <div class="kpi-label">Total bons de sortie</div>
     </div>
   </div>
@@ -302,7 +350,7 @@
   <div class="kpi-card kpi-card-litres">
     <div class="kpi-icon kpi-icon-navy"><i class="bi bi-droplet-fill"></i></div>
     <div class="kpi-body">
-      <div class="kpi-value">{{ total_litres|floatformat:0 }}</div>
+      <div class="kpi-value">{{ total_litres|num_plain:0 }}</div>
       <div class="kpi-label">Total litres consommés</div>
     </div>
   </div>
@@ -321,7 +369,7 @@
     </div>
     <div class="kpi-body">
       <div class="kpi-value" style="color:{% if nb_anomalies > 0 %}#dc2626{% else %}#16a34a{% endif %};">
-        {{ nb_anomalies }}
+        {{ nb_anomalies|num_plain:0 }}
       </div>
       <div class="kpi-label">Bons en anomalie</div>
     </div>
@@ -347,7 +395,7 @@
       <div class="col-auto">
         <label class="filter-label"><i class="bi bi-building me-1"></i>Société</label>
         <select name="societe" class="form-select">
-          <option value="">Toutes les sociétés</option>
+          <option value="">Toutes</option>
           <option value="SOMATRIN" {% if societe == 'SOMATRIN' %}selected{% endif %}>SOMATRIN</option>
           <option value="OTEC"     {% if societe == 'OTEC'     %}selected{% endif %}>OTEC</option>
         </select>
@@ -357,32 +405,18 @@
         <label class="filter-label"><i class="bi bi-geo-alt me-1"></i>Site</label>
         <select name="site" class="form-select">
           <option value="">Tous les sites</option>
-          <optgroup label="SOMATRIN">
-            <option value="LHOUJ" {% if site == 'LHOUJ' %}selected{% endif %}>LHOUJ</option>
-            <option value="SOMBE" {% if site == 'SOMBE' %}selected{% endif %}>SOMBE</option>
-            <option value="CONAB" {% if site == 'CONAB' %}selected{% endif %}>CONAB</option>
-            <option value="STCHS" {% if site == 'STCHS' %}selected{% endif %}>STCHS</option>
-            <option value="MDEN"  {% if site == 'MDEN'  %}selected{% endif %}>MDEN</option>
-            <option value="S.LAA" {% if site == 'S.LAA' %}selected{% endif %}>S.LAA</option>
-            <option value="GRABE" {% if site == 'GRABE' %}selected{% endif %}>GRABE</option>
-            <option value="CIMAM" {% if site == 'CIMAM' %}selected{% endif %}>CIMAM</option>
-          </optgroup>
-          <optgroup label="OTEC">
-            <option value="OTAG"  {% if site == 'OTAG'  %}selected{% endif %}>OTAG</option>
-            <option value="CIMBM" {% if site == 'CIMBM' %}selected{% endif %}>CIMBM</option>
-            <option value="SETTA" {% if site == 'SETTA' %}selected{% endif %}>SETTA</option>
-            <option value="LHM"   {% if site == 'LHM'   %}selected{% endif %}>LHM</option>
-            <option value="STCHO" {% if site == 'STCHO' %}selected{% endif %}>STCHO</option>
-          </optgroup>
+          {% for s in sites %}
+            <option value="{{ s }}" {% if site == s %}selected{% endif %}>{{ s }}</option>
+          {% endfor %}
         </select>
       </div>
 
       <div class="col-auto">
-        <label class="filter-label"><i class="bi bi-exclamation-circle me-1"></i>Anomalie</label>
+        <label class="filter-label"><i class="bi bi-shield-check me-1"></i>Statut</label>
         <select name="anomalie" class="form-select">
-          <option value="">Toutes</option>
-          <option value="OK"       {% if anomalie == 'OK' %}selected{% endif %}>OK</option>
-          <option value="Anomalie" {% if anomalie == 'Anomalie' %}selected{% endif %}>Anomalie</option>
+          <option value="">Tous les statuts</option>
+          <option value="ok"       {% if anomalie == 'ok'       %}selected{% endif %}>OK (bons normaux)</option>
+          <option value="anomalie" {% if anomalie == 'anomalie' %}selected{% endif %}>Anomalie (bons avec écart négatif)</option>
         </select>
       </div>
     </div>
@@ -398,8 +432,22 @@
 
       <div class="col-auto">
         <label class="filter-label"><i class="bi bi-diagram-3 me-1"></i>Ouvrage / Analytique</label>
-        <input type="text" name="ouvrage" class="form-control" style="min-width:180px;"
-               placeholder="Ex : S00012, Transport…" value="{{ ouvrage }}">
+        <select name="ouvrage" class="form-select">
+          <option value="">Tous les ouvrages</option>
+          {% for o in ouvrages_list %}
+          <option value="{{ o }}" {% if o == ouvrage %}selected{% endif %}>{{ o }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-auto">
+        <label class="filter-label"><i class="bi bi-lightning-charge me-1"></i>Activité</label>
+        <select name="activite" class="form-select" style="min-width:220px;">
+          <option value="">Toutes les activités</option>
+          <option value="transport"      {% if activite_filtre == 'transport'      %}selected{% endif %}>Transport &amp; Logistique</option>
+          <option value="production"     {% if activite_filtre == 'production'     %}selected{% endif %}>Production</option>
+          <option value="voiture_service"{% if activite_filtre == 'voiture_service'%}selected{% endif %}>Voiture de service</option>
+        </select>
       </div>
 
       <div class="col-auto ms-auto d-flex gap-2 align-items-end">
@@ -409,10 +457,27 @@
         <a href="{% url 'gasoil_sorties' %}" class="btn-reset">
           <i class="bi bi-x-circle"></i>Réinitialiser
         </a>
-        <a href="{% url 'gasoil_sorties_export' %}?date_debut={{ date_debut }}&date_fin={{ date_fin }}&societe={{ societe }}&site={{ site }}&chauffeur={{ chauffeur }}&ouvrage={{ ouvrage }}&anomalie={{ anomalie }}"
-           class="btn-export">
-          <i class="bi bi-file-earmark-excel-fill"></i>Excel
-        </a>
+        <div class="dropdown">
+          <button class="btn-export dropdown-toggle" type="button"
+                  data-bs-toggle="dropdown" id="btn-export-toggle"
+                  data-total="{{ total_bons|num_plain:0 }}">
+            📊 <span id="btn-export-text">Exporter tout ({{ total_bons|num_plain:0 }})</span>
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end">
+            <li><a class="dropdown-item" id="link-export-excel"
+                   href="{% url 'gasoil_sorties_export' %}?{{ export_qs }}">
+              <i class="bi bi-file-earmark-excel-fill text-success me-2"></i>Excel (.xlsx)
+            </a></li>
+            <li><a class="dropdown-item" id="link-export-pdf"
+                   href="?export=pdf&{{ export_qs }}">
+              <i class="bi bi-file-earmark-pdf-fill text-danger me-2"></i>PDF (A4)
+            </a></li>
+            <li><a class="dropdown-item" id="link-export-csv"
+                   href="?export=csv&{{ export_qs }}">
+              <i class="bi bi-file-earmark-spreadsheet-fill text-success me-2"></i>CSV (Excel FR)
+            </a></li>
+          </ul>
+        </div>
       </div>
     </div>
 
@@ -429,13 +494,23 @@
   {% if site       %}<span class="filter-tag tag-green"><i class="bi bi-geo-alt"></i>{{ site }}</span>{% endif %}
   {% if chauffeur  %}<span class="filter-tag tag-orange"><i class="bi bi-person"></i>{{ chauffeur }}</span>{% endif %}
   {% if ouvrage    %}<span class="filter-tag tag-blue"><i class="bi bi-diagram-3"></i>{{ ouvrage }}</span>{% endif %}
-  {% if anomalie   %}<span class="filter-tag tag-red"><i class="bi bi-exclamation-triangle"></i>{{ anomalie }}</span>{% endif %}
+  {% if anomalie == 'ok'       %}<span class="filter-tag tag-green"><i class="bi bi-check-circle"></i>Statut : OK</span>{% endif %}
+  {% if anomalie == 'anomalie' %}<span class="filter-tag tag-red"><i class="bi bi-exclamation-triangle"></i>Statut : Anomalie</span>{% endif %}
 </div>
 {% endif %}
 
+<!-- ══ BARRE DE SÉLECTION ════════════════════ -->
+<div class="selection-bar" id="selection-bar">
+  <span class="sel-count-badge" id="sel-count">0</span>
+  <span style="color:#374151;">bon(s) sélectionné(s)</span>
+  <button class="btn-clear-sel" id="btn-clear-sel">
+    <i class="bi bi-x-circle me-1"></i>Tout désélectionner
+  </button>
+</div>
+
 <!-- ══ TABLEAU ══════════════════════════════ -->
 <div class="summary-bar">
-  <span><strong>{{ total_bons }}</strong> bon{{ total_bons|pluralize }} trouvé{{ total_bons|pluralize }}
+  <span><strong>{{ total_bons|num_plain:0 }}</strong> bon{{ total_bons|pluralize }} trouvé{{ total_bons|pluralize }}
     {% if date_debut and date_fin %} — du <strong>{{ date_debut }}</strong> au <strong>{{ date_fin }}</strong>{% endif %}
   </span>
   {% if page_obj.paginator.num_pages > 1 %}
@@ -448,6 +523,10 @@
     <table class="table-somatrin">
       <thead>
         <tr>
+          <th class="th-cb">
+            <input type="checkbox" class="row-checkbox" id="cb-all"
+                   title="Tout sélectionner">
+          </th>
           <th>Date</th>
           <th>N° Bon</th>
           <th>Société</th>
@@ -467,19 +546,23 @@
         {% if page_obj.object_list %}
           {% for bon in page_obj %}
           <tr {% if bon.anomalie == 'Anomalie' %}class="row-anomalie"{% endif %}>
+            <td class="td-cb">
+              <input type="checkbox" class="row-checkbox cb-row-item"
+                     data-id="{{ bon.id }}">
+            </td>
             <td class="td-date">{{ bon.date }}</td>
             <td class="td-bon">{{ bon.name }}</td>
             <td>{{ bon.societe }}</td>
             <td>{{ bon.site }}</td>
             <td class="td-ouvrage" title="{{ bon.ouvrage }}">{{ bon.ouvrage }}</td>
-            <td>{{ bon.engin }}</td>
+            <td>{{ bon.engin|matricule_only }}</td>
             <td>{{ bon.chauffeur }}</td>
-            <td class="td-num">{{ bon.cpt_initial|floatformat:0 }}</td>
-            <td class="td-num">{{ bon.cpt_actuel|floatformat:0 }}</td>
-            <td class="td-num">{{ bon.ecart|floatformat:1 }}</td>
-            <td class="td-num"><strong>{{ bon.product_qty|floatformat:1 }}</strong></td>
+            <td class="td-num">{{ bon.cpt_initial|num_plain:0 }}</td>
+            <td class="td-num">{{ bon.cpt_actuel|num_plain:0 }}</td>
+            <td class="td-num">{{ bon.ecart|num_plain:1 }}</td>
+            <td class="td-num"><strong>{{ bon.product_qty|num_plain:1 }}</strong></td>
             <td class="td-conso">
-              {% if bon.consommation %}{{ bon.consommation|floatformat:2 }} L/h{% else %}—{% endif %}
+              {% if bon.consommation %}{{ bon.consommation|num_plain:2 }} L/h{% else %}—{% endif %}
             </td>
             <td class="text-center">
               {% if bon.anomalie == 'OK' %}
@@ -492,7 +575,7 @@
           {% endfor %}
         {% else %}
           <tr>
-            <td colspan="13">
+            <td colspan="14">
               <div class="empty-state">
                 <i class="bi bi-inbox"></i>
                 <p>Aucun résultat pour ces filtres.</p>
@@ -508,7 +591,7 @@
   {% if page_obj.paginator.num_pages > 1 %}
   <div class="pagination-bar">
     <span class="page-info">
-      Affichage {{ page_obj.start_index }}–{{ page_obj.end_index }} sur {{ total_bons }}
+      Affichage {{ page_obj.start_index }}–{{ page_obj.end_index }} sur {{ total_bons|num_plain:0 }}
     </span>
     <div class="page-links">
       {% if page_obj.has_previous %}
@@ -548,4 +631,105 @@
 
 </div>
 
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  'use strict';
+
+  const totalBons   = {{ total_bons }};
+  const cbAll       = document.getElementById('cb-all');
+  const selBar      = document.getElementById('selection-bar');
+  const selCount    = document.getElementById('sel-count');
+  const btnText     = document.getElementById('btn-export-text');
+  const btnClear    = document.getElementById('btn-clear-sel');
+  const linkExcel   = document.getElementById('link-export-excel');
+  const linkPdf     = document.getElementById('link-export-pdf');
+  const linkCsv     = document.getElementById('link-export-csv');
+
+  // URLs de base capturées depuis le DOM (construites par Django)
+  const baseExcel   = linkExcel.getAttribute('href');
+  const basePdf     = linkPdf.getAttribute('href');
+  const baseCsv     = linkCsv.getAttribute('href');
+
+  function cbRows() {
+    return document.querySelectorAll('.cb-row-item');
+  }
+
+  function getSelectedIds() {
+    return [...cbRows()].filter(cb => cb.checked).map(cb => cb.dataset.id);
+  }
+
+  function refresh() {
+    const ids = getSelectedIds();
+    const n   = ids.length;
+
+    if (n > 0) {
+      selCount.textContent = n;
+      selBar.classList.add('visible');
+      btnText.textContent  = 'Exporter sélection (' + n + ')';
+      const suffix = '&ids=' + ids.join(',');
+      linkExcel.href = baseExcel + suffix;
+      linkPdf.href   = basePdf   + suffix;
+      linkCsv.href   = baseCsv   + suffix;
+    } else {
+      selBar.classList.remove('visible');
+      btnText.textContent = 'Exporter tout (' + totalBons + ')';
+      linkExcel.href = baseExcel;
+      linkPdf.href   = basePdf;
+      linkCsv.href   = baseCsv;
+    }
+
+    const all = cbRows();
+    if (all.length === 0) return;
+    const allChecked    = [...all].every(cb => cb.checked);
+    cbAll.checked       = allChecked;
+    cbAll.indeterminate = !allChecked && n > 0;
+  }
+
+  // Tout sélectionner / désélectionner
+  cbAll.addEventListener('change', function () {
+    cbRows().forEach(function (cb) {
+      cb.checked = cbAll.checked;
+      cb.closest('tr').classList.toggle('row-selected', cbAll.checked);
+    });
+    refresh();
+  });
+
+  // Checkbox individuelle (délégation sur tbody)
+  document.querySelector('.table-somatrin tbody')
+    .addEventListener('change', function (e) {
+      if (!e.target.classList.contains('cb-row-item')) return;
+      e.target.closest('tr').classList.toggle('row-selected', e.target.checked);
+      refresh();
+    });
+
+  // Clic sur la ligne entière → bascule la checkbox
+  document.querySelectorAll('.table-somatrin tbody tr').forEach(function (tr) {
+    tr.style.cursor = 'pointer';
+    tr.addEventListener('click', function (e) {
+      if (e.target.closest('.td-cb')) return; // checkbox directe déjà gérée
+      const cb = tr.querySelector('.cb-row-item');
+      if (!cb) return;
+      cb.checked = !cb.checked;
+      tr.classList.toggle('row-selected', cb.checked);
+      refresh();
+    });
+  });
+
+  // Tout désélectionner
+  btnClear.addEventListener('click', function () {
+    cbRows().forEach(function (cb) {
+      cb.checked = false;
+      cb.closest('tr').classList.remove('row-selected');
+    });
+    cbAll.checked       = false;
+    cbAll.indeterminate = false;
+    refresh();
+  });
+
+  refresh();
+})();
+</script>
 {% endblock %}

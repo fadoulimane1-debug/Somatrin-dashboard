@@ -34,12 +34,12 @@
       position: fixed;
       top: 0; left: 0; right: 0;
       height: var(--topbar-h);
-      background: var(--navy-dark);
+      background: #FFFFFF;
       display: flex;
       align-items: center;
       padding: 0 20px;
       z-index: 200;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      box-shadow: 0 1px 0 #e5e7eb, 0 2px 8px rgba(0,0,0,0.08);
     }
     .topbar-brand {
       display: flex;
@@ -60,7 +60,7 @@
       display: flex;
       align-items: center;
       gap: 8px;
-      color: #c8d3e0;
+      color: #1a1a2e;
       font-size: 13px;
     }
     .topbar-user .avatar {
@@ -81,16 +81,16 @@
     .btn-logout {
       display: flex; align-items: center; gap: 6px;
       padding: 6px 14px;
-      background: rgba(255,255,255,0.08);
-      border: 1px solid rgba(255,255,255,0.12);
+      background: #f3f4f6;
+      border: 1px solid #e5e7eb;
       border-radius: 6px;
-      color: #c8d3e0; font-size: 13px;
+      color: #1a1a2e; font-size: 13px;
       text-decoration: none;
       transition: background 0.2s, color 0.2s;
     }
     .btn-logout:hover {
-      background: rgba(232,119,34,0.2);
-      color: var(--orange-lt);
+      background: rgba(232,119,34,0.15);
+      color: #E87722;
       border-color: rgba(232,119,34,0.3);
     }
 
@@ -229,7 +229,7 @@
     <div class="topbar-user">
       <div class="avatar">{{ user.username|slice:":1"|upper }}</div>
       <div>
-        <div style="color:#fff; font-weight:600; line-height:1.2;">{{ user.get_full_name|default:user.username }}</div>
+        <div style="color:#1a1a2e; font-weight:600; line-height:1.2;">{{ user.get_full_name|default:user.username }}</div>
         {% if user.is_superuser %}
           <span class="badge-role">Super Admin</span>
         {% elif user.is_staff or "pilotage" in user_groups or "si" in user_groups %}
@@ -320,14 +320,20 @@
       <i class="bi bi-chevron-down nav-chevron"></i>
     </a>
     <div class="collapse {% if '/transport/' in request.path %}show{% endif %}" id="menu-transport">
-      <a href="/transport/entrees/" class="nav-item nav-sub {% if request.path == '/transport/entrees/' %}active{% endif %}">
-        <i class="bi bi-arrow-down-circle"></i> Entrées
+      <a href="/transport/bons-transport/" class="nav-item nav-sub {% if request.path == '/transport/bons-transport/' %}active{% endif %}">
+        <i class="bi bi-file-earmark-text"></i> Bons transport
       </a>
-      <a href="/transport/sorties/" class="nav-item nav-sub {% if request.path == '/transport/sorties/' %}active{% endif %}">
-        <i class="bi bi-arrow-up-circle"></i> Sorties
+      <a href="/transport/gasoil/" class="nav-item nav-sub {% if request.path == '/transport/gasoil/' %}active{% endif %}">
+        <i class="bi bi-fuel-pump"></i> Gasoil
       </a>
-      <a href="/transport/bilan/"   class="nav-item nav-sub {% if request.path == '/transport/bilan/' %}active{% endif %}">
-        <i class="bi bi-bar-chart-fill"></i> Bilan
+      <a href="/transport/couts-par-nature/" class="nav-item nav-sub {% if request.path == '/transport/couts-par-nature/' %}active{% endif %}">
+        <i class="bi bi-pie-chart"></i> Coûts par nature
+      </a>
+      <a href="/transport/facturation-client/" class="nav-item nav-sub {% if request.path == '/transport/facturation-client/' %}active{% endif %}">
+        <i class="bi bi-receipt"></i> Facturation (Client)
+      </a>
+      <a href="/transport/rentabilite/" class="nav-item nav-sub {% if request.path == '/transport/rentabilite/' %}active{% endif %}">
+        <i class="bi bi-graph-up-arrow"></i> Rentabilité
       </a>
     </div>
   </div>
@@ -344,14 +350,23 @@
       <i class="bi bi-chevron-down nav-chevron"></i>
     </a>
     <div class="collapse {% if '/production/' in request.path %}show{% endif %}" id="menu-production">
-      <a href="/production/entrees/" class="nav-item nav-sub {% if request.path == '/production/entrees/' %}active{% endif %}">
-        <i class="bi bi-arrow-down-circle"></i> Entrées
+      <a href="/production/production/" class="nav-item nav-sub {% if request.path == '/production/production/' %}active{% endif %}">
+        <i class="bi bi-gear"></i> Production
       </a>
-      <a href="/production/sorties/" class="nav-item nav-sub {% if request.path == '/production/sorties/' %}active{% endif %}">
-        <i class="bi bi-arrow-up-circle"></i> Sorties
+      <a href="/production/gasoil/" class="nav-item nav-sub {% if request.path == '/production/gasoil/' %}active{% endif %}">
+        <i class="bi bi-fuel-pump"></i> Gasoil
       </a>
-      <a href="/production/bilan/"   class="nav-item nav-sub {% if request.path == '/production/bilan/' %}active{% endif %}">
-        <i class="bi bi-bar-chart-fill"></i> Bilan
+      <a href="/production/couts-par-nature/" class="nav-item nav-sub {% if request.path == '/production/couts-par-nature/' %}active{% endif %}">
+        <i class="bi bi-pie-chart"></i> Coûts par nature
+      </a>
+      <a href="/production/facturation-ventes/" class="nav-item nav-sub {% if request.path == '/production/facturation-ventes/' %}active{% endif %}">
+        <i class="bi bi-receipt"></i> Facturation (Ventes)
+      </a>
+      <a href="/production/rentabilite/" class="nav-item nav-sub {% if request.path == '/production/rentabilite/' %}active{% endif %}">
+        <i class="bi bi-graph-up-arrow"></i> Rentabilité
+      </a>
+      <a href="/production/sites/" class="nav-item nav-sub {% if request.path == '/production/sites/' %}active{% endif %}">
+        <i class="bi bi-geo-alt"></i> Sites
       </a>
     </div>
   </div>

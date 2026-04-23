@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% load vehicle_extras %}
+
+{% block title %}Transport - Rentabilité{% endblock %}
+
+{% block breadcrumb %}
+  <a href="{% url 'accueil' %}">Accueil</a>
+  <i class="bi bi-chevron-right"></i>
+  <span style="color:#1a2c4e; font-weight:600;">Transport - Rentabilité</span>
+{% endblock %}
+
+{% block content %}
+<span class="page-title">Rentabilité</span>
+{% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+
+<div class="filters-card">
+  <form method="get" class="row g-3 align-items-end">
+    <div class="col-md-3"><label class="form-label">Date début</label><input type="date" name="date_debut" class="form-control" value="{{ date_debut }}"></div>
+    <div class="col-md-3"><label class="form-label">Date fin</label><input type="date" name="date_fin" class="form-control" value="{{ date_fin }}"></div>
+    <div class="col-md-6 d-flex gap-2">
+      <button class="btn btn-primary" type="submit">Calculer</button>
+      <a class="btn btn-outline-secondary" href="{% url 'transport_rentabilite' %}">Réinitialiser</a>
+    </div>
+  </form>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-md-3"><div class="card"><div class="text-muted small">Facturation HT</div><div class="h5 mb-0">{{ total_revenus|num_plain:2 }}</div></div></div>
+  <div class="col-md-3"><div class="card"><div class="text-muted small">Coûts</div><div class="h5 mb-0">{{ total_couts|num_plain:2 }}</div></div></div>
+  <div class="col-md-3"><div class="card"><div class="text-muted small">Résultat</div><div class="h5 mb-0 {% if resultat < 0 %}text-danger{% else %}text-success{% endif %}">{{ resultat|num_plain:2 }}</div></div></div>
+  <div class="col-md-3"><div class="card"><div class="text-muted small">Marge (%)</div><div class="h5 mb-0 {% if marge_pct < 0 %}text-danger{% else %}text-success{% endif %}">{{ marge_pct|num_plain:2 }}%</div></div></div>
+</div>
+
+<div class="card">
+  <div class="mb-2"><strong>Coûts par nature</strong></div>
+  <div class="table-responsive">
+    <table class="table table-sm table-striped align-middle">
+      <thead class="table-dark"><tr><th>Nature</th><th class="text-end">Montant</th></tr></thead>
+      <tbody>
+      {% for row in couts_agg %}
+        <tr><td>{{ row.nature }}</td><td class="text-end">{{ row.montant|num_plain:2 }}</td></tr>
+      {% empty %}
+        <tr><td colspan="2" class="text-center text-muted">Aucune donnée</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

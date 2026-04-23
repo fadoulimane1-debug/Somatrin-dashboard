@@ -1,0 +1,165 @@
+{% extends 'base.html' %}
+{% load vehicle_extras %}
+{% load static %}
+
+{% block title %}Rapport Sorties Gasoil — SOMATRIN{% endblock %}
+
+{% block nav_gasoil %}active{% endblock %}
+
+{% block breadcrumb %}
+  <a href="{% url 'accueil' %}">Accueil</a>
+  <i class="bi bi-chevron-right"></i>
+  <a href="{% url 'gasoil_sorties' %}">Gasoil</a>
+  <i class="bi bi-chevron-right"></i>
+  <span style="color:#1a2c4e; font-weight:600;">Rapport</span>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+body {
+    font-family: Arial, Helvetica, sans-serif;
+    margin: 0;
+    padding: 20px;
+    background-color: white;
+}
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid #1a2c4e;
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+}
+.logo {
+    width: 150px;
+    height: auto;
+}
+.confidential {
+    text-align: center;
+    color: #1a2c4e;
+    font-size: 14px;
+}
+.page-info {
+    text-align: right;
+    color: #6b7280;
+    font-size: 12px;
+}
+.title {
+    text-align: center;
+    color: #1a2c4e;
+    font-size: 24px;
+    font-weight: bold;
+    margin: 20px 0;
+}
+.subtitle {
+    text-align: center;
+    color: #6b7280;
+    font-size: 14px;
+    margin-bottom: 20px;
+}
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+th, td {
+    border: 1px solid #d1d5db;
+    padding: 8px;
+    text-align: left;
+    font-size: 12px;
+}
+th {
+    background-color: #1a2c4e;
+    color: white;
+    text-align: center;
+    font-weight: bold;
+}
+tr:nth-child(even) {
+    background-color: #f4f6fb;
+}
+.ouvrage {
+    width: 200px;
+}
+.status-ok {
+    color: #16a34a;
+    font-weight: bold;
+}
+.right-align {
+    text-align: right;
+}
+.center-align {
+    text-align: center;
+}
+.total-row {
+    background-color: #1a2c4e;
+    color: white;
+    font-weight: bold;
+}
+@media print {
+    body {
+        margin: 0;
+    }
+    .header, .title, .subtitle {
+        page-break-after: avoid;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="header">
+    <img src="{% static 'images/logo_somatrin.png' %}" alt="SOMATRIN Logo" class="logo">
+    <div class="confidential">Document Confidentiel — Usage Interne</div>
+    <div class="page-info">Page 1 / 453 | 16/04/2026</div>
+</div>
+
+<h1 class="title">Rapport Sorties Gasoil</h1>
+<p class="subtitle">Toutes les données</p>
+
+<table>
+    <thead>
+        <tr>
+            <th>Date</th>
+            <th>N° Bon</th>
+            <th>Société</th>
+            <th>Site</th>
+            <th class="ouvrage">Ouvrage</th>
+            <th>Engin</th>
+            <th>Catégorie</th>
+            <th>Chauffeur</th>
+            <th class="right-align">Cpt.Init</th>
+            <th class="right-align">Cpt.Act</th>
+            <th class="right-align">Écart</th>
+            <th class="right-align">Qté(L)</th>
+            <th class="right-align">Conso.</th>
+            <th class="center-align">Statut</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for bon in bons %}
+        <tr>
+            <td class="center-align">{{ bon.date }}</td>
+            <td>{{ bon.name }}</td>
+            <td>{{ bon.societe }}</td>
+            <td>{{ bon.site }}</td>
+            <td class="ouvrage">{{ bon.ouvrage }}</td>
+            <td>{{ bon.engin|matricule_only }}</td>
+            <td>{{ bon.categorie }}</td>
+            <td>{{ bon.chauffeur }}</td>
+            <td class="right-align">{{ bon.cpt_initial|num_plain:0 }}</td>
+            <td class="right-align">{{ bon.cpt_actuel|num_plain:0 }}</td>
+            <td class="right-align">{{ bon.ecart|num_plain:1 }}</td>
+            <td class="right-align">{{ bon.product_qty|num_plain:1 }}</td>
+            <td class="right-align">{{ bon.consommation|num_plain:2 }}</td>
+            <td class="center-align{% if bon.anomalie == 'OK' %} status-ok{% endif %}">{{ bon.anomalie }}</td>
+        </tr>
+        {% endfor %}
+        <tr class="total-row">
+            <td colspan="11">TOTAL — {{ total_bons|num_plain:0 }} bon{{ total_bons|pluralize:"s" }}</td>
+            <td class="right-align">{{ total_qty|num_plain:1 }}</td>
+            <td></td>
+            <td></td>
+        </tr>
+    </tbody>
+</table>
+{% endblock %}

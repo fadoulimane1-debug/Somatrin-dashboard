@@ -2,3 +2,4 @@ django
 python-decouple
 requests
 openpyxl
+reportlab

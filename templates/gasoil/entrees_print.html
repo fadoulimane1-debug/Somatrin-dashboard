@@ -1,0 +1,284 @@
+{% load humanize %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Entrées Gasoil — SOMATRIN</title>
+  <style>
+    @page { size: A4 landscape; margin: 15mm 12mm; }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      font-size: 10.5px;
+      color: #1a1a2e;
+      background: #fff;
+    }
+
+    /* ── Header ── */
+    .print-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #1a2c4e;
+    }
+    .print-header-left {
+      flex: 1;
+    }
+    .print-header-center {
+      flex: 1;
+      text-align: center;
+      font-size: 12px;
+      color: #6b7280;
+      font-weight: 600;
+    }
+    .print-header-right {
+      flex: 1;
+      text-align: right;
+      font-size: 10px;
+      color: #6b7280;
+    }
+    .logo-text {
+      font-size: 22px; font-weight: 900; color: #1a2c4e; letter-spacing: 3px;
+    }
+    .logo-accent { color: #E87722; }
+
+    /* ── Filters summary ── */
+    .filter-summary {
+      background: #f8f9fb;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      padding: 7px 12px;
+      font-size: 10px;
+      color: #374151;
+      margin-bottom: 14px;
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+    .filter-summary span b { color: #1a2c4e; }
+
+    /* ── KPI row ── */
+    .kpi-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .kpi-box {
+      flex: 1;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 9px 12px;
+      text-align: center;
+    }
+    .kpi-box .val {
+      font-size: 18px;
+      font-weight: 800;
+      color: #1a2c4e;
+    }
+    .kpi-box .lbl {
+      font-size: 9px;
+      color: #6b7280;
+      margin-top: 2px;
+    }
+    .kpi-box.orange { border-top: 3px solid #E87722; }
+    .kpi-box.green  { border-top: 3px solid #16a34a; }
+    .kpi-box.navy   { border-top: 3px solid #1a2c4e; }
+
+    /* ── Table ── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 9.5px;
+    }
+    thead tr {
+      background: #1a2c4e;
+      color: #fff;
+    }
+    thead th {
+      padding: 7px 8px;
+      font-weight: 600;
+      font-size: 9px;
+      letter-spacing: 0.3px;
+      white-space: nowrap;
+      border: 1px solid #15253f;
+    }
+    tbody tr { border-bottom: 1px solid #e5e7eb; }
+    tbody tr:nth-child(even) { background: #f8f9fb; }
+    tbody td {
+      padding: 5px 8px;
+      border: 1px solid #e5e7eb;
+      color: #374151;
+    }
+    .td-right { text-align: right; font-variant-numeric: tabular-nums; }
+    .td-center { text-align: center; }
+    .td-date { font-family: monospace; font-size: 9px; color: #6b7280; }
+    .td-bold { font-weight: 700; color: #1a2c4e; }
+
+    /* Total row */
+    tfoot tr { background: #eef1f7; font-weight: 700; }
+    tfoot td { padding: 6px 8px; border: 1px solid #c7d0e0; }
+
+    /* ── Footer ── */
+    .print-footer {
+      margin-top: 10px;
+      font-size: 9px;
+      color: #9ca3af;
+      text-align: right;
+      border-top: 1px solid #e5e7eb;
+      padding-top: 5px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    /* ── Print button (hidden on print) ── */
+    .no-print {
+      margin-bottom: 16px;
+      display: flex;
+      gap: 8px;
+    }
+    .btn-print {
+      padding: 8px 20px;
+      background: #1a2c4e;
+      color: #fff;
+      border: none;
+      border-radius: 7px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-print:hover { background: #E87722; }
+    .btn-back {
+      padding: 8px 16px;
+      background: #f3f4f6;
+      color: #374151;
+      border: 1px solid #d1d5db;
+      border-radius: 7px;
+      font-size: 13px;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    @media print {
+      .no-print { display: none !important; }
+      body { font-size: 10px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Actions (masquées à l'impression) -->
+<div class="no-print">
+  <button class="btn-print" onclick="window.print()">🖨 Imprimer / Enregistrer en PDF</button>
+  <a class="btn-back" href="javascript:history.back()">← Retour</a>
+</div>
+
+<!-- En-tête -->
+<div class="print-header">
+  <div class="print-header-left">
+    <div class="logo-text">SOM<span class="logo-accent">A</span>TRIN</div>
+  </div>
+  <div class="print-header-center">
+    Document Confidentiel — Usage Interne
+  </div>
+  <div class="print-header-right">
+    Page 1/1 | {{ now|date:"d/m/Y" }}
+  </div>
+</div>
+
+<!-- Titre -->
+<div style="text-align: center; margin-bottom: 15px;">
+  <h1 style="font-size: 20px; font-weight: 800; color: #1a2c4e; margin: 0;">Rapport Entrées Gasoil</h1>
+</div>
+
+<!-- Sous-titre : filtres actifs -->
+<div style="text-align: center; margin-bottom: 15px; font-size: 11px; color: #6b7280;">
+  {% if date_debut or date_fin %}
+    Période : {% if date_debut %}du {{ date_debut }}{% endif %}{% if date_fin %} au {{ date_fin }}{% endif %}
+  {% else %}
+    Toutes les dates
+  {% endif %}
+  {% if site %} — Site : {{ site }}{% endif %}
+  {% if fournisseur %} — Fournisseur : {{ fournisseur }}{% endif %}
+</div>
+
+<!-- KPI -->
+<div class="kpi-row">
+  <div class="kpi-box orange">
+    <div class="val">{{ total_bons|intcomma }}</div>
+    <div class="lbl">Bons de réception</div>
+  </div>
+  <div class="kpi-box green">
+    <div class="val">{{ total_litres|floatformat:0|intcomma }}</div>
+    <div class="lbl">Total litres reçus</div>
+  </div>
+  <div class="kpi-box navy">
+    <div class="val" style="font-size:16px;">{{ total_cout|floatformat:2|intcomma }}</div>
+    <div class="lbl">Coût total (MAD)</div>
+  </div>
+</div>
+
+<!-- Tableau -->
+<table>
+  <thead>
+    <tr>
+      <th>Date facture</th>
+      <th>N° Facture</th>
+      <th>Réf. fournisseur</th>
+      <th>Fournisseur</th>
+      <th>Produit</th>
+      <th class="td-right">Qté (L)</th>
+      <th class="td-right">Prix unit. HT</th>
+      <th class="td-right">Total HT (MAD)</th>
+      <th>Statut</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% if bons %}
+      {% for bon in bons %}
+      <tr>
+        <td class="td-date">{{ bon.date }}</td>
+        <td class="td-bold">{{ bon.name }}</td>
+        <td style="font-size:10px; color:#9ca3af;">{{ bon.ref|default:"—" }}</td>
+        <td>{{ bon.fournisseur }}</td>
+        <td>{{ bon.product }}</td>
+        <td class="td-right">{{ bon.product_qty|floatformat:1|intcomma }}</td>
+        <td class="td-right">{% if bon.price_unit %}{{ bon.price_unit|floatformat:2|intcomma }}{% else %}—{% endif %}</td>
+        <td class="td-right td-bold">{% if bon.total %}{{ bon.total|floatformat:2|intcomma }}{% else %}—{% endif %}</td>
+        <td class="td-center">{{ bon.statut|default:"—" }}</td>
+      </tr>
+      {% endfor %}
+    {% else %}
+      <tr>
+        <td colspan="9" style="text-align:center; padding:20px; color:#9ca3af;">
+          Aucune ligne GASOIL trouvée dans les factures fournisseurs.
+        </td>
+      </tr>
+    {% endif %}
+  </tbody>
+  {% if bons %}
+  <tfoot>
+    <tr>
+      <td colspan="5" style="text-align:right; color:#1a2c4e; font-weight: 700;">TOTAL</td>
+      <td class="td-right" style="color:#16a34a; font-weight: 700;">{{ total_litres|floatformat:1|intcomma }}</td>
+      <td></td>
+      <td class="td-right" style="color:#1a2c4e; font-weight: 700;">{{ total_cout|floatformat:2|intcomma }}</td>
+      <td></td>
+    </tr>
+  </tfoot>
+  {% endif %}
+</table>
+
+<!-- Pied de page -->
+<div class="print-footer">
+  <span>SOMATRIN — Reporting Gasoil</span>
+  <span>{{ bons|length }} enregistrement{{ bons|length|pluralize }} exporté{{ bons|length|pluralize }}</span>
+</div>
+
+</body>
+</html>

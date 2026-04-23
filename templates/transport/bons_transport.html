@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+{% load vehicle_extras %}
+
+{% block title %}Transport - Bons transport{% endblock %}
+
+{% block breadcrumb %}
+  <a href="{% url 'accueil' %}">Accueil</a>
+  <i class="bi bi-chevron-right"></i>
+  <span style="color:#1a2c4e; font-weight:600;">Transport - Bons transport</span>
+{% endblock %}
+
+{% block content %}
+<span class="page-title">Bons transport</span>
+
+{% if error %}
+<div class="alert alert-danger">{{ error }}</div>
+{% endif %}
+
+<div class="filters-card">
+  <form method="get" class="row g-3 align-items-end">
+    <div class="col-md-2"><label class="form-label">Date début</label><input type="date" name="date_debut" class="form-control" value="{{ date_debut }}"></div>
+    <div class="col-md-2"><label class="form-label">Date fin</label><input type="date" name="date_fin" class="form-control" value="{{ date_fin }}"></div>
+    <div class="col-md-3"><label class="form-label">Référence</label><input type="text" name="reference" class="form-control" value="{{ reference }}"></div>
+    <div class="col-md-3"><label class="form-label">Partenaire</label><input type="text" name="partenaire" class="form-control" value="{{ partenaire }}"></div>
+    <div class="col-md-2"><label class="form-label">Site</label><input type="text" name="site" class="form-control" value="{{ site }}"></div>
+    <div class="col-12 d-flex gap-2">
+      <button class="btn btn-primary" type="submit">Filtrer</button>
+      <a class="btn btn-outline-secondary" href="{% url 'transport_bons' %}">Réinitialiser</a>
+    </div>
+  </form>
+</div>
+
+<div class="card">
+  <div class="mb-2"><strong>{{ total_rows|num_plain:0 }}</strong> résultat(s)</div>
+  <div class="table-responsive">
+    <table class="table table-sm table-striped align-middle">
+      <thead class="table-dark">
+        <tr>
+          <th>Date</th><th>Référence</th><th>Partenaire</th><th>Site</th><th>Origine</th><th>Etat</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for row in rows %}
+        <tr>
+          <td>{{ row.date }}</td>
+          <td>{{ row.reference }}</td>
+          <td>{{ row.partenaire }}</td>
+          <td>{{ row.site }}</td>
+          <td>{{ row.origine }}</td>
+          <td>{{ row.etat }}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="6" class="text-center text-muted">Aucune donnée</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

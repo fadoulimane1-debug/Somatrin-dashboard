@@ -1,0 +1,130 @@
+{% extends 'base.html' %}
+{% load static humanize %}
+
+{% block title %}{{ page_title }} — SOMATRIN{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* Filters */
+  .filters-card {
+    background: #fff; border-radius: 12px;
+    padding: 18px 22px; margin-bottom: 24px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+  }
+  .filter-label { font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 5px; display: block; }
+  .filters-card .form-control,
+  .filters-card .form-select {
+    font-size: 13px; border-color: #d1d5db; border-radius: 7px; padding: 7px 10px; min-width: 240px;
+  }
+  .filters-card .form-control:focus,
+  .filters-card .form-select:focus {
+    border-color: #E87722; box-shadow: 0 0 0 3px rgba(232,119,34,0.12);
+  }
+  .btn-filtrer {
+    padding: 8px 20px; background: #1a2c4e; color: #fff;
+    border: none; border-radius: 7px; font-size: 13px; font-weight: 600;
+    cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+    transition: background 0.2s;
+  }
+  .btn-filtrer:hover { background: #E87722; }
+
+  /* Table */
+  .table-card {
+    background: #fff; border-radius: 12px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.07); overflow: hidden;
+  }
+  .table-card-header {
+    padding: 16px 20px; font-size: 14px; font-weight: 700;
+    color: #1a2c4e; border-bottom: 1px solid #f1f3f5;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .table-card-header i { color: #E87722; }
+  .table-recap { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .table-recap thead tr { background: #1a2c4e; color: #fff; }
+  .table-recap thead th { padding: 11px 16px; font-weight: 600; font-size: 12px; border: none; }
+  .table-recap tbody tr { border-bottom: 1px solid #f1f3f5; transition: background 0.1s; }
+  .table-recap tbody tr:nth-child(even) { background: #f8f9fb; }
+  .table-recap tbody tr:hover { background: #fff4ec; }
+  .table-recap td { padding: 10px 16px; color: #374151; border: none; }
+</style>
+{% endblock %}
+
+{% block breadcrumb %}
+  <a href="{% url 'accueil' %}">Accueil</a>
+  <i class="bi bi-chevron-right"></i>
+  <span style="color:#1a2c4e; font-weight:600;">QHSE — Sorties</span>
+{% endblock %}
+
+{% block content %}
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <span class="page-title mb-0" style="margin-bottom:0!important;">{{ page_title }}</span>
+</div>
+
+{% if error %}
+<div class="alert-odoo">
+  <i class="bi bi-exclamation-triangle-fill"></i>
+  <span>{{ error }}</span>
+</div>
+{% endif %}
+
+<!-- ══ FILTRES ══════════════════════════ -->
+<div class="filters-card">
+  <form method="GET">
+    <div class="row g-3 align-items-end">
+      <div class="col-auto">
+        <label class="filter-label"><i class="bi bi-geo-alt me-1"></i>Site</label>
+        <select name="site" class="form-select">
+          <option value="">Tous les sites</option>
+          {% for s in sites %}
+            <option value="{{ s }}" {% if site == s %}selected{% endif %}>{{ s }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-auto ms-auto">
+        <button type="submit" class="btn-filtrer">
+          <i class="bi bi-search"></i>Filtrer
+        </button>
+      </div>
+    </div>
+  </form>
+</div>
+
+<!-- ══ TABLEAU ════════════════════════════ -->
+<div class="table-card">
+  <div class="table-card-header">
+    <i class="bi bi-list-ul"></i> Sorties QHSE
+  </div>
+  {% if alerts %}
+  <div style="overflow-x:auto;">
+    <table class="table-recap">
+      <thead>
+        <tr>
+          <th>Référence</th>
+          <th>Site</th>
+          <th>État</th>
+          <th>Date</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for alert in alerts|slice:":20" %}
+        <tr>
+          <td>{{ alert.name }}</td>
+          <td>{{ alert.location_id.1|default:'—' }}</td>
+          <td>{{ alert.state|default:'—' }}</td>
+          <td>{{ alert.date|default:'—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div style="padding:20px; color:#475569; text-align:center;">
+    <i class="bi bi-inbox" style="font-size:32px; margin-bottom:8px; color:#cbd5e1;"></i>
+    <p>Aucune sortie QHSE trouvée.</p>
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}
+

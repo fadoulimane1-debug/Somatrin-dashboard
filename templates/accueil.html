@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load static humanize %}
 
 {% block title %}Accueil — SOMATRIN{% endblock %}
 {% block nav_accueil %}active{% endblock %}
@@ -227,46 +227,6 @@
   </div>
 </div>
 
-<!-- ══ ACTIONS RAPIDES ══════════════════════════════════════ -->
-<div class="sec-hd">
-  <i class="bi bi-lightning-charge-fill"></i>Actions rapides
-</div>
-
-<div class="aq-wrap">
-
-  {# ── Gasoil ── #}
-  {% if user.is_superuser or user.is_staff or "pilotage" in user_groups or "si" in user_groups or "transport" in user_groups or "parc_materiel" in user_groups %}
-    <a href="{% url 'gasoil_sorties' %}"        class="aq aq-primary"><i class="bi bi-fuel-pump-fill"></i>Sorties gasoil</a>
-    <a href="{% url 'gasoil_entrees' %}"        class="aq aq-ghost"><i class="bi bi-arrow-down-circle-fill"></i>Entrées gasoil</a>
-    <a href="{% url 'gasoil_bilan' %}"          class="aq aq-ghost"><i class="bi bi-bar-chart-fill"></i>Bilan gasoil</a>
-    <a href="{% url 'gasoil_sorties_export' %}" class="aq aq-ghost"><i class="bi bi-file-earmark-excel-fill" style="color:#16a34a;"></i>Export Excel</a>
-  {% endif %}
-
-  {# ── Modules à venir (bientôt) ── #}
-  {% if user.is_superuser or user.is_staff or "pilotage" in user_groups or "si" in user_groups or "transport" in user_groups %}
-    <span class="aq aq-soon"><i class="bi bi-truck-front-fill"></i>Transport <span class="aq-soon-pill">Bientôt</span></span>
-  {% endif %}
-  {% if user.is_superuser or user.is_staff or "pilotage" in user_groups or "si" in user_groups or "production" in user_groups %}
-    <span class="aq aq-soon"><i class="bi bi-gear-wide-connected"></i>Production <span class="aq-soon-pill">Bientôt</span></span>
-  {% endif %}
-  {% if user.is_superuser or user.is_staff or "pilotage" in user_groups or "si" in user_groups or "parc_materiel" in user_groups %}
-    <span class="aq aq-soon"><i class="bi bi-tools"></i>Maintenance <span class="aq-soon-pill">Bientôt</span></span>
-  {% endif %}
-  {% if user.is_superuser or user.is_staff or "rh" in user_groups %}
-    <span class="aq aq-soon"><i class="bi bi-person-lines-fill"></i>RH <span class="aq-soon-pill">Bientôt</span></span>
-  {% endif %}
-  {% if user.is_superuser or user.is_staff or "finance" in user_groups %}
-    <span class="aq aq-soon"><i class="bi bi-graph-up-arrow"></i>Comptabilité <span class="aq-soon-pill">Bientôt</span></span>
-  {% endif %}
-
-  {# ── Administration ── #}
-  {% if user.is_superuser or user.is_staff %}
-    <a href="{% url 'admin:index' %}"                  class="aq aq-ghost"><i class="bi bi-shield-lock-fill"></i>Administration</a>
-    <a href="{% url 'admin:auth_user_changelist' %}"   class="aq aq-ghost"><i class="bi bi-people-fill"></i>Utilisateurs</a>
-  {% endif %}
-
-</div>
-
 <!-- ══ MODULES ══════════════════════════════════════════════ -->
 <div class="sec-hd">
   <i class="bi bi-grid-1x2"></i>Mes modules
@@ -274,118 +234,46 @@
 
 <div class="mod-grid">
 
-  {# ── Gasoil — actif, toujours visible ── #}
   <a href="{% url 'gasoil_sorties' %}" class="mod">
-    <div class="mod-ico" style="background:#fff4ec; color:#E87722;">
-      <i class="bi bi-fuel-pump-fill"></i>
-    </div>
     <div class="mod-title">Gasoil</div>
     <div class="mod-desc">Suivi des entrées, sorties et bilan de consommation carburant.</div>
-    <div class="mod-foot">
-      <span class="badge-on">Actif</span>
-      <i class="bi bi-arrow-right mod-arrow"></i>
-    </div>
   </a>
-
-  {# ── Transport ── #}
-  {% if user.is_superuser or user.is_staff or "pilotage" in user_groups or "si" in user_groups or "transport" in user_groups %}
-  <span class="mod mod-soon">
-    <div class="mod-ico" style="background:#eff6ff; color:#3b82f6;">
-      <i class="bi bi-truck-front-fill"></i>
-    </div>
-    <div class="mod-title">Transport</div>
-    <div class="mod-desc">Bons de transport, planification des rotations et suivi kilométrique.</div>
-    <div class="mod-foot"><span class="badge-off">Bientôt</span></div>
-  </span>
-  {% endif %}
-
-  {# ── Production ── #}
-  {% if user.is_superuser or user.is_staff or "pilotage" in user_groups or "si" in user_groups or "production" in user_groups %}
-  <span class="mod mod-soon">
-    <div class="mod-ico" style="background:#f0fdf4; color:#16a34a;">
-      <i class="bi bi-gear-wide-connected"></i>
-    </div>
+  <a href="{% url 'transport_bons' %}" class="mod">
+    <div class="mod-title">Transport &amp; Logistique</div>
+    <div class="mod-desc">Bons de transport, gasoil, coûts par nature, facturation client et rentabilité.</div>
+  </a>
+  <a href="/production/" class="mod">
     <div class="mod-title">Production</div>
-    <div class="mod-desc">Tableaux de bord de production, tonnages et rendements opérationnels.</div>
-    <div class="mod-foot"><span class="badge-off">Bientôt</span></div>
-  </span>
-  {% endif %}
-
-  {# ── Maintenance / Parc matériel ── #}
-  {% if user.is_superuser or user.is_staff or "pilotage" in user_groups or "si" in user_groups or "production" in user_groups or "parc_materiel" in user_groups %}
-  <span class="mod mod-soon">
-    <div class="mod-ico" style="background:#fefce8; color:#ca8a04;">
-      <i class="bi bi-tools"></i>
-    </div>
-    <div class="mod-title">Maintenance</div>
+    <div class="mod-desc">Exploitation carrière, gasoil, coûts par nature, facturation ventes et rentabilité.</div>
+  </a>
+  <div class="mod mod-soon">
+    <div class="mod-title">Parc & Maintenance</div>
     <div class="mod-desc">Ordres de travail, disponibilité des équipements et historique.</div>
-    <div class="mod-foot"><span class="badge-off">Bientôt</span></div>
-  </span>
-  {% endif %}
+  </div>
 
-  {# ── Achats ── #}
-  {% if user.is_superuser or user.is_staff or "pilotage" in user_groups or "si" in user_groups or "achat" in user_groups %}
-  <span class="mod mod-soon">
-    <div class="mod-ico" style="background:#fdf4ff; color:#a855f7;">
-      <i class="bi bi-bag-check-fill"></i>
-    </div>
-    <div class="mod-title">Achats</div>
+  <div class="mod mod-soon">
+    <div class="mod-title">Achats & Approvisionnement</div>
     <div class="mod-desc">Bons de commande, fournisseurs et analyse des dépenses.</div>
-    <div class="mod-foot"><span class="badge-off">Bientôt</span></div>
-  </span>
-  {% endif %}
+  </div>
 
-  {# ── RH ── #}
-  {% if user.is_superuser or user.is_staff or "pilotage" in user_groups or "si" in user_groups or "rh" in user_groups %}
-  <span class="mod mod-soon">
-    <div class="mod-ico" style="background:#fff1f2; color:#e11d48;">
-      <i class="bi bi-people-fill"></i>
-    </div>
-    <div class="mod-title">Ressources Humaines</div>
-    <div class="mod-desc">Effectifs, absences, pointage et suivi des formations.</div>
-    <div class="mod-foot"><span class="badge-off">Bientôt</span></div>
-  </span>
-  {% endif %}
-
-  {# ── Finance / Comptabilité ── #}
-  {% if user.is_superuser or user.is_staff or "pilotage" in user_groups or "si" in user_groups or "finance" in user_groups %}
-  <span class="mod mod-soon">
-    <div class="mod-ico" style="background:#ecfdf5; color:#059669;">
-      <i class="bi bi-graph-up-arrow"></i>
-    </div>
+  <div class="mod mod-soon">
     <div class="mod-title">Comptabilité</div>
     <div class="mod-desc">Indicateurs financiers, analytique et suivi des coûts de revient.</div>
-    <div class="mod-foot"><span class="badge-off">Bientôt</span></div>
-  </span>
-  {% endif %}
+  </div>
 
-  {# ── QHSE / SMQ ── #}
-  {% if user.is_superuser or user.is_staff or "pilotage" in user_groups or "si" in user_groups or "hse" in user_groups or "smq" in user_groups %}
-  <span class="mod mod-soon">
-    <div class="mod-ico" style="background:#f0fdf4; color:#16a34a;">
-      <i class="bi bi-shield-check"></i>
-    </div>
-    <div class="mod-title">QHSE / SMQ</div>
-    <div class="mod-desc">Indicateurs HSE, gestion des non-conformités et suivi qualité.</div>
-    <div class="mod-foot"><span class="badge-off">Bientôt</span></div>
-  </span>
-  {% endif %}
+  <div class="mod mod-soon">
+    <div class="mod-title">QHSE</div>
+    <div class="mod-desc">Indicateurs HSE, gestion des alertes et suivi qualité.</div>
+  </div>
 
-  {# ── Administration ── #}
-  {% if user.is_superuser or user.is_staff %}
-  <a href="{% url 'admin:index' %}" class="mod">
-    <div class="mod-ico" style="background:#eef1f7; color:#1a2c4e;">
-      <i class="bi bi-shield-lock-fill"></i>
-    </div>
-    <div class="mod-title">Administration</div>
-    <div class="mod-desc">Gestion des utilisateurs, des groupes et configuration du système.</div>
-    <div class="mod-foot">
-      <span class="badge-on">Actif</span>
-      <i class="bi bi-arrow-right mod-arrow"></i>
-    </div>
+  <div class="mod mod-soon">
+    <div class="mod-title">Ressources Humaines</div>
+    <div class="mod-desc">Effectifs, absences, pointage et suivi des formations.</div>
+  </div>
+  <a href="#" class="mod mod-soon">
+    <div class="mod-title">Système d'Information</div>
+    <div class="mod-desc">Projets SI, parc informatique, tickets incidents, mises à disposition, demandes et moyens généraux.</div>
   </a>
-  {% endif %}
-
 </div>
 
 {% endblock %}

@@ -1,0 +1,186 @@
+{% extends 'base.html' %}
+{% load vehicle_extras %}
+
+{% block title %}Transport - Facturation client{% endblock %}
+
+{% block breadcrumb %}
+  <a href="{% url 'accueil' %}">Accueil</a>
+  <i class="bi bi-chevron-right"></i>
+  <span style="color:#1a2c4e; font-weight:600;">Transport - Facturation client</span>
+{% endblock %}
+
+{% block content %}
+<span class="page-title">Facturation (Client)</span>
+{% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+
+<div class="filters-card">
+  <form method="get" class="row g-3 align-items-end">
+    <div class="col-md-3"><label class="form-label">Date début</label><input type="date" name="date_debut" class="form-control" value="{{ date_debut }}"></div>
+    <div class="col-md-3"><label class="form-label">Date fin</label><input type="date" name="date_fin" class="form-control" value="{{ date_fin }}"></div>
+    <div class="col-md-3">
+      <label class="form-label">Client</label>
+      <select name="client_id" class="form-select">
+        <option value="">— Tous —</option>
+        {% for c in clients %}
+          <option value="{{ c.id }}" {% if client_id == c.id|stringformat:"d" %}selected{% endif %}>{{ c.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Lieu de livraison</label>
+      <select name="shipping_id" class="form-select">
+        <option value="">— Tous —</option>
+        {% for s in shippings %}
+          <option value="{{ s.id }}" {% if shipping_id == s.id|stringformat:"d" %}selected{% endif %}>{{ s.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Société</label>
+      <select name="company_id" class="form-select">
+        <option value="">— Toutes —</option>
+        {% for c in companies %}
+          <option value="{{ c.id }}" {% if company_id == c.id|stringformat:"d" %}selected{% endif %}>{{ c.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Regroupement</label>
+      <select name="group_by" class="form-select">
+        <option value="" {% if not group_by %}selected{% endif %}>Détail</option>
+        <option value="month" {% if group_by == 'month' %}selected{% endif %}>Par Mois</option>
+        <option value="company" {% if group_by == 'company' %}selected{% endif %}>Par Société</option>
+        <option value="month_company" {% if group_by == 'month_company' %}selected{% endif %}>Par Mois + Société</option>
+        <option value="month_delivery" {% if group_by == 'month_delivery' %}selected{% endif %}>Par Mois + Lieu de livraison</option>
+        <option value="client" {% if group_by == 'client' %}selected{% endif %}>Par Client</option>
+      </select>
+    </div>
+    <div class="col-12 d-flex gap-2">
+      <button class="btn btn-primary" type="submit">Filtrer</button>
+      <a class="btn btn-outline-secondary" href="{% url 'transport_facturation_client' %}">Réinitialiser</a>
+    </div>
+  </form>
+</div>
+
+<div class="card">
+  <div class="mb-2">
+    <strong>{{ total_rows|num_plain:0 }}</strong> facture(s) |
+    HT: <strong>{{ total_ht|num_plain:2 }}</strong> |
+    TVA: <strong>{{ total_tva|num_plain:2 }}</strong> |
+    TTC: <strong>{{ total_ttc|num_plain:2 }}</strong>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-sm table-striped align-middle">
+      {% if group_by and grouped_rows %}
+      <thead class="table-dark">
+        <tr>
+          <th>{% if group_by == 'month' %}Mois{% elif group_by == 'company' %}Société{% elif group_by == 'month_company' %}Mois + Société{% elif group_by == 'month_delivery' %}Mois + Lieu de livraison{% else %}Client{% endif %}</th>
+          <th class="text-end">Nb Factures</th>
+          <th class="text-end">HT</th>
+          <th class="text-end">TVA</th>
+          <th class="text-end">TTC</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for row in grouped_rows %}
+        <tr>
+          <td>{{ row.label }}</td>
+          <td class="text-end">{{ row.count|num_plain:0 }}</td>
+          <td class="text-end">{{ row.ht|num_plain:2 }}</td>
+          <td class="text-end">{{ row.tva|num_plain:2 }}</td>
+          <td class="text-end">{{ row.ttc|num_plain:2 }}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="5" class="text-center text-muted">Aucune donnée</td></tr>
+      {% endfor %}
+      </tbody>
+      <tfoot class="table-secondary">
+        <tr>
+          <th>Total</th>
+          <th class="text-end">{{ total_rows|num_plain:0 }}</th>
+          <th class="text-end">{{ total_ht|num_plain:2 }}</th>
+          <th class="text-end">{{ total_tva|num_plain:2 }}</th>
+          <th class="text-end">{{ total_ttc|num_plain:2 }}</th>
+        </tr>
+      </tfoot>
+      {% else %}
+      <thead class="table-dark">
+        <tr>
+          <th style="width:120px;">N° Facture</th>
+          <th style="width:100px; white-space:nowrap;">Date</th>
+          <th style="width:200px;">Client</th>
+          <th style="width:200px;">Lieu de livraison</th>
+          <th style="width:100px;">Société</th>
+          <th class="text-end" style="width:120px;">HT</th>
+          <th class="text-end" style="width:120px;">TVA</th>
+          <th class="text-end" style="width:120px;">TTC</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for row in rows %}
+        <tr>
+          <td style="width:120px;">{{ row.numero }}</td>
+          <td style="width:100px; white-space:nowrap;">{{ row.date }}</td>
+          <td style="width:200px;">{{ row.client }}</td>
+          <td style="width:200px;">{{ row.lieu_livraison }}</td>
+          <td style="width:100px;">{{ row.societe }}</td>
+          <td class="text-end">{{ row.ht|num_plain:2 }}</td><td class="text-end">{{ row.tva|num_plain:2 }}</td><td class="text-end">{{ row.ttc|num_plain:2 }}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="8" class="text-center text-muted">Aucune donnée</td></tr>
+      {% endfor %}
+      </tbody>
+      <tfoot class="table-secondary">
+        <tr>
+          <th colspan="5">Total</th>
+          <th class="text-end">{{ total_ht|num_plain:2 }}</th>
+          <th class="text-end">{{ total_tva|num_plain:2 }}</th>
+          <th class="text-end">{{ total_ttc|num_plain:2 }}</th>
+        </tr>
+      </tfoot>
+      {% endif %}
+    </table>
+  </div>
+</div>
+
+<div class="card mt-4">
+  <div class="mb-2">
+    <strong>Chiffre d'affaires par Lieu de livraison</strong>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-sm table-striped align-middle">
+      <thead class="table-dark">
+        <tr>
+          <th>Lieu</th>
+          <th class="text-end">Nb Factures</th>
+          <th class="text-end">HT</th>
+          <th class="text-end">TVA</th>
+          <th class="text-end">TTC</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for row in delivery_rows %}
+        <tr>
+          <td>{{ row.lieu }}</td>
+          <td class="text-end">{{ row.count|num_plain:0 }}</td>
+          <td class="text-end">{{ row.ht|num_plain:2 }}</td>
+          <td class="text-end">{{ row.tva|num_plain:2 }}</td>
+          <td class="text-end">{{ row.ttc|num_plain:2 }}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="5" class="text-center text-muted">Aucune donnée</td></tr>
+      {% endfor %}
+      </tbody>
+      <tfoot class="table-secondary">
+        <tr>
+          <th>Total général</th>
+          <th class="text-end">{{ delivery_total_count|num_plain:0 }}</th>
+          <th class="text-end">{{ delivery_total_ht|num_plain:2 }}</th>
+          <th class="text-end">{{ delivery_total_tva|num_plain:2 }}</th>
+          <th class="text-end">{{ delivery_total_ttc|num_plain:2 }}</th>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+{% endblock %}

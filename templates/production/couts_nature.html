@@ -1,0 +1,140 @@
+{% extends 'base.html' %}
+{% load vehicle_extras %}
+
+{% block title %}Production - Coûts par nature{% endblock %}
+
+{% block breadcrumb %}
+  <a href="{% url 'accueil' %}">Accueil</a>
+  <i class="bi bi-chevron-right"></i>
+  <span style="color:#1a2c4e; font-weight:600;">Production - Coûts par nature</span>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .loader-bar {
+    background: linear-gradient(90deg, #16a34a, #14532d) !important;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<span class="page-title">Coûts par nature</span>
+{% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+
+<div class="filters-card">
+  <form method="get" class="row g-3 align-items-end">
+    <div class="col-md-3"><label class="form-label">Date début</label><input type="date" name="date_debut" class="form-control" value="{{ date_debut }}"></div>
+    <div class="col-md-3"><label class="form-label">Date fin</label><input type="date" name="date_fin" class="form-control" value="{{ date_fin }}"></div>
+    <div class="col-md-3">
+      <label class="form-label">Catégorie produit</label>
+      <select name="nature" class="form-select">
+        <option value="">— Toutes —</option>
+        {% for n in nature_options %}
+          <option value="{{ n }}" {% if nature == n %}selected{% endif %}>{{ n }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Véhicule</label>
+      <select name="vehicule" class="form-select">
+        <option value="">— Tous —</option>
+        {% for v in vehicules %}
+          <option value="{{ v }}" {% if vehicule == v %}selected{% endif %}>{{ v }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Produit</label>
+      <select name="product_id" class="form-select">
+        <option value="">— Tous —</option>
+        {% for p in product_options %}
+          <option value="{{ p.id }}" {% if product_id == p.id|stringformat:"d" %}selected{% endif %}>{{ p.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Société</label>
+      <select name="company_id" class="form-select">
+        <option value="">— Toutes —</option>
+        {% for c in company_options %}
+          <option value="{{ c.id }}" {% if company_id == c.id|stringformat:"d" %}selected{% endif %}>{{ c.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Regroupement</label>
+      <select name="group_by" class="form-select">
+        <option value="" {% if not group_by %}selected{% endif %}>Détail (ligne à ligne)</option>
+        <option value="nature" {% if group_by == 'nature' %}selected{% endif %}>Catégorie produit</option>
+        <option value="month" {% if group_by == 'month' %}selected{% endif %}>Mois</option>
+        <option value="vehicle" {% if group_by == 'vehicle' %}selected{% endif %}>Véhicule</option>
+      </select>
+    </div>
+    <div class="col-12 d-flex gap-2">
+      <button class="btn btn-primary" type="submit">Filtrer</button>
+      <a class="btn btn-outline-secondary" href="{% url 'production_couts_nature' %}">Réinitialiser</a>
+    </div>
+  </form>
+</div>
+
+<div class="card">
+  <div class="mb-2">
+    <strong>{{ total_rows|num_plain:0 }}</strong> N° Bon
+    {% if group_by and grouped_rows %} · <strong>{{ grouped_rows|length|num_plain:0 }}</strong> groupe(s){% endif %}
+    <span class="ms-2">| Total : <strong>{{ total_montant|num_plain:2 }}</strong></span>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-sm table-striped align-middle">
+      {% if group_by and grouped_rows %}
+      <thead class="table-dark">
+        <tr>
+          <th>{% if group_by == 'nature' %}Catégorie produit{% elif group_by == 'month' %}Mois{% else %}Véhicule{% endif %}</th>
+          <th class="text-end">N° Bon</th>
+          <th class="text-end">Montant</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for row in grouped_rows %}
+        <tr>
+          <td>{{ row.label }}</td>
+          <td class="text-end">{{ row.count|num_plain:0 }}</td>
+          <td class="text-end">{{ row.montant|num_plain:2 }}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="3" class="text-center text-muted">Aucune donnée</td></tr>
+      {% endfor %}
+      </tbody>
+      <tfoot class="table-secondary">
+        <tr>
+          <th>Total</th>
+          <th class="text-end">{{ total_rows|num_plain:0 }}</th>
+          <th class="text-end">{{ total_montant|num_plain:2 }}</th>
+        </tr>
+      </tfoot>
+      {% else %}
+      <thead class="table-dark">
+        <tr><th>Date</th><th>Véhicule</th><th>Catégorie produit</th><th class="text-end">Montant</th></tr>
+      </thead>
+      <tbody>
+      {% for row in rows %}
+        <tr>
+          <td>{{ row.date }}</td>
+          <td>{{ row.vehicule|matricule_only }}</td>
+          <td>{{ row.nature }}</td>
+          <td class="text-end">{{ row.montant|num_plain:2 }}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="4" class="text-center text-muted">Aucune donnée</td></tr>
+      {% endfor %}
+      </tbody>
+      <tfoot class="table-secondary">
+        <tr>
+          <th colspan="3">Total</th>
+          <th class="text-end">{{ total_montant|num_plain:2 }}</th>
+        </tr>
+      </tfoot>
+      {% endif %}
+    </table>
+  </div>
+</div>
+{% endblock %}

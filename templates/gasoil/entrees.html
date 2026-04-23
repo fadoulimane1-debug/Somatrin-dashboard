@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load static vehicle_extras %}
 
 {% block title %}Entrées Gasoil — SOMATRIN{% endblock %}
 
@@ -75,7 +75,15 @@
     transition: background 0.2s;
   }
   .btn-reset:hover { background: #e5e7eb; color: #111827; }
-  .filters-sep { height: 1px; background: #f3f4f6; margin: 16px 0; }
+
+  .btn-export {
+    padding: 8px 16px; background: #16a34a; color: #fff;
+    border: none; border-radius: 7px; font-size: 13px; font-weight: 600;
+    display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+    transition: background 0.2s;
+  }
+  .btn-export:hover, .btn-export:focus { background: #15803d; color: #fff; }
+  .btn-export::after { display: none; }
 
   /* Filter tags */
   .filter-tag {
@@ -109,10 +117,11 @@
   .table-somatrin tbody tr:hover { background: #f0fdf4; }
   .table-somatrin td { padding: 10px 14px; color: #374151; vertical-align: middle; border: none; }
 
-  .td-date { font-family: monospace; font-size: 12px; white-space: nowrap; color: #6b7280; }
-  .td-bon  { font-weight: 600; color: #1a2c4e; white-space: nowrap; }
-  .td-num  { text-align: right; font-variant-numeric: tabular-nums; }
+  .td-date  { font-family: monospace; font-size: 12px; white-space: nowrap; color: #6b7280; }
+  .td-bon   { font-weight: 600; color: #1a2c4e; white-space: nowrap; }
+  .td-num   { text-align: right; font-variant-numeric: tabular-nums; }
   .td-total { text-align: right; font-weight: 700; color: #16a34a; }
+  .td-ref   { font-size: 11px; color: #9ca3af; }
 
   .badge-entree {
     display: inline-flex; align-items: center; gap: 4px;
@@ -128,7 +137,7 @@
 {% block content %}
 
 <div class="d-flex align-items-center justify-content-between mb-4">
-  <span class="page-title mb-0" style="margin-bottom:0!important;">Entrées gasoil</span>
+  <span class="page-title mb-0" style="margin-bottom:0!important;">Entrées gasoil — Factures fournisseurs</span>
 </div>
 
 {% if error %}
@@ -144,24 +153,24 @@
   <div class="kpi-card kpi-card-bons">
     <div class="kpi-icon kpi-icon-orange"><i class="bi bi-receipt"></i></div>
     <div>
-      <div class="kpi-value">{{ total_bons }}</div>
-      <div class="kpi-label">Total bons de réception</div>
+      <div class="kpi-value">{{ total_bons|num_plain:0 }}</div>
+      <div class="kpi-label">N° Bon GASOIL facturés</div>
     </div>
   </div>
 
   <div class="kpi-card kpi-card-litres">
     <div class="kpi-icon kpi-icon-green"><i class="bi bi-droplet-fill"></i></div>
     <div>
-      <div class="kpi-value">{{ total_litres|floatformat:0 }}</div>
-      <div class="kpi-label">Total litres reçus</div>
+      <div class="kpi-value">{{ total_litres|num_plain:0 }}</div>
+      <div class="kpi-label">Total litres facturés</div>
     </div>
   </div>
 
   <div class="kpi-card kpi-card-cout">
     <div class="kpi-icon kpi-icon-navy"><i class="bi bi-cash-coin"></i></div>
     <div>
-      <div class="kpi-value" style="font-size:20px;">{{ total_cout|floatformat:2 }}</div>
-      <div class="kpi-label">Coût total (MAD)</div>
+      <div class="kpi-value" style="font-size:20px;">{{ total_cout|num_plain:2 }}</div>
+      <div class="kpi-label">Montant HT total (MAD)</div>
     </div>
   </div>
 
@@ -183,18 +192,14 @@
       </div>
 
       <div class="col-auto">
-        <label class="filter-label">Site de réception</label>
-        <select name="site" class="form-select">
-          <option value="">Tous les sites</option>
-          <option value="LHOUJ" {% if site == 'LHOUJ' %}selected{% endif %}>LHOUJ/Stock</option>
-          <option value="LHMEK" {% if site == 'LHMEK' %}selected{% endif %}>LHMEK/Stock</option>
-        </select>
+        <label class="filter-label"><i class="bi bi-building me-1"></i>Fournisseur</label>
+        <input type="text" name="fournisseur" class="form-control" style="min-width:200px;"
+               placeholder="Nom du fournisseur…" value="{{ fournisseur }}">
       </div>
 
       <div class="col-auto">
-        <label class="filter-label"><i class="bi bi-building me-1"></i>Fournisseur</label>
-        <input type="text" name="fournisseur" class="form-control" style="min-width:180px;"
-               placeholder="Nom du fournisseur…" value="{{ fournisseur }}">
+        
+      
       </div>
 
       <div class="col-auto ms-auto d-flex gap-2 align-items-end">
@@ -204,6 +209,19 @@
         <a href="{% url 'gasoil_entrees' %}" class="btn-reset">
           <i class="bi bi-x-circle"></i>Réinitialiser
         </a>
+        <div class="dropdown">
+          <button class="btn-export dropdown-toggle" type="button" data-bs-toggle="dropdown">
+            <i class="bi bi-download"></i>Exporter
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end">
+            <li><a class="dropdown-item" href="?export=pdf&{{ request.GET.urlencode }}">
+              <i class="bi bi-file-earmark-pdf-fill text-danger me-2"></i>PDF (A4)
+            </a></li>
+            <li><a class="dropdown-item" href="?export=csv&{{ request.GET.urlencode }}">
+              <i class="bi bi-file-earmark-spreadsheet-fill text-success me-2"></i>CSV (Excel FR)
+            </a></li>
+          </ul>
+        </div>
       </div>
 
     </div>
@@ -211,19 +229,26 @@
 </div>
 
 <!-- Tags filtres actifs -->
-{% if date_debut or date_fin or site or fournisseur %}
+{% if date_debut or date_fin or fournisseur or activite_filtre %}
 <div class="d-flex align-items-center gap-2 flex-wrap mb-3">
   <span style="font-size:12px; color:#6b7280;">Filtres actifs :</span>
   {% if date_debut %}<span class="filter-tag tag-blue"><i class="bi bi-calendar2"></i>Début : {{ date_debut }}</span>{% endif %}
   {% if date_fin   %}<span class="filter-tag tag-blue"><i class="bi bi-calendar2"></i>Fin : {{ date_fin }}</span>{% endif %}
-  {% if site       %}<span class="filter-tag tag-green"><i class="bi bi-geo-alt"></i>{{ site }}</span>{% endif %}
   {% if fournisseur %}<span class="filter-tag tag-green"><i class="bi bi-building"></i>{{ fournisseur }}</span>{% endif %}
+  {% if activite_filtre %}
+    <span class="filter-tag tag-blue"><i class="bi bi-lightning-charge"></i>
+      {% if activite_filtre == 'transport' %}Transport &amp; Logistique
+      {% elif activite_filtre == 'production' %}Production
+      {% elif activite_filtre == 'voiture_service' %}Voiture de service
+      {% endif %}
+    </span>
+  {% endif %}
 </div>
 {% endif %}
 
 <!-- ══ TABLEAU ══════════════════════════ -->
 <div class="summary-bar">
-  <span><strong>{{ total_bons }}</strong> bon{{ total_bons|pluralize }} de réception</span>
+  <span><strong>{{ total_bons|num_plain:0 }}</strong> N° Bon GASOIL trouvé{{ total_bons|pluralize }}</span>
 </div>
 
 <div class="table-card">
@@ -231,13 +256,14 @@
     <table class="table-somatrin">
       <thead>
         <tr>
-          <th>Date</th>
-          <th>N° Bon</th>
+          <th>Date facture</th>
+          <th>N° Facture</th>
+          <th>Réf. fournisseur</th>
           <th>Fournisseur</th>
-          <th>Site de réception</th>
-          <th class="text-end">Quantité (L)</th>
-          <th class="text-end">Prix unitaire</th>
-          <th class="text-end">Total (MAD)</th>
+          <th>Produit</th>
+          <th class="text-end">Qté (L)</th>
+          <th class="text-end">Prix unit. HT</th>
+          <th class="text-end">Total HT (MAD)</th>
           <th class="text-center">Statut</th>
         </tr>
       </thead>
@@ -245,34 +271,29 @@
         {% if bons %}
           {% for bon in bons %}
           <tr>
-            <td class="td-date">{{ bon.date|slice:":10" }}</td>
+            <td class="td-date">{{ bon.date }}</td>
             <td class="td-bon">{{ bon.name }}</td>
-            <td>
-              {% if bon.partner_id %}
-                {{ bon.partner_id.1|default:"—" }}
-              {% else %}—{% endif %}
-            </td>
-            <td>{{ bon.location_dest_id.1|default:"—" }}</td>
-            <td class="td-num"><strong>{{ bon.product_qty|floatformat:1 }}</strong></td>
+            <td class="td-ref">{{ bon.ref|default:"—" }}</td>
+            <td>{{ bon.fournisseur }}</td>
+            <td>{{ bon.product }}</td>
+            <td class="td-num"><strong>{{ bon.product_qty|num_plain:1 }}</strong></td>
             <td class="td-num">
-              {% if bon.price_unit %}{{ bon.price_unit|floatformat:2 }}{% else %}—{% endif %}
+              {% if bon.price_unit %}{{ bon.price_unit|num_plain:2 }}{% else %}—{% endif %}
             </td>
             <td class="td-total">
-              {% if bon.price_unit and bon.product_qty %}
-                {{ bon.product_qty|floatformat:0 }}
-              {% else %}—{% endif %}
+              {% if bon.total %}{{ bon.total|num_plain:2 }}{% else %}—{% endif %}
             </td>
             <td class="text-center">
-              <span class="badge-entree"><i class="bi bi-arrow-down-circle-fill"></i>Reçu</span>
+              <span class="badge-entree"><i class="bi bi-check-circle-fill"></i>Validé</span>
             </td>
           </tr>
           {% endfor %}
         {% else %}
           <tr>
-            <td colspan="8">
+            <td colspan="9">
               <div class="empty-state">
                 <i class="bi bi-inbox"></i>
-                <p>Aucune entrée pour ces filtres.</p>
+                <p>Aucune ligne GASOIL trouvée dans les factures fournisseurs.</p>
               </div>
             </td>
           </tr>
