@@ -1,0 +1,717 @@
+{% extends 'base.html' %}
+
+{% block title %}Achats — Fournisseurs{% endblock %}
+
+{% block breadcrumb %}
+  <a href="{% url 'accueil' %}">Accueil</a>
+  <i class="bi bi-chevron-right"></i>
+  <a href="{% url 'achats_overview' %}">Achats &amp; Approvisionnement</a>
+  <i class="bi bi-chevron-right"></i>
+  <span style="color:#1a2c4e; font-weight:600;">Fournisseurs</span>
+{% endblock %}
+
+{% block extra_css %}
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy:      #1a2c4e;
+  --navy-dark: #0f1e38;
+  --navy-mid:  #1e3460;
+  --orange:    #E87722;
+  --orange-lt: rgba(232,119,34,0.10);
+  --white:     #FFFFFF;
+  --light:     #F8FAFC;
+  --gray:      #6B7280;
+  --border:    #E5E7EB;
+  --shadow-sm: 0 2px 8px rgba(0,0,0,0.06);
+  --shadow-md: 0 4px 20px rgba(0,0,0,0.08);
+  --radius:    14px;
+  --radius-sm: 8px;
+}
+body, * { font-family: 'DM Sans', sans-serif; }
+
+/* ── Animations ─────────────────────────────────────────────── */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Hero Banner ────────────────────────────────────────────── */
+.hero-banner {
+  position: relative;
+  border-radius: var(--radius);
+  padding: 32px 36px;
+  margin-bottom: 24px;
+  overflow: hidden;
+  background: linear-gradient(135deg, var(--navy-dark) 0%, var(--navy) 60%, var(--navy-mid) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  animation: fadeInUp 0.4s ease;
+}
+.hero-banner::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, var(--orange), transparent);
+}
+.hero-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(232,119,34,0.15);
+  border: 1px solid rgba(232,119,34,0.30);
+  color: #f5a24b;
+  border-radius: 99px;
+  padding: 4px 14px;
+  font-size: 11px; font-weight: 600;
+  letter-spacing: 1.5px; text-transform: uppercase;
+  margin-bottom: 10px;
+}
+.hero-title {
+  font-size: 28px; font-weight: 700;
+  color: #fff; line-height: 1.2; margin-bottom: 6px;
+}
+.hero-title span { color: var(--orange); }
+.hero-sub {
+  font-size: 13px; color: rgba(255,255,255,0.55);
+  display: flex; align-items: center; gap: 6px;
+}
+.hero-ghost {
+  position: absolute; right: 40px; top: 50%;
+  transform: translateY(-50%);
+  font-size: 90px; font-weight: 900;
+  color: rgba(255,255,255,0.04);
+  letter-spacing: -4px; user-select: none; pointer-events: none;
+}
+.hero-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--orange); color: #fff;
+  border-radius: 99px; padding: 8px 20px;
+  font-size: 13px; font-weight: 600;
+  text-decoration: none; transition: all 0.2s;
+  margin-top: 14px;
+}
+.hero-btn:hover { background: #cf6a1a; color: #fff; transform: translateY(-1px); }
+
+/* ── KPI Cards ──────────────────────────────────────────────── */
+.kpi-row   { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; margin-bottom: 16px; }
+.kpi-row-2 { display: grid; grid-template-columns: repeat(2,1fr); gap: 16px; margin-bottom: 20px; }
+
+.kpi-card {
+  background: #fff; border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 20px 22px;
+  box-shadow: var(--shadow-sm); transition: all 0.25s ease;
+  display: flex; align-items: flex-start; gap: 14px;
+  animation: fadeInUp 0.4s ease both;
+}
+.kpi-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.kpi-card:nth-child(1) { animation-delay: 0.05s; border-left: 3px solid var(--navy); }
+.kpi-card:nth-child(2) { animation-delay: 0.10s; border-left: 3px solid var(--orange); }
+.kpi-card:nth-child(3) { animation-delay: 0.15s; border-left: 3px solid var(--orange); }
+.kpi-card:nth-child(4) { animation-delay: 0.20s; border-left: 3px solid #16a34a; }
+
+.kpi-icon {
+  width: 42px; height: 42px; border-radius: 10px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; font-size: 18px;
+}
+.kpi-body { flex: 1; min-width: 0; }
+.kpi-label {
+  font-size: 11px; color: var(--gray); font-weight: 500;
+  letter-spacing: 0.3px; text-transform: uppercase; margin-bottom: 6px;
+}
+.kpi-value { font-size: 28px; font-weight: 700; color: var(--navy); line-height: 1; }
+.kpi-value-sm { font-size: 22px; font-weight: 700; color: var(--navy); line-height: 1; }
+
+.kpi-card-sm {
+  background: #fff; border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 14px 18px;
+  box-shadow: var(--shadow-sm); transition: all 0.25s ease;
+  display: flex; align-items: center; gap: 12px;
+}
+.kpi-card-sm:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+
+/* ── Chart Card ─────────────────────────────────────────────── */
+.chart-card {
+  background: #fff; border-radius: var(--radius);
+  border: 1px solid var(--border); box-shadow: var(--shadow-sm);
+  padding: 24px; margin-bottom: 20px;
+  animation: fadeInUp 0.5s 0.2s ease both;
+}
+.chart-card-title { font-size: 15px; font-weight: 600; color: var(--navy); margin-bottom: 2px; }
+.chart-card-sub   { font-size: 12px; color: var(--gray); margin-bottom: 20px; }
+
+/* ── Filter Card ────────────────────────────────────────────── */
+.filter-card {
+  background: #fff; border-radius: var(--radius);
+  border: 1px solid var(--border); padding: 20px 24px;
+  box-shadow: var(--shadow-sm); margin-bottom: 16px;
+  animation: fadeInUp 0.5s 0.25s ease both;
+}
+.filter-label {
+  display: block; font-size: 11px; font-weight: 600;
+  color: var(--gray); text-transform: uppercase;
+  letter-spacing: 0.5px; margin-bottom: 4px;
+}
+.filter-input {
+  width: 100%; height: 38px; padding: 0 12px;
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  font-size: 13px; color: #374151; background: #fff;
+  outline: none; transition: border-color 0.2s, box-shadow 0.2s;
+  font-family: 'DM Sans', sans-serif;
+}
+.filter-input:focus {
+  border-color: var(--navy);
+  box-shadow: 0 0 0 3px rgba(26,44,78,0.08);
+}
+.btn-filtrer {
+  width: 100%; height: 38px; background: var(--navy); color: #fff;
+  border: none; border-radius: var(--radius-sm);
+  padding: 0 20px; font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: all 0.2s; white-space: nowrap;
+  font-family: 'DM Sans', sans-serif;
+}
+.btn-filtrer:hover { background: var(--orange); }
+.btn-reset {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  width: 100%; height: 38px; background: transparent;
+  border: 1px solid var(--border); color: var(--gray);
+  border-radius: var(--radius-sm); padding: 0 16px;
+  font-size: 13px; cursor: pointer; transition: all 0.2s;
+  text-decoration: none;
+}
+.btn-reset:hover { border-color: var(--navy); color: var(--navy); }
+.btn-export {
+  height: 34px; border-radius: var(--radius-sm);
+  font-size: 12px; font-weight: 500; padding: 0 14px;
+  cursor: pointer; transition: opacity 0.2s;
+  text-decoration: none; display: inline-flex; align-items: center; gap: 5px;
+  border: 1px solid;
+}
+.btn-export:hover { opacity: 0.82; }
+.btn-excel { background: #dcfce7; color: #15803d; border-color: #bbf7d0; }
+.btn-csv   { background: #dbeafe; color: #1d4ed8; border-color: #bfdbfe; }
+.btn-pdf   { background: #fee2e2; color: #dc2626; border-color: #fecaca; }
+
+/* ── Search ─────────────────────────────────────────────────── */
+.search-wrap { position: relative; margin-bottom: 12px; }
+.search-icon {
+  position: absolute; left: 12px; top: 50%;
+  transform: translateY(-50%);
+  color: var(--gray); font-size: 14px; pointer-events: none;
+}
+.search-input {
+  width: 100%; height: 38px; padding: 0 12px 0 36px;
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  font-size: 13px; outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  font-family: 'DM Sans', sans-serif;
+}
+.search-input:focus {
+  border-color: var(--navy);
+  box-shadow: 0 0 0 3px rgba(26,44,78,0.08);
+}
+
+/* ── Table Wrapper ──────────────────────────────────────────── */
+.table-wrapper {
+  background: #fff; border-radius: var(--radius);
+  border: 1px solid var(--border); box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  animation: fadeInUp 0.5s 0.3s ease both;
+}
+.table-info-bar {
+  padding: 10px 16px; font-size: 13px; color: var(--gray);
+  border-bottom: 1px solid var(--border); background: var(--light);
+}
+.data-table { width: 100%; border-collapse: collapse; }
+.data-table thead th {
+  background: var(--navy); color: rgba(255,255,255,0.90);
+  font-size: 11px; font-weight: 600; letter-spacing: 0.5px;
+  text-transform: uppercase; padding: 12px 14px;
+  white-space: nowrap; border: none;
+}
+.data-table tbody tr {
+  border-bottom: 1px solid #f3f4f6; transition: background 0.15s;
+}
+.data-table tbody tr:nth-child(even) { background: #f8fafc; }
+.data-table tbody tr:hover { background: #f0f4ff; }
+.data-table td { padding: 11px 14px; font-size: 13px; color: #374151; vertical-align: middle; }
+.badge-actif {
+  background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0;
+  border-radius: 99px; padding: 3px 10px; font-size: 11px; font-weight: 600;
+}
+.badge-inactif {
+  background: #f3f4f6; color: #6b7280; border: 1px solid #e5e7eb;
+  border-radius: 99px; padding: 3px 10px; font-size: 11px; font-weight: 600;
+}
+.tfoot-total td {
+  background: var(--navy); color: #fff;
+  font-weight: 700; font-size: 13px; padding: 13px 14px;
+}
+
+/* ── Pagination ─────────────────────────────────────────────── */
+.page-btn {
+  height: 32px; padding: 0 12px;
+  border: 1px solid var(--border); background: #fff;
+  border-radius: 6px; font-size: 13px; cursor: pointer;
+  transition: all 0.15s; font-family: 'DM Sans', sans-serif;
+}
+.page-btn:hover, .page-btn.active {
+  background: var(--navy); color: #fff; border-color: var(--navy);
+}
+
+/* ── Table columns ──────────────────────────────────────────── */
+.col-avatar { width:50px; padding:8px 10px !important; }
+.col-nom    { max-width:180px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-weight:600; color:var(--navy); }
+.col-ref    { width:90px; font-size:12px; color:#9ca3af; white-space:nowrap; }
+.col-ville  { width:110px; white-space:nowrap; }
+.col-pays   { width:90px;  white-space:nowrap; }
+.col-phone  { width:130px; white-space:nowrap; font-size:12px; }
+.col-email  { max-width:180px; }
+.col-cmd    { width:100px; text-align:right !important; }
+.col-statut { width:80px;  text-align:center !important; }
+
+/* ── Responsive ─────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .kpi-row   { grid-template-columns: repeat(2, 1fr); }
+  .kpi-row-2 { grid-template-columns: 1fr; }
+  .hero-ghost { display: none; }
+  .hero-banner { padding: 22px 20px; }
+  .hero-title { font-size: 22px; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- ══ HERO BANNER ══════════════════════════════════════════════════ -->
+<div class="hero-banner">
+  <div style="position:relative; z-index:1;">
+    <div class="hero-badge">
+      <i class="bi bi-cart3"></i>MODULE ACHATS
+    </div>
+    <div class="hero-title">Référentiel <span>Fournisseurs</span></div>
+    <div class="hero-sub">
+      <i class="bi bi-people"></i>
+      Annuaire et performance des fournisseurs Odoo
+    </div>
+    <a href="{% url 'achats_overview' %}" class="hero-btn">
+      <i class="bi bi-arrow-left-short"></i>Achats &amp; Approvisionnement
+    </a>
+  </div>
+  <div class="hero-ghost">SUP</div>
+</div>
+
+{% if error %}
+<div class="alert alert-danger mb-3">
+  <i class="bi bi-exclamation-triangle me-2"></i>{{ error }}
+</div>
+{% endif %}
+
+<!-- ══ KPI CARDS — 4 principales ════════════════════════════════════ -->
+<div class="kpi-row">
+  <div class="kpi-card">
+    <div class="kpi-icon" style="background:rgba(26,44,78,0.08); color:var(--navy);">
+      <i class="bi bi-building"></i>
+    </div>
+    <div class="kpi-body">
+      <div class="kpi-label">Total fournisseurs</div>
+      <div class="kpi-value" data-count="{{ total_fournisseurs }}">{{ total_fournisseurs }}</div>
+    </div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-icon" style="background:var(--orange-lt); color:var(--orange);">
+      <i class="bi bi-check-circle"></i>
+    </div>
+    <div class="kpi-body">
+      <div class="kpi-label">Fournisseurs actifs</div>
+      <div class="kpi-value" data-count="{{ fournisseurs_actifs }}">{{ fournisseurs_actifs }}</div>
+    </div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-icon" style="background:var(--orange-lt); color:var(--orange);">
+      <i class="bi bi-cart-check"></i>
+    </div>
+    <div class="kpi-body">
+      <div class="kpi-label">Total commandes</div>
+      <div class="kpi-value" data-count="{{ total_commandes }}">{{ total_commandes }}</div>
+    </div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-icon" style="background:rgba(22,163,74,0.10); color:#16a34a;">
+      <i class="bi bi-trophy"></i>
+    </div>
+    <div class="kpi-body">
+      <div class="kpi-label">Top fournisseur</div>
+      <div class="kpi-value" style="font-size:15px; line-height:1.35;">{{ top_fournisseur }}</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ KPI CARDS — 2 secondaires ════════════════════════════════════ -->
+<div class="kpi-row-2">
+  <div class="kpi-card-sm">
+    <div class="kpi-icon" style="width:36px;height:36px;background:rgba(26,44,78,0.08);color:var(--navy);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">
+      <i class="bi bi-envelope"></i>
+    </div>
+    <div>
+      <div class="kpi-label" style="margin-bottom:2px;">Avec email renseigné</div>
+      <div class="kpi-value-sm">{{ nb_avec_email }}</div>
+    </div>
+  </div>
+  <div class="kpi-card-sm">
+    <div class="kpi-icon" style="width:36px;height:36px;background:var(--orange-lt);color:var(--orange);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">
+      <i class="bi bi-telephone"></i>
+    </div>
+    <div>
+      <div class="kpi-label" style="margin-bottom:2px;">Avec téléphone renseigné</div>
+      <div class="kpi-value-sm">{{ nb_avec_phone }}</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ GRAPHIQUE DONUT ═══════════════════════════════════════════════ -->
+{% if stats_ville_json != '{}' %}
+<div class="chart-card">
+  <div class="chart-card-title">
+    <span style="color:var(--orange);">●</span>&nbsp;Répartition par ville (Top 6)
+  </div>
+  <div class="chart-card-sub">Nombre de fournisseurs par ville principale</div>
+  <div style="position:relative; height:280px; max-width:320px; margin:0 auto;">
+    <canvas id="villeChart"></canvas>
+  </div>
+</div>
+{% endif %}
+
+<!-- ══ FILTRES ═══════════════════════════════════════════════════════ -->
+<div class="filter-card">
+  <form method="get" class="row g-2 align-items-end">
+    <div class="col-lg-3 col-md-6">
+      <label class="filter-label">Nom fournisseur</label>
+      <input type="text" name="nom" value="{{ nom }}" class="filter-input" placeholder="Rechercher...">
+    </div>
+    <div class="col-lg-2 col-md-4">
+      <label class="filter-label">Ville</label>
+      <select name="ville" class="filter-input">
+        <option value="">Toutes les villes</option>
+        {% for v in villes %}
+          <option value="{{ v }}" {% if ville == v %}selected{% endif %}>{{ v }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-lg-2 col-md-4">
+      <label class="filter-label">Pays</label>
+      <select name="pays" class="filter-input">
+        <option value="">Tous les pays</option>
+        {% for p in pays_list %}
+          <option value="{{ p }}" {% if pays == p %}selected{% endif %}>{{ p }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-lg-2 col-md-4">
+      <label class="filter-label">Statut</label>
+      <select name="statut" class="filter-input">
+        <option value="">Tous</option>
+        <option value="Actif"   {% if statut == 'Actif'   %}selected{% endif %}>Actif</option>
+        <option value="Inactif" {% if statut == 'Inactif' %}selected{% endif %}>Inactif</option>
+      </select>
+    </div>
+    <div class="col-lg-1 col-md-4">
+      <button type="submit" class="btn-filtrer">
+        <i class="bi bi-funnel-fill me-1"></i>Filtrer
+      </button>
+    </div>
+    <div class="col-lg-2 col-md-4">
+      <a href="{% url 'achats_suppliers' %}" class="btn-reset">
+        <i class="bi bi-arrow-counterclockwise"></i>Reset
+      </a>
+    </div>
+  </form>
+
+  <div class="mt-3 d-flex gap-2 flex-wrap">
+    <a class="btn-export btn-excel" href="?nom={{ nom }}&ville={{ ville }}&pays={{ pays }}&statut={{ statut }}&export=excel">
+      <i class="bi bi-file-earmark-excel"></i>Export Excel
+    </a>
+    <a class="btn-export btn-csv" href="?nom={{ nom }}&ville={{ ville }}&pays={{ pays }}&statut={{ statut }}&export=csv">
+      <i class="bi bi-filetype-csv"></i>Export CSV
+    </a>
+    <a class="btn-export btn-pdf" href="?nom={{ nom }}&ville={{ ville }}&pays={{ pays }}&statut={{ statut }}&export=pdf">
+      <i class="bi bi-file-pdf"></i>Export PDF
+    </a>
+  </div>
+</div>
+
+<!-- ══ RECHERCHE + TABLEAU ═══════════════════════════════════════════ -->
+<div style="max-width:400px; margin-bottom:12px; position:relative;">
+  <i class="bi bi-search" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#9ca3af;font-size:13px;pointer-events:none;"></i>
+  <input type="text" id="searchTable" class="search-input" placeholder="Rechercher un fournisseur...">
+</div>
+
+<div class="table-wrapper">
+  <div class="table-info-bar" id="tableInfoBar">
+    {{ total_fournisseurs }} fournisseur(s) trouvé(s)
+  </div>
+
+  <div class="table-responsive">
+    <table class="data-table" id="data-table">
+      <thead>
+        <tr>
+          <th class="col-avatar"></th>
+          <th onclick="sortTable(1)" style="min-width:180px; cursor:pointer; user-select:none;">NOM <span id="sort-1" style="opacity:.6;">↕</span></th>
+          <th style="width:90px;">RÉF.</th>
+          <th onclick="sortTable(3)" style="width:110px; cursor:pointer; user-select:none;">VILLE <span id="sort-3" style="opacity:.6;">↕</span></th>
+          <th style="width:90px;">PAYS</th>
+          <th style="width:130px;">TÉLÉPHONE</th>
+          <th style="min-width:180px;">EMAIL</th>
+          <th onclick="sortTable(7)" style="width:100px; text-align:right; cursor:pointer; user-select:none;">NB CMD <span id="sort-7" style="opacity:.6;">↕</span></th>
+          <th style="width:80px; text-align:center;">STATUT</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr data-row>
+
+          <!-- Avatar initiales -->
+          <td class="col-avatar">
+            <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#1a2c4e,#E87722);color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;text-transform:uppercase;flex-shrink:0;letter-spacing:0;">
+              {{ row.nom|slice:":2" }}
+            </div>
+          </td>
+
+          <!-- Nom (ellipsis + tooltip) -->
+          <td class="col-nom" title="{{ row.nom }}">{{ row.nom }}</td>
+
+          <!-- Réf -->
+          <td class="col-ref">{{ row.ref }}</td>
+
+          <!-- Ville -->
+          <td class="col-ville">{{ row.ville }}</td>
+
+          <!-- Pays -->
+          <td class="col-pays">{{ row.pays }}</td>
+
+          <!-- Téléphone (nowrap, mobile fusionné dans views) -->
+          <td class="col-phone">
+            {% if row.phone != '—' %}
+              <a href="tel:{{ row.phone }}" style="color:var(--navy); text-decoration:none;">{{ row.phone }}</a>
+            {% else %}<span style="color:#9ca3af;">—</span>{% endif %}
+          </td>
+
+          <!-- Email (ellipsis + tooltip + cliquable) -->
+          <td class="col-email">
+            {% if row.email != '—' %}
+              <a href="mailto:{{ row.email }}"
+                 title="{{ row.email }}"
+                 style="color:var(--orange);font-weight:500;text-decoration:none;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px;display:block;">
+                {{ row.email }}
+              </a>
+            {% else %}<span style="color:#9ca3af;">—</span>{% endif %}
+          </td>
+
+          <!-- Nb commandes (coloré) -->
+          <td class="col-cmd">
+            {% if row.nb_commandes > 20 %}
+              <span style="color:#15803d; font-weight:700;">{{ row.nb_commandes }}</span>
+            {% elif row.nb_commandes > 5 %}
+              <span style="color:#E87722; font-weight:600;">{{ row.nb_commandes }}</span>
+            {% elif row.nb_commandes == 0 %}
+              <span style="color:#9ca3af;">0</span>
+            {% else %}
+              <span style="color:#374151; font-weight:500;">{{ row.nb_commandes }}</span>
+            {% endif %}
+          </td>
+
+          <!-- Statut -->
+          <td class="col-statut">
+            {% if row.statut == 'Actif' %}
+              <span class="badge-actif">Actif</span>
+            {% else %}
+              <span class="badge-inactif">Inactif</span>
+            {% endif %}
+          </td>
+
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="9" style="text-align:center; padding:40px 14px; color:var(--gray);">
+            <i class="bi bi-inbox" style="font-size:30px; display:block; margin-bottom:8px; opacity:0.4;"></i>
+            Aucun fournisseur trouvé pour ces filtres.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr class="tfoot-total">
+          <td colspan="6">TOTAL</td>
+          <td style="text-align:right;">{{ total_fournisseurs }}</td>
+          <td style="text-align:right;">{{ total_commandes }}</td>
+          <td></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+
+  <div class="d-flex justify-content-between align-items-center p-3 flex-wrap gap-2"
+       style="border-top:1px solid var(--border);">
+    <div style="font-size:12px; color:var(--gray);" id="pageInfo"></div>
+    <div class="d-flex gap-1 flex-wrap" id="paginationControls"></div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+/* ── Animated counters ─────────────────────────────────────────── */
+function animateCount(el, target) {
+  var start = 0, step = target / 50;
+  var timer = setInterval(function () {
+    start += step;
+    if (start >= target) {
+      el.textContent = Math.floor(target).toLocaleString('fr-FR');
+      clearInterval(timer); return;
+    }
+    el.textContent = Math.floor(start).toLocaleString('fr-FR');
+  }, 20);
+}
+document.querySelectorAll('.kpi-value[data-count]').forEach(function (el) {
+  var t = parseInt(el.dataset.count, 10);
+  if (t) animateCount(el, t);
+});
+
+/* ── Tri colonnes ──────────────────────────────────────────────── */
+var _sortDir = {};
+function sortTable(col) {
+  var tbody = document.querySelector('#data-table tbody');
+  var rows  = Array.from(tbody.querySelectorAll('tr[data-row]'));
+  _sortDir[col] = !_sortDir[col];
+  rows.sort(function (a, b) {
+    var aVal = (a.cells[col] ? a.cells[col].textContent.trim() : '');
+    var bVal = (b.cells[col] ? b.cells[col].textContent.trim() : '');
+    var aNum = parseFloat(aVal.replace(/\s/g, ''));
+    var bNum = parseFloat(bVal.replace(/\s/g, ''));
+    if (!isNaN(aNum) && !isNaN(bNum)) {
+      return _sortDir[col] ? aNum - bNum : bNum - aNum;
+    }
+    return _sortDir[col]
+      ? aVal.localeCompare(bVal, 'fr')
+      : bVal.localeCompare(aVal, 'fr');
+  });
+  document.querySelectorAll('[id^="sort-"]').forEach(function (el) {
+    el.textContent = '↕'; el.style.opacity = '.6';
+  });
+  var icon = document.getElementById('sort-' + col);
+  if (icon) { icon.textContent = _sortDir[col] ? '↑' : '↓'; icon.style.opacity = '1'; }
+  rows.forEach(function (r) { tbody.appendChild(r); });
+  currentPage = 1;
+  renderPage();
+}
+
+/* ── Recherche temps réel ──────────────────────────────────────── */
+document.getElementById('searchTable').addEventListener('input', function () {
+  var q = this.value.toLowerCase();
+  document.querySelectorAll('#data-table tbody tr[data-row]').forEach(function (tr) {
+    tr.dataset.hidden = tr.textContent.toLowerCase().includes(q) ? '' : '1';
+  });
+  currentPage = 1;
+  renderPage();
+});
+
+/* ── Pagination JS (50 lignes / page) ──────────────────────────── */
+var PAGE_SIZE = 50;
+var currentPage = 1;
+
+function getVisibleRows() {
+  return Array.from(document.querySelectorAll('#data-table tbody tr[data-row]'))
+    .filter(function (tr) { return tr.dataset.hidden !== '1'; });
+}
+
+function renderPage() {
+  var visible = getVisibleRows();
+  var total = visible.length;
+  var totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  if (currentPage > totalPages) currentPage = totalPages;
+  var start = (currentPage - 1) * PAGE_SIZE;
+  var end   = start + PAGE_SIZE;
+
+  document.querySelectorAll('#data-table tbody tr[data-row]').forEach(function (tr) {
+    tr.style.display = 'none';
+  });
+  visible.forEach(function (tr, i) {
+    tr.style.display = (i >= start && i < end) ? '' : 'none';
+  });
+
+  var info = document.getElementById('pageInfo');
+  if (info) info.textContent = total + ' fournisseur(s) — page ' + currentPage + ' / ' + totalPages;
+
+  var bar = document.getElementById('tableInfoBar');
+  if (bar) bar.textContent = total + ' fournisseur(s) trouvé(s)';
+
+  var ctrl = document.getElementById('paginationControls');
+  if (!ctrl) return;
+  ctrl.innerHTML = '';
+  if (totalPages <= 1) return;
+
+  function mkBtn(label, page, active) {
+    var b = document.createElement('button');
+    b.className = 'page-btn' + (active ? ' active' : '');
+    b.textContent = label;
+    b.addEventListener('click', function () { currentPage = page; renderPage(); });
+    ctrl.appendChild(b);
+  }
+  mkBtn('«', 1, false);
+  mkBtn('‹', Math.max(1, currentPage - 1), false);
+  var lo = Math.max(1, currentPage - 2), hi = Math.min(totalPages, currentPage + 2);
+  for (var p = lo; p <= hi; p++) mkBtn(String(p), p, p === currentPage);
+  mkBtn('›', Math.min(totalPages, currentPage + 1), false);
+  mkBtn('»', totalPages, false);
+}
+renderPage();
+
+/* ── Donut Chart ───────────────────────────────────────────────── */
+(function () {
+  var canvas = document.getElementById('villeChart');
+  if (!canvas || typeof Chart === 'undefined') return;
+  var raw    = {{ stats_ville_json|safe }};
+  var labels = Object.keys(raw);
+  var values = Object.values(raw);
+  if (!labels.length) return;
+  var palette = ['#1a2c4e','#E87722','#16a34a','#dc2626','#7c3aed','#0891b2','#94a3b8'];
+  new Chart(canvas, {
+    type: 'doughnut',
+    data: {
+      labels: labels,
+      datasets: [{
+        data: values,
+        backgroundColor: palette.slice(0, labels.length),
+        borderWidth: 2,
+        borderColor: '#fff'
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '65%',
+      animation: { animateRotate: true, duration: 800 },
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { padding: 16, font: { size: 12 }, usePointStyle: true }
+        },
+        tooltip: {
+          callbacks: {
+            label: function (ctx) {
+              var tot = ctx.dataset.data.reduce(function (a, b) { return a + b; }, 0);
+              var pct = tot > 0 ? Math.round(ctx.parsed / tot * 100) : 0;
+              return ' ' + ctx.label + ' : ' + ctx.parsed + ' (' + pct + '%)';
+            }
+          }
+        }
+      }
+    }
+  });
+})();
+</script>
+{% endblock %}

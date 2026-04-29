@@ -213,10 +213,77 @@
       .main { margin-left: 0; padding: 16px; }
       .topbar-brand { width: auto; }
     }
+
+    /* ══════════════════════════════════════════
+       GLOBAL LOADER (jauge SOMATRIN)
+    ══════════════════════════════════════════ */
+    #loading-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.36);
+      z-index: 9999;
+      justify-content: center;
+      align-items: center;
+    }
+    .loader-box {
+      background: #fff;
+      border-radius: 14px;
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
+      padding: 18px 24px 16px;
+      min-width: 280px;
+      text-align: center;
+    }
+    .loader-logo {
+      width: 70px;
+      margin-bottom: 12px;
+      animation: pulseLogo 1.5s ease-in-out infinite;
+    }
+    .loader-track {
+      width: 100%;
+      height: 8px;
+      background: #e5e7eb;
+      border-radius: 999px;
+      overflow: hidden;
+      position: relative;
+    }
+    .loader-bar {
+      position: absolute;
+      left: -38%;
+      top: 0;
+      width: 38%;
+      height: 100%;
+      background: linear-gradient(90deg, #2e7d32, #e65100);
+      border-radius: 999px;
+      animation: slideBar 1.25s ease-in-out infinite;
+    }
+    .loader-text {
+      margin: 10px 0 0;
+      font-size: 13px;
+      font-weight: 600;
+      color: #1f2937;
+    }
+    @keyframes slideBar {
+      0% { left: -38%; }
+      100% { left: 100%; }
+    }
+    @keyframes pulseLogo {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.08); opacity: 0.8; }
+    }
   </style>
   {% block extra_css %}{% endblock %}
 </head>
 <body>
+<div id="loading-overlay" role="status" aria-live="polite" aria-label="Chargement">
+  <div class="loader-box">
+    <img src="{% static 'images/logo_somatrin.png' %}" alt="SOMATRIN" class="loader-logo">
+    <div class="loader-track">
+      <div class="loader-bar"></div>
+    </div>
+    <p class="loader-text">Chargement des données...</p>
+  </div>
+</div>
 
 <!-- ══ TOP BAR ══════════════════════════════════════════ -->
 <header class="topbar">
@@ -288,7 +355,8 @@
 
   <div class="nav-divider"></div>
 
-  <!-- ── GASOIL — visible par tous ── -->
+  <!-- ── GASOIL — visible selon rôle (masqué pour user transport dédié) ── -->
+  {% if user.is_superuser or user.is_staff or "pilotage" in user_groups or "si" in user_groups or "gasoil" in user_groups or user.username|lower == "gasoil" or user.username|lower == "production" %}
   <div class="nav-section">
     <div class="nav-section-title">Gasoil</div>
     <a class="nav-item" data-bs-toggle="collapse" href="#menu-gasoil"
@@ -308,23 +376,21 @@
       </a>
     </div>
   </div>
+  {% endif %}
 
-  <!-- ── TRANSPORT ── -->
-  {% if user.is_superuser or user.is_staff or "pilotage" in user_groups or "si" in user_groups or "transport" in user_groups %}
+  <!-- ── TRANSPORT & LOGISTIQUE ── -->
+  {% if user.is_superuser or user.is_staff or "pilotage" in user_groups or "si" in user_groups or "transport" in user_groups or user.username|lower == "transport" %}
   <div class="nav-divider"></div>
   <div class="nav-section">
-    <div class="nav-section-title">Transport</div>
+    <div class="nav-section-title">Transport &amp; Logistique</div>
     <a class="nav-item" data-bs-toggle="collapse" href="#menu-transport"
        aria-expanded="{% if '/transport/' in request.path %}true{% else %}false{% endif %}">
-      <i class="bi bi-truck-front-fill"></i> Transport
+      <i class="bi bi-truck-front-fill"></i> Transport &amp; Logistique
       <i class="bi bi-chevron-down nav-chevron"></i>
     </a>
     <div class="collapse {% if '/transport/' in request.path %}show{% endif %}" id="menu-transport">
       <a href="/transport/bons-transport/" class="nav-item nav-sub {% if request.path == '/transport/bons-transport/' %}active{% endif %}">
         <i class="bi bi-file-earmark-text"></i> Bons transport
-      </a>
-      <a href="/transport/gasoil/" class="nav-item nav-sub {% if request.path == '/transport/gasoil/' %}active{% endif %}">
-        <i class="bi bi-fuel-pump"></i> Gasoil
       </a>
       <a href="/transport/couts-par-nature/" class="nav-item nav-sub {% if request.path == '/transport/couts-par-nature/' %}active{% endif %}">
         <i class="bi bi-pie-chart"></i> Coûts par nature
@@ -340,7 +406,7 @@
   {% endif %}
 
   <!-- ── PRODUCTION ── -->
-  {% if user.is_superuser or user.is_staff or "pilotage" in user_groups or "si" in user_groups or "production" in user_groups %}
+  {% if user.is_superuser or user.is_staff or "pilotage" in user_groups or "si" in user_groups or "production" in user_groups or user.username|lower == "production" %}
   <div class="nav-divider"></div>
   <div class="nav-section">
     <div class="nav-section-title">Production</div>
@@ -350,11 +416,11 @@
       <i class="bi bi-chevron-down nav-chevron"></i>
     </a>
     <div class="collapse {% if '/production/' in request.path %}show{% endif %}" id="menu-production">
+      <a href="/production/gasoil/" class="nav-item nav-sub {% if request.path == '/production/gasoil/' %}active{% endif %}">
+        <i class="bi bi-fuel-pump-fill"></i> Gasoil
+      </a>
       <a href="/production/production/" class="nav-item nav-sub {% if request.path == '/production/production/' %}active{% endif %}">
         <i class="bi bi-gear"></i> Production
-      </a>
-      <a href="/production/gasoil/" class="nav-item nav-sub {% if request.path == '/production/gasoil/' %}active{% endif %}">
-        <i class="bi bi-fuel-pump"></i> Gasoil
       </a>
       <a href="/production/couts-par-nature/" class="nav-item nav-sub {% if request.path == '/production/couts-par-nature/' %}active{% endif %}">
         <i class="bi bi-pie-chart"></i> Coûts par nature
@@ -372,49 +438,67 @@
   </div>
   {% endif %}
 
-  <!-- ── MAINTENANCE (Parc matériel) ── -->
+  <!-- ── PARC & MAINTENANCE ── -->
   {% if user.is_superuser or user.is_staff or "pilotage" in user_groups or "si" in user_groups or "production" in user_groups or "parc_materiel" in user_groups %}
   <div class="nav-divider"></div>
   <div class="nav-section">
-    <div class="nav-section-title">Parc matériel</div>
+    <div class="nav-section-title">Parc &amp; Maintenance</div>
     <a class="nav-item" data-bs-toggle="collapse" href="#menu-maintenance"
        aria-expanded="{% if '/maintenance/' in request.path %}true{% else %}false{% endif %}">
-      <i class="bi bi-wrench-adjustable-circle-fill"></i> Maintenance
+      <i class="bi bi-wrench-adjustable-circle-fill"></i> Parc &amp; Maintenance
       <i class="bi bi-chevron-down nav-chevron"></i>
     </a>
     <div class="collapse {% if '/maintenance/' in request.path %}show{% endif %}" id="menu-maintenance">
-      <a href="/maintenance/entrees/" class="nav-item nav-sub {% if request.path == '/maintenance/entrees/' %}active{% endif %}">
-        <i class="bi bi-arrow-down-circle"></i> Entrées
+      <a href="{% url 'parc_overview' %}" class="nav-item nav-sub {% if request.path == '/maintenance/vue-ensemble/' %}active{% endif %}">
+        <i class="bi bi-grid-1x2"></i> Vue d'ensemble
       </a>
-      <a href="/maintenance/sorties/" class="nav-item nav-sub {% if request.path == '/maintenance/sorties/' %}active{% endif %}">
-        <i class="bi bi-arrow-up-circle"></i> Sorties
+      <a href="{% url 'parc_equipements' %}" class="nav-item nav-sub {% if request.path == '/maintenance/equipements/' %}active{% endif %}">
+        <i class="bi bi-truck-front"></i> Équipements
       </a>
-      <a href="/maintenance/bilan/"   class="nav-item nav-sub {% if request.path == '/maintenance/bilan/' %}active{% endif %}">
-        <i class="bi bi-bar-chart-fill"></i> Bilan
+      <a href="{% url 'parc_disponibilite' %}" class="nav-item nav-sub {% if request.path == '/maintenance/disponibilite/' %}active{% endif %}">
+        <i class="bi bi-speedometer2"></i> Disponibilité
+      </a>
+      <a href="{% url 'parc_ordres_maintenance' %}" class="nav-item nav-sub {% if request.path == '/maintenance/ordres-maintenance/' %}active{% endif %}">
+        <i class="bi bi-tools"></i> Ordres maintenance
+      </a>
+      <a href="{% url 'parc_interventions' %}" class="nav-item nav-sub {% if request.path == '/maintenance/interventions/' %}active{% endif %}">
+        <i class="bi bi-wrench-adjustable"></i> Interventions
+      </a>
+      <a href="{% url 'parc_couts' %}" class="nav-item nav-sub {% if request.path == '/maintenance/couts/' %}active{% endif %}">
+        <i class="bi bi-cash-coin"></i> Coûts maintenance
       </a>
     </div>
   </div>
   {% endif %}
 
-  <!-- ── ACHATS ── -->
+  <!-- ── ACHATS & APPROVISIONNEMENT ── -->
   {% if user.is_superuser or user.is_staff or "pilotage" in user_groups or "si" in user_groups or "achat" in user_groups %}
   <div class="nav-divider"></div>
   <div class="nav-section">
-    <div class="nav-section-title">Achats</div>
+    <div class="nav-section-title">Achats &amp; Approvisionnement</div>
     <a class="nav-item" data-bs-toggle="collapse" href="#menu-achats"
        aria-expanded="{% if '/achats/' in request.path %}true{% else %}false{% endif %}">
-      <i class="bi bi-cart-fill"></i> Achats
+      <i class="bi bi-cart-fill"></i> Achats &amp; Approvisionnement
       <i class="bi bi-chevron-down nav-chevron"></i>
     </a>
     <div class="collapse {% if '/achats/' in request.path %}show{% endif %}" id="menu-achats">
-      <a href="/achats/entrees/" class="nav-item nav-sub {% if request.path == '/achats/entrees/' %}active{% endif %}">
-        <i class="bi bi-arrow-down-circle"></i> Entrées
+      <a href="{% url 'achats_overview' %}" class="nav-item nav-sub {% if request.path == '/achats/vue-ensemble/' %}active{% endif %}">
+        <i class="bi bi-grid-1x2"></i> Vue d'ensemble
       </a>
-      <a href="/achats/sorties/" class="nav-item nav-sub {% if request.path == '/achats/sorties/' %}active{% endif %}">
-        <i class="bi bi-arrow-up-circle"></i> Sorties
+      <a href="{% url 'achats_purchase_requests' %}" class="nav-item nav-sub {% if request.path == '/achats/demandes-achat/' %}active{% endif %}">
+        <i class="bi bi-card-checklist"></i> Demandes d'achat
       </a>
-      <a href="/achats/bilan/"   class="nav-item nav-sub {% if request.path == '/achats/bilan/' %}active{% endif %}">
-        <i class="bi bi-bar-chart-fill"></i> Bilan
+      <a href="{% url 'achats_rfq' %}" class="nav-item nav-sub {% if request.path == '/achats/demandes-prix/' %}active{% endif %}">
+        <i class="bi bi-currency-exchange"></i> Demandes de prix
+      </a>
+      <a href="{% url 'achats_purchase_orders' %}" class="nav-item nav-sub {% if request.path == '/achats/bons-commande/' %}active{% endif %}">
+        <i class="bi bi-file-earmark-text"></i> Bons de commande
+      </a>
+      <a href="{% url 'achats_delivery_tracking' %}" class="nav-item nav-sub {% if request.path == '/achats/suivi-livraisons/' %}active{% endif %}">
+        <i class="bi bi-truck"></i> Suivi livraisons
+      </a>
+      <a href="{% url 'achats_suppliers' %}" class="nav-item nav-sub {% if request.path == '/achats/fournisseurs/' %}active{% endif %}">
+        <i class="bi bi-building"></i> Fournisseurs
       </a>
     </div>
   </div>
@@ -444,14 +528,14 @@
   </div>
   {% endif %}
 
-  <!-- ── COMPTABILITÉ ── -->
+  <!-- ── FINANCE & COMPTABILITÉ ── -->
   {% if user.is_superuser or user.is_staff or "pilotage" in user_groups or "si" in user_groups or "finance" in user_groups %}
   <div class="nav-divider"></div>
   <div class="nav-section">
-    <div class="nav-section-title">Finance</div>
+    <div class="nav-section-title">Finance &amp; Comptabilité</div>
     <a class="nav-item" data-bs-toggle="collapse" href="#menu-compta"
        aria-expanded="{% if '/comptabilite/' in request.path %}true{% else %}false{% endif %}">
-      <i class="bi bi-calculator-fill"></i> Comptabilité
+      <i class="bi bi-calculator-fill"></i> Finance &amp; Comptabilité
       <i class="bi bi-chevron-down nav-chevron"></i>
     </a>
     <div class="collapse {% if '/comptabilite/' in request.path %}show{% endif %}" id="menu-compta">
@@ -489,6 +573,17 @@
         <i class="bi bi-bar-chart-fill"></i> Bilan
       </a>
     </div>
+  </div>
+  {% endif %}
+
+  <!-- ── SYSTÈME D'INFORMATION ── -->
+  {% if user.is_superuser or user.is_staff or "pilotage" in user_groups or "si" in user_groups %}
+  <div class="nav-divider"></div>
+  <div class="nav-section">
+    <div class="nav-section-title">Système d'Information</div>
+    <a href="{% url 'admin:index' %}" class="nav-item {% if '/admin/' in request.path %}active{% endif %}">
+      <i class="bi bi-cpu-fill"></i> Pilotage SI
+    </a>
   </div>
   {% endif %}
 
@@ -530,5 +625,27 @@
 
 {% block extra_js %}{% endblock %}
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const overlay = document.getElementById('loading-overlay');
+    if (!overlay) return;
+
+    overlay.style.display = 'none';
+
+    document.querySelectorAll('form').forEach(function (form) {
+      form.addEventListener('submit', function (event) {
+        const submitter = event.submitter || document.activeElement;
+        if (!submitter) return;
+
+        const text = (submitter.textContent || '').toLowerCase();
+        const isFilterBtn = submitter.classList.contains('btn-filtrer') || text.includes('filtrer');
+        if (!isFilterBtn) return;
+
+        overlay.style.display = 'flex';
+        submitter.disabled = true;
+      });
+    });
+  });
+</script>
 </body>
 </html>

@@ -1,0 +1,715 @@
+{% extends 'base.html' %}
+
+{% block title %}Achats — Bons de commande{% endblock %}
+
+{% block breadcrumb %}
+  <a href="{% url 'accueil' %}">Accueil</a>
+  <i class="bi bi-chevron-right"></i>
+  <a href="{% url 'achats_overview' %}">Achats &amp; Approvisionnement</a>
+  <i class="bi bi-chevron-right"></i>
+  <span style="color:#1a2c4e; font-weight:600;">Bons de commande</span>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ── Hero ─────────────────────────────────────────────────── */
+.hero {
+  background: linear-gradient(135deg, #0f1e38 0%, #1a2c4e 50%, #1e3460 100%);
+  border-radius: 16px; padding: 28px 32px 24px; margin-bottom: 24px;
+  position: relative; overflow: hidden;
+  display: flex; align-items: center; justify-content: space-between; gap: 20px;
+}
+.hero-deco { position:absolute; border-radius:50%; pointer-events:none; }
+.hero-deco-1 { width:280px;height:280px;right:-70px;top:-90px;    background:rgba(232,119,34,.08); }
+.hero-deco-2 { width:160px;height:160px;right:100px;bottom:-80px; background:rgba(255,255,255,.03); }
+.hero-deco-3 { width:90px; height:90px; left:38%;  top:-28px;     background:rgba(232,119,34,.05); }
+.hero-content { position:relative; z-index:1; }
+.hero-eyebrow {
+  font-size:11px; font-weight:600; letter-spacing:1.8px; text-transform:uppercase;
+  color:rgba(255,255,255,.40); margin-bottom:6px;
+  display:flex; align-items:center; gap:8px;
+}
+.hero-pulse {
+  width:7px; height:7px; border-radius:50%; background:#E87722;
+  box-shadow:0 0 0 3px rgba(232,119,34,.22);
+  animation:pulseBC 2.2s infinite;
+}
+@keyframes pulseBC {
+  0%,100%{ box-shadow:0 0 0 3px rgba(232,119,34,.22); }
+  50%    { box-shadow:0 0 0 7px rgba(232,119,34,.08); }
+}
+.hero-title { font-size:24px; font-weight:800; color:#fff; line-height:1.2; margin-bottom:4px; }
+.hero-title span { color:#E87722; }
+.hero-sub  { font-size:13px; color:rgba(255,255,255,.42); display:flex; align-items:center; gap:6px; }
+.hero-right { position:relative; z-index:1; text-align:right; flex-shrink:0; }
+.hero-ghost { font-size:42px; font-weight:900; letter-spacing:5px; color:rgba(255,255,255,.06); user-select:none; line-height:1; }
+.hero-badge {
+  display:inline-flex; align-items:center; gap:6px;
+  background:#E87722; color:#fff; border-radius:99px;
+  padding:6px 16px; font-size:12px; font-weight:700; margin-top:8px;
+}
+
+/* ── KPI cards ───────────────────────────────────────────── */
+.kpi-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:20px; }
+.kpi-card {
+  background:#fff; border:0.5px solid #e5e7eb; border-radius:12px;
+  padding:18px 20px; position:relative; overflow:hidden;
+}
+.kpi-card-navy   { border-left:3px solid #1a2c4e; }
+.kpi-card-orange { border-left:3px solid #E87722; }
+.kpi-card-green  { border-left:3px solid #16a34a; }
+.kpi-card-amber  { border-left:3px solid #b45309; }
+.kpi-ico {
+  width:40px; height:40px; border-radius:10px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:18px; margin-bottom:12px;
+}
+.ico-navy   { background:rgba(26,44,78,.08);   color:#1a2c4e; }
+.ico-orange { background:rgba(232,119,34,.10); color:#E87722; }
+.ico-green  { background:rgba(22,163,74,.10);  color:#16a34a; }
+.ico-amber  { background:rgba(180,83,9,.10);   color:#b45309; }
+.kpi-label { font-size:12px; color:#6b7280; margin-bottom:4px; }
+.kpi-value { font-size:26px; font-weight:700; color:#1a2c4e; line-height:1; }
+.kpi-sub   { font-size:11px; color:#9ca3af; margin-top:4px; }
+.chart-card {
+  background:#fff; border:0.5px solid #e5e7eb; border-radius:14px;
+  padding:18px 20px; margin-bottom:20px;
+  box-shadow:0 2px 8px rgba(0,0,0,.04);
+}
+.insight-grid {
+  display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:16px;
+}
+.insight-card {
+  background:#f8fafc; border:1px solid #e6ecf3; border-radius:10px; padding:10px 12px;
+}
+.insight-card .lbl { font-size:11px; color:#6b7280; text-transform:uppercase; letter-spacing:.5px; }
+.insight-card .val { font-size:18px; color:#1a2c4e; font-weight:800; margin-top:2px; }
+
+/* ── Badges état ─────────────────────────────────────────── */
+.badge-etat {
+  border-radius:99px; padding:3px 12px;
+  font-size:11px; font-weight:600; display:inline-block; white-space:nowrap;
+}
+.s-draft    { background:#f3f4f6; color:#6b7280; border:1px solid #e5e7eb; }
+.s-sent     { background:#fef3c7; color:#b45309; border:1px solid #fde68a; }
+.s-confirm  { background:#dbeafe; color:#1d4ed8; border:1px solid #bfdbfe; }
+.s-done     { background:#dcfce7; color:#15803d; border:1px solid #bbf7d0; }
+.s-cancel   { background:#fee2e2; color:#dc2626; border:1px solid #fecaca; }
+
+/* ── Filtre card ─────────────────────────────────────────── */
+.filter-card {
+  background:#fff; border:0.5px solid #e5e7eb; border-radius:14px;
+  padding:20px 24px; margin-bottom:20px;
+  box-shadow:0 2px 8px rgba(0,0,0,.04);
+}
+.filter-label {
+  display:block; font-size:11px; font-weight:600; color:#6b7280;
+  text-transform:uppercase; letter-spacing:.5px; margin-bottom:4px;
+}
+.filter-input {
+  height:38px; border:1px solid #e5e7eb; border-radius:8px;
+  font-size:13px; padding:0 12px; width:100%;
+  background:#fff; color:#111827; outline:none;
+  transition:border-color .15s;
+  appearance:none; -webkit-appearance:none;
+}
+.filter-input:focus { border-color:#1a2c4e; box-shadow:0 0 0 3px rgba(26,44,78,.07); }
+select.filter-input {
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 16 16'%3E%3Cpath fill='%236b7280' d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+  background-repeat:no-repeat; background-position:right 10px center;
+  padding-right:30px;
+}
+.btn-filtrer {
+  height:38px; background:#1a2c4e; color:#fff; border:none;
+  border-radius:8px; padding:0 20px; font-weight:600; font-size:13px;
+  cursor:pointer; white-space:nowrap; transition:background .18s;
+  display:inline-flex; align-items:center; gap:6px;
+}
+.btn-filtrer:hover { background:#E87722; color:#fff; }
+.btn-reset {
+  height:38px; background:#fff; color:#374151;
+  border:1px solid #e5e7eb; border-radius:8px; padding:0 16px;
+  font-size:13px; text-decoration:none; cursor:pointer; white-space:nowrap;
+  display:inline-flex; align-items:center; gap:6px;
+  transition:border-color .15s, color .15s;
+}
+.btn-reset:hover { border-color:#1a2c4e; color:#1a2c4e; }
+.btn-export-excel {
+  height:38px; background:#dcfce7; color:#15803d;
+  border:1px solid #bbf7d0; border-radius:8px; padding:0 16px;
+  font-size:13px; text-decoration:none; white-space:nowrap;
+  display:inline-flex; align-items:center; gap:6px;
+  transition:background .15s;
+}
+.btn-export-excel:hover { background:#bbf7d0; color:#15803d; }
+.btn-export-csv {
+  height:38px; background:#dbeafe; color:#1d4ed8;
+  border:1px solid #bfdbfe; border-radius:8px; padding:0 16px;
+  font-size:13px; text-decoration:none; white-space:nowrap;
+  display:inline-flex; align-items:center; gap:6px;
+  transition:background .15s;
+}
+.btn-export-csv:hover { background:#bfdbfe; color:#1d4ed8; }
+.btn-export-pdf {
+  height:38px; background:#fef2f2; color:#dc2626;
+  border:1px solid #fecaca; border-radius:8px; padding:0 16px;
+  font-size:13px; text-decoration:none; white-space:nowrap;
+  display:inline-flex; align-items:center; gap:6px;
+}
+.btn-export-pdf:hover { background:#fecaca; color:#dc2626; }
+.badge-filter {
+  display:inline-flex; align-items:center; gap:4px;
+  background:#fff7ed; color:#c2410c; border:1px solid #fed7aa;
+  border-radius:99px; padding:2px 10px; font-size:11px; font-weight:600;
+}
+.badge-filter-rm {
+  cursor:pointer; font-size:13px; line-height:1;
+  border:none; background:none; color:#c2410c; padding:0;
+}
+.badge-filter-rm:hover { color:#dc2626; }
+
+/* ── Table card ──────────────────────────────────────────── */
+.table-card {
+  background:#fff; border:0.5px solid #e5e7eb;
+  border-radius:12px; padding:16px;
+}
+.table thead th {
+  background:#1a2c4e !important; color:#fff !important;
+  font-size:12px; font-weight:600; padding:12px 14px;
+  border:none; white-space:nowrap; vertical-align:middle;
+}
+.table tbody tr:nth-child(even) { background:#f8fafc; }
+.table tbody tr:nth-child(odd)  { background:#fff; }
+.table tbody tr:hover { background:#f0f4ff !important; transition:background .1s; }
+.table td { vertical-align:middle; padding:10px 14px; font-size:13px; }
+.table tfoot td {
+  background:#1a2c4e !important; color:#fff !important;
+  font-weight:700; border:none; padding:11px 14px;
+}
+.col-num      { min-width:140px; font-weight:700; color:#1a2c4e; }
+.col-date     { min-width:95px; }
+.col-fourn    { min-width:180px; }
+.col-resp     { min-width:140px; }
+.col-soc      { min-width:130px; }
+.col-montant  { min-width:120px; }
+.col-delai    { min-width:130px; }
+.badge-delai {
+  display:inline-flex; align-items:center; border-radius:99px;
+  padding:2px 10px; font-size:11px; font-weight:700;
+}
+.d-ok { background:#dcfce7; color:#166534; border:1px solid #bbf7d0; }
+.d-mid { background:#fef3c7; color:#92400e; border:1px solid #fde68a; }
+.d-late { background:#fee2e2; color:#991b1b; border:1px solid #fecaca; }
+.row-retard td { background:#fff5f5 !important; }
+
+/* ── Pagination ──────────────────────────────────────────── */
+.page-item.active .page-link { background:#1a2c4e; border-color:#1a2c4e; color:#fff; }
+.page-link { color:#1a2c4e; }
+.page-link:hover { color:#E87722; border-color:#E87722; }
+
+/* ── Empty state ─────────────────────────────────────────── */
+.empty-state { text-align:center; padding:48px 20px; }
+.empty-state i { font-size:48px; color:#d1d5db; display:block; margin-bottom:12px; }
+.empty-state p { color:#6b7280; font-size:14px; margin:0; }
+
+/* ── Responsive ──────────────────────────────────────────── */
+@media (max-width:992px) { .kpi-grid { grid-template-columns:repeat(2,1fr); } }
+@media (max-width:576px) {
+  .kpi-grid  { grid-template-columns:1fr 1fr; }
+  .insight-grid { grid-template-columns:1fr; }
+  .hero-right{ display:none; }
+  .hero      { padding:20px; }
+  .hero-title{ font-size:20px; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- ══ HERO ═══════════════════════════════════════════════════ -->
+<div class="hero">
+  <div class="hero-deco hero-deco-1"></div>
+  <div class="hero-deco hero-deco-2"></div>
+  <div class="hero-deco hero-deco-3"></div>
+  <div class="hero-content">
+    <div class="hero-eyebrow"><span class="hero-pulse"></span>Module Achats</div>
+    <div class="hero-title">Bons de <span>commande</span></div>
+    <div class="hero-sub"><i class="bi bi-bag-check"></i>Suivi des bons validés, montants engagés et état des commandes</div>
+  </div>
+  <div class="hero-right">
+    <div class="hero-ghost">PO</div>
+    <span class="hero-badge"><i class="bi bi-cart-check-fill"></i>Achats &amp; Approvisionnement</span>
+  </div>
+</div>
+
+{% if error %}
+<div class="alert alert-danger mb-3"><i class="bi bi-exclamation-triangle me-2"></i>{{ error }}</div>
+{% endif %}
+
+<!-- ══ KPI CARDS ═══════════════════════════════════════════════ -->
+<div class="kpi-grid">
+  <div class="kpi-card kpi-card-navy">
+    <div class="kpi-ico ico-navy"><i class="bi bi-file-earmark-text"></i></div>
+    <div class="kpi-label">Total bons</div>
+    <div class="kpi-value" id="kpi-total-bons" data-count="{{ total_bons }}">{{ total_bons }}</div>
+  </div>
+  <div class="kpi-card kpi-card-orange">
+    <div class="kpi-ico ico-orange"><i class="bi bi-currency-dollar"></i></div>
+    <div class="kpi-label">Montant TTC total</div>
+    <div class="kpi-value" id="kpi-total-ttc" data-count="0">0,00</div>
+    <div class="kpi-sub">toutes taxes comprises</div>
+  </div>
+  <div class="kpi-card kpi-card-amber">
+    <div class="kpi-ico ico-amber"><i class="bi bi-exclamation-triangle"></i></div>
+    <div class="kpi-label">Bons en retard</div>
+    <div class="kpi-value" id="kpi-retard" data-count="0" style="color:#dc2626;">0</div>
+    <div class="kpi-sub">date prévue dépassée</div>
+  </div>
+  <div class="kpi-card kpi-card-green">
+    <div class="kpi-ico ico-green"><i class="bi bi-check-circle"></i></div>
+    <div class="kpi-label">Bons confirmés</div>
+    <div class="kpi-value" id="kpi-confirmes" data-count="{{ nb_confirmes }}">{{ nb_confirmes }}</div>
+    <div class="kpi-sub">état purchase ou terminé</div>
+  </div>
+</div>
+
+<div class="insight-grid">
+  <div class="insight-card">
+    <div class="lbl">Taux de confirmation</div>
+    <div class="val" id="ins-confirm-rate">0%</div>
+  </div>
+  <div class="insight-card">
+    <div class="lbl">Ticket moyen TTC</div>
+    <div class="val" id="ins-ticket-moyen">0,00</div>
+  </div>
+  <div class="insight-card">
+    <div class="lbl">Fournisseur leader</div>
+    <div class="val" id="ins-top-fournisseur">—</div>
+  </div>
+</div>
+
+<div class="chart-card">
+  <div style="font-weight:700;font-size:14px;color:#1a2c4e;margin-bottom:4px;">
+    <i class="bi bi-pie-chart-fill me-2" style="color:#E87722;"></i>Répartition des bons par état
+  </div>
+  <div style="font-size:12px;color:#6b7280;margin-bottom:12px;">Brouillon / Envoyé / Confirmé / Terminé / Annulé</div>
+  <div style="position:relative;height:220px;max-width:460px;">
+    <canvas id="stateChartPO"></canvas>
+  </div>
+</div>
+
+<!-- ══ FILTRES ════════════════════════════════════════════════ -->
+<div class="filter-card">
+  <form method="get" id="filter-form-bc" class="row g-3 align-items-end">
+    <div class="col-lg-2 col-md-4 col-6">
+      <label class="filter-label">Date début</label>
+      <input type="date" name="date_debut" value="{{ date_debut }}" class="filter-input">
+    </div>
+    <div class="col-lg-2 col-md-4 col-6">
+      <label class="filter-label">Date fin</label>
+      <input type="date" name="date_fin" value="{{ date_fin }}" class="filter-input">
+    </div>
+    <div class="col-lg-2 col-md-4 col-12">
+      <label class="filter-label">Fournisseur</label>
+      <input list="fournisseurs-bc" name="fournisseur" value="{{ fournisseur }}" class="filter-input" placeholder="Tous">
+      <datalist id="fournisseurs-bc">{% for f in fournisseurs %}<option value="{{ f }}">{% endfor %}</datalist>
+    </div>
+    <div class="col-lg-2 col-md-4 col-12">
+      <label class="filter-label">État</label>
+      <select name="etat" class="filter-input">
+        <option value="">Tous</option>
+        <option value="draft"    {% if etat == 'draft'    %}selected{% endif %}>Brouillon</option>
+        <option value="sent"     {% if etat == 'sent'     %}selected{% endif %}>Envoyé</option>
+        <option value="purchase" {% if etat == 'purchase' %}selected{% endif %}>Confirmé</option>
+        <option value="done"     {% if etat == 'done'     %}selected{% endif %}>Terminé</option>
+        <option value="cancel"   {% if etat == 'cancel'   %}selected{% endif %}>Annulé</option>
+      </select>
+    </div>
+    <div class="col-lg-2 col-md-4 col-12">
+      <label class="filter-label">Responsable</label>
+      <input list="resps-bc" name="responsable" value="{{ responsable }}" class="filter-input" placeholder="Tous">
+      <datalist id="resps-bc">{% for r in responsables %}<option value="{{ r }}">{% endfor %}</datalist>
+    </div>
+    <div class="col-lg-2 col-md-4 col-12">
+      <label class="filter-label">Société</label>
+      <select name="societe" class="filter-input">
+        <option value="">Toutes</option>
+        {% for s in societes %}
+          <option value="{{ s }}" {% if societe == s %}selected{% endif %}>{{ s }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-12 d-flex gap-2 flex-wrap">
+      <button type="submit" class="btn-filtrer">
+        <i class="bi bi-funnel-fill"></i>Filtrer
+      </button>
+      <a href="{% url 'achats_purchase_orders' %}" class="btn-reset">
+        <i class="bi bi-arrow-counterclockwise"></i>Réinitialiser
+      </a>
+    </div>
+  </form>
+
+  <div class="mt-3 d-flex gap-2 flex-wrap align-items-center">
+    <a class="btn-export-excel"
+       href="?date_debut={{ date_debut }}&date_fin={{ date_fin }}&fournisseur={{ fournisseur }}&etat={{ etat }}&responsable={{ responsable }}&societe={{ societe }}&export=excel">
+      <i class="bi bi-file-earmark-excel"></i>Export Excel
+    </a>
+    <a class="btn-export-csv"
+       href="?date_debut={{ date_debut }}&date_fin={{ date_fin }}&fournisseur={{ fournisseur }}&etat={{ etat }}&responsable={{ responsable }}&societe={{ societe }}&export=csv">
+      <i class="bi bi-filetype-csv"></i>Export CSV
+    </a>
+    <a class="btn-export-pdf"
+       href="?date_debut={{ date_debut }}&date_fin={{ date_fin }}&fournisseur={{ fournisseur }}&etat={{ etat }}&responsable={{ responsable }}&societe={{ societe }}&export=pdf">
+      <i class="bi bi-file-pdf"></i>Export PDF
+    </a>
+  </div>
+
+  {% if date_debut or date_fin or fournisseur or etat or responsable or societe %}
+  <div class="mt-3 d-flex flex-wrap gap-2 align-items-center">
+    <span style="font-size:11px;color:#6b7280;font-weight:600;">Filtres actifs :</span>
+    {% if date_debut %}
+    <span class="badge-filter">
+      <i class="bi bi-calendar3"></i>Début : {{ date_debut }}
+      <button class="badge-filter-rm" onclick="removeFilterBC('date_debut')" title="Retirer">×</button>
+    </span>
+    {% endif %}
+    {% if date_fin %}
+    <span class="badge-filter">
+      <i class="bi bi-calendar3"></i>Fin : {{ date_fin }}
+      <button class="badge-filter-rm" onclick="removeFilterBC('date_fin')" title="Retirer">×</button>
+    </span>
+    {% endif %}
+    {% if fournisseur %}
+    <span class="badge-filter">
+      <i class="bi bi-shop"></i>{{ fournisseur }}
+      <button class="badge-filter-rm" onclick="removeFilterBC('fournisseur')" title="Retirer">×</button>
+    </span>
+    {% endif %}
+    {% if etat %}
+    <span class="badge-filter">
+      <i class="bi bi-toggle-on"></i>{{ etat|capfirst }}
+      <button class="badge-filter-rm" onclick="removeFilterBC('etat')" title="Retirer">×</button>
+    </span>
+    {% endif %}
+    {% if responsable %}
+    <span class="badge-filter">
+      <i class="bi bi-person"></i>{{ responsable }}
+      <button class="badge-filter-rm" onclick="removeFilterBC('responsable')" title="Retirer">×</button>
+    </span>
+    {% endif %}
+    {% if societe %}
+    <span class="badge-filter">
+      <i class="bi bi-building"></i>{{ societe }}
+      <button class="badge-filter-rm" onclick="removeFilterBC('societe')" title="Retirer">×</button>
+    </span>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+
+<!-- ══ TABLEAU ════════════════════════════════════════════════ -->
+<input type="text" id="searchTable" placeholder="Rechercher dans le tableau..."
+  style="width:100%;padding:8px 14px;border:1px solid #e5e7eb;border-radius:8px;
+         margin-bottom:12px;font-size:13px;outline:none;box-sizing:border-box;">
+
+<div class="table-card">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <span style="font-size:12px; color:#6b7280;">
+      <i class="bi bi-table me-1"></i>{{ total_bons }} bon(s) de commande
+    </span>
+    <span style="font-size:12px; color:#6b7280;" id="pagination-info"></span>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table align-middle mb-0" id="data-table">
+      <thead>
+        <tr>
+          <th class="col-num">N° Commande</th>
+          <th class="col-date">Date</th>
+          <th class="col-date">Date prévue</th>
+          <th class="col-fourn">Fournisseur</th>
+          <th class="col-resp">Responsable</th>
+          <th class="col-soc">Société</th>
+          <th class="col-delai">Délai livraison</th>
+          <th class="text-end col-montant">Montant HT</th>
+          <th class="text-end col-montant">Taxes</th>
+          <th class="text-end col-montant">Montant TTC</th>
+          <th>État</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for row in rows %}
+        <tr data-row data-order="{{ row.date }}" data-planned="{{ row.date_planned }}" data-state="{{ row.etat_raw }}" data-ht="{{ row.montant_ht }}" data-tax="{{ row.montant_tax }}" data-ttc="{{ row.montant_ttc }}">
+          <td class="col-num">{{ row.name }}</td>
+          <td class="col-date">{{ row.date }}</td>
+          <td class="col-date">{{ row.date_planned }}</td>
+          <td class="col-fourn">{{ row.fournisseur }}</td>
+          <td class="col-resp">{{ row.responsable }}</td>
+          <td class="col-soc">{{ row.societe }}</td>
+          <td class="col-delai"><span class="badge-delai d-mid">Calcul...</span></td>
+          <td class="text-end col-montant">{{ row.montant_ht|floatformat:"2g" }}</td>
+          <td class="text-end col-montant" style="color:#6b7280;">{{ row.montant_tax|floatformat:"2g" }}</td>
+          <td class="text-end col-montant" style="font-weight:600;">{{ row.montant_ttc|floatformat:"2g" }}</td>
+          <td>
+            <span class="badge-etat
+              {% if row.etat_raw == 'draft'    %}s-draft
+              {% elif row.etat_raw == 'sent'   %}s-sent
+              {% elif row.etat_raw == 'purchase'%}s-confirm
+              {% elif row.etat_raw == 'done'   %}s-done
+              {% elif row.etat_raw == 'cancel' %}s-cancel
+              {% else %}s-draft{% endif %}">
+              {{ row.etat }}
+            </span>
+          </td>
+        </tr>
+      {% empty %}
+        <tr>
+          <td colspan="11" class="p-0">
+            <div class="empty-state">
+              <i class="bi bi-inbox"></i>
+              <p>Aucun bon de commande trouvé pour ces filtres</p>
+            </div>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+      {% if rows %}
+      <tfoot>
+        <tr>
+          <td colspan="7" style="font-weight:700;">TOTAL</td>
+          <td class="text-end" id="total-ht">{{ total_ht|floatformat:"2g" }}</td>
+          <td class="text-end" id="total-tax">0,00</td>
+          <td class="text-end" id="total-ttc">0,00</td>
+          <td>{{ total_bons }} bon(s)</td>
+        </tr>
+      </tfoot>
+      {% endif %}
+    </table>
+  </div>
+
+  <div class="d-flex justify-content-center mt-4">
+    <div id="pagination-container"></div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+function removeFilterBC(key) {
+  var url = new URL(window.location.href);
+  url.searchParams.delete(key);
+  window.location.href = url.toString();
+}
+
+function animateCount(el, target, decimal) {
+  if (!el) return;
+  var t = Number(target || 0);
+  var step = t / 60;
+  var cur = 0;
+  var timer = setInterval(function () {
+    cur += step;
+    if (cur >= t) {
+      el.textContent = decimal ? t.toLocaleString('fr-FR', {minimumFractionDigits:2, maximumFractionDigits:2}) : Math.round(t).toLocaleString('fr-FR');
+      clearInterval(timer);
+      return;
+    }
+    el.textContent = decimal
+      ? cur.toLocaleString('fr-FR', {minimumFractionDigits:2, maximumFractionDigits:2})
+      : Math.floor(cur).toLocaleString('fr-FR');
+  }, 25);
+}
+
+/* Recherche temps réel */
+var searchInput = document.getElementById('searchTable');
+if (searchInput) {
+  searchInput.addEventListener('input', function () {
+    var q = this.value.toLowerCase();
+    document.querySelectorAll('#data-table tbody tr[data-row]').forEach(function (tr) {
+      tr.style.display = tr.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+  });
+}
+
+/* Délai livraison (date prévue - date commande) */
+(function () {
+  function parseFr(s) {
+    if (!s || s === '—') return null;
+    var m = String(s).match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (!m) return null;
+    return new Date(parseInt(m[3], 10), parseInt(m[2], 10) - 1, parseInt(m[1], 10));
+  }
+  var DAY = 24 * 60 * 60 * 1000;
+  document.querySelectorAll('#data-table tbody tr[data-row]').forEach(function (tr) {
+    var dOrder = parseFr(tr.dataset.order || '');
+    var dPlanned = parseFr(tr.dataset.planned || '');
+    var badge = tr.querySelector('.badge-delai');
+    if (!badge) return;
+    if (!dOrder || !dPlanned) {
+      badge.className = 'badge-delai d-mid';
+      badge.textContent = 'Non défini';
+      return;
+    }
+    dOrder.setHours(0, 0, 0, 0);
+    dPlanned.setHours(0, 0, 0, 0);
+    var diff = Math.round((dPlanned - dOrder) / DAY);
+    if (diff < 0) {
+      badge.className = 'badge-delai d-late';
+      badge.textContent = 'Retard (' + Math.abs(diff) + ' j)';
+      tr.classList.add('row-retard');
+    } else if (diff <= 7) {
+      badge.className = 'badge-delai d-ok';
+      badge.textContent = diff + ' j';
+    } else if (diff <= 15) {
+      badge.className = 'badge-delai d-mid';
+      badge.textContent = diff + ' j';
+    } else {
+      badge.className = 'badge-delai d-late';
+      badge.textContent = diff + ' j';
+    }
+  });
+})();
+
+/* KPI dynamiques + totaux tableau */
+(function () {
+  var rows = document.querySelectorAll('#data-table tbody tr[data-row]');
+  if (!rows.length) return;
+  var totalHT = 0, totalTax = 0, totalTTC = 0, nbRetard = 0, nbConfirmes = 0;
+  rows.forEach(function (tr) {
+    totalHT += parseFloat(tr.dataset.ht || 0);
+    totalTax += parseFloat(tr.dataset.tax || 0);
+    totalTTC += parseFloat(tr.dataset.ttc || 0);
+    if (tr.classList.contains('row-retard')) nbRetard += 1;
+    var st = (tr.dataset.state || '').toLowerCase();
+    if (st === 'purchase' || st === 'done') nbConfirmes += 1;
+  });
+  function fr(n) { return (n || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+  var elTotalTTC = document.getElementById('kpi-total-ttc');
+  var elRetard = document.getElementById('kpi-retard');
+  var elConfirmes = document.getElementById('kpi-confirmes');
+  if (elTotalTTC) elTotalTTC.textContent = fr(totalTTC);
+  if (elRetard) elRetard.textContent = nbRetard.toLocaleString('fr-FR');
+  if (elConfirmes) elConfirmes.textContent = nbConfirmes.toLocaleString('fr-FR');
+  var tHT = document.getElementById('total-ht');
+  var tTax = document.getElementById('total-tax');
+  var tTTC = document.getElementById('total-ttc');
+  if (tHT) tHT.textContent = fr(totalHT);
+  if (tTax) tTax.textContent = fr(totalTax);
+  if (tTTC) tTTC.textContent = fr(totalTTC);
+
+  // Insights
+  var totalBons = rows.length || 1;
+  var confirmRate = (nbConfirmes * 100) / totalBons;
+  var ticketMoyen = totalTTC / totalBons;
+  var fourCount = {};
+  rows.forEach(function (tr) {
+    var td = tr.querySelector('.col-fourn');
+    var f = td ? td.textContent.trim() : '';
+    if (!f) f = '—';
+    fourCount[f] = (fourCount[f] || 0) + 1;
+  });
+  var topF = '—', topN = -1;
+  Object.keys(fourCount).forEach(function (k) {
+    if (fourCount[k] > topN) { topN = fourCount[k]; topF = k; }
+  });
+  var elCR = document.getElementById('ins-confirm-rate');
+  var elTM = document.getElementById('ins-ticket-moyen');
+  var elTF = document.getElementById('ins-top-fournisseur');
+  if (elCR) elCR.textContent = confirmRate.toFixed(1).replace('.', ',') + '%';
+  if (elTM) elTM.textContent = fr(ticketMoyen);
+  if (elTF) elTF.textContent = topF;
+
+  // KPI animation
+  var kTot = document.getElementById('kpi-total-bons');
+  var kTtc = document.getElementById('kpi-total-ttc');
+  var kRet = document.getElementById('kpi-retard');
+  var kConf = document.getElementById('kpi-confirmes');
+  animateCount(kTot, totalBons, false);
+  animateCount(kTtc, totalTTC, true);
+  animateCount(kRet, nbRetard, false);
+  animateCount(kConf, nbConfirmes, false);
+
+  // Doughnut chart états
+  if (typeof Chart !== 'undefined') {
+    var counts = { draft: 0, sent: 0, purchase: 0, done: 0, cancel: 0 };
+    rows.forEach(function (tr) {
+      var st = (tr.dataset.state || '').toLowerCase();
+      if (counts[st] !== undefined) counts[st] += 1;
+    });
+    var canvas = document.getElementById('stateChartPO');
+    if (canvas) {
+      new Chart(canvas, {
+        type: 'doughnut',
+        data: {
+          labels: ['Brouillon', 'Envoyé', 'Confirmé', 'Terminé', 'Annulé'],
+          datasets: [{
+            data: [counts.draft, counts.sent, counts.purchase, counts.done, counts.cancel],
+            backgroundColor: ['#1a2c4e', '#E87722', '#16a34a', '#22c55e', '#dc2626'],
+            borderWidth: 0
+          }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+      });
+    }
+  }
+})();
+
+(function () {
+  var PAGE_SIZE = 50;
+  var currentPage = 1;
+  var tbody = document.querySelector('#data-table tbody');
+  if (!tbody) return;
+  var rows = Array.from(tbody.querySelectorAll('tr[data-row]'));
+  if (rows.length === 0) return;
+  var totalPages = Math.ceil(rows.length / PAGE_SIZE);
+
+  function showPage(page) {
+    currentPage = page;
+    var start = (page - 1) * PAGE_SIZE;
+    var end = start + PAGE_SIZE;
+    rows.forEach(function (tr, i) {
+      tr.style.display = (i >= start && i < end) ? '' : 'none';
+    });
+    var info = document.getElementById('pagination-info');
+    if (info) info.textContent = 'Page ' + page + ' / ' + totalPages + ' — ' + rows.length + ' ligne(s)';
+    renderPagination();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function renderPagination() {
+    var container = document.getElementById('pagination-container');
+    if (!container || totalPages <= 1) return;
+    var html = '<ul class="pagination pagination-sm mb-0">';
+
+    html += currentPage > 1
+      ? '<li class="page-item"><a class="page-link" href="#" data-p="' + (currentPage - 1) + '"><i class="bi bi-chevron-left"></i></a></li>'
+      : '<li class="page-item disabled"><span class="page-link"><i class="bi bi-chevron-left"></i></span></li>';
+
+    for (var i = 1; i <= totalPages; i++) {
+      if (i === 1 || i === totalPages || Math.abs(i - currentPage) <= 2) {
+        html += '<li class="page-item' + (i === currentPage ? ' active' : '') + '">'
+              + '<a class="page-link" href="#" data-p="' + i + '">' + i + '</a></li>';
+      } else if (Math.abs(i - currentPage) === 3) {
+        html += '<li class="page-item disabled"><span class="page-link">…</span></li>';
+      }
+    }
+
+    html += currentPage < totalPages
+      ? '<li class="page-item"><a class="page-link" href="#" data-p="' + (currentPage + 1) + '"><i class="bi bi-chevron-right"></i></a></li>'
+      : '<li class="page-item disabled"><span class="page-link"><i class="bi bi-chevron-right"></i></span></li>';
+
+    html += '</ul>';
+    container.innerHTML = html;
+    container.querySelectorAll('[data-p]').forEach(function (el) {
+      el.addEventListener('click', function (e) {
+        e.preventDefault();
+        showPage(parseInt(this.getAttribute('data-p')));
+      });
+    });
+  }
+
+  showPage(1);
+})();
+</script>
+{% endblock %}

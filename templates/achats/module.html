@@ -1,0 +1,261 @@
+{% extends 'base.html' %}
+
+{% block title %}Achats &amp; Approvisionnement — {{ page_title }}{% endblock %}
+
+{% block breadcrumb %}
+  <a href="{% url 'accueil' %}">Accueil</a>
+  <i class="bi bi-chevron-right"></i>
+  <a href="{% url 'achats_overview' %}">Achats &amp; Approvisionnement</a>
+  <i class="bi bi-chevron-right"></i>
+  <span style="color:#1a2c4e; font-weight:600;">{{ page_title }}</span>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ── Hero Banner ─────────────────────────────────────────── */
+.wb {
+  background: linear-gradient(135deg, #0f1e38 0%, #1a2c4e 50%, #1e3460 100%);
+  border-radius: 16px;
+  padding: 28px 32px 24px;
+  margin-bottom: 28px;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+.wb-deco { position:absolute; border-radius:50%; pointer-events:none; }
+.wb-deco-1 { width:280px; height:280px; right:-70px;  top:-90px;    background:rgba(232,119,34,.08); }
+.wb-deco-2 { width:160px; height:160px; right:100px;  bottom:-80px; background:rgba(255,255,255,.03); }
+.wb-deco-3 { width:90px;  height:90px;  left:38%;     top:-28px;    background:rgba(232,119,34,.05); }
+.wb-content { position:relative; z-index:1; }
+.wb-eyebrow {
+  font-size:11px; font-weight:600; letter-spacing:1.8px; text-transform:uppercase;
+  color:rgba(255,255,255,.40); margin-bottom:6px;
+  display:flex; align-items:center; gap:8px;
+}
+.wb-pulse {
+  width:7px; height:7px; border-radius:50%; background:#E87722;
+  box-shadow:0 0 0 3px rgba(232,119,34,.22);
+  animation:pulseOrange 2.2s infinite;
+}
+@keyframes pulseOrange {
+  0%,100%{ box-shadow:0 0 0 3px rgba(232,119,34,.22); }
+  50%    { box-shadow:0 0 0 7px rgba(232,119,34,.08); }
+}
+.wb-title { font-size:24px; font-weight:800; color:#fff; line-height:1.2; margin-bottom:4px; }
+.wb-title span { color:#E87722; }
+.wb-sub { font-size:13px; color:rgba(255,255,255,.42); display:flex; align-items:center; gap:6px; }
+.wb-right { position:relative; z-index:1; text-align:right; flex-shrink:0; }
+.wb-logo-ghost {
+  font-size:44px; font-weight:900; letter-spacing:6px;
+  color:rgba(255,255,255,.06); user-select:none; line-height:1;
+}
+.wb-badge {
+  display:inline-flex; align-items:center; gap:6px;
+  background:rgba(232,119,34,.18); border:1px solid rgba(232,119,34,.32);
+  color:#f5a24b; border-radius:99px;
+  padding:5px 16px; font-size:11px; font-weight:600; letter-spacing:.4px; margin-top:8px;
+}
+@media (max-width:640px) { .wb { padding:22px 20px; } .wb-right { display:none; } .wb-title { font-size:20px; } }
+
+/* ── Section header ─────────────────────────────────────── */
+.sec-hd {
+  display:flex; align-items:center; gap:8px;
+  font-size:11px; font-weight:700; letter-spacing:1.3px;
+  text-transform:uppercase; color:#9ca3af;
+  margin-bottom:16px;
+}
+.sec-hd i { color:#E87722; font-size:13px; }
+.sec-hd::after { content:''; flex:1; height:1px; background:#eef0f3; }
+
+/* ── Module cards ───────────────────────────────────────── */
+.achat-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 22px 20px 18px;
+  min-height: 200px;
+  box-shadow: 0 1px 3px rgba(0,0,0,.05), 0 2px 10px rgba(0,0,0,.04);
+  border: 1.5px solid #f0f2f5;
+  border-left: 4px solid #1a2c4e;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  text-decoration: none;
+  color: inherit;
+  position: relative;
+  overflow: hidden;
+  transform: translateY(8px);
+  opacity: 0;
+  animation: fadeInUp 0.45s ease forwards;
+  transition: border-left-color .2s, box-shadow .2s, transform .2s;
+}
+.achat-card:hover {
+  border-left-color: #E87722;
+  box-shadow: 0 8px 28px rgba(232,119,34,.16);
+  transform: translateY(-3px);
+  color: inherit;
+}
+.achat-card .card-icon {
+  width: 46px; height: 46px; border-radius: 11px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; margin-bottom: 14px; flex-shrink: 0;
+}
+.achat-card h3 {
+  font-size: 15px; font-weight: 700; color: #1a2c4e;
+  margin: 0 0 6px;
+}
+.achat-card p {
+  color: #6b7280; font-size: 13px; line-height: 1.55;
+  margin: 0 0 16px; flex: 1;
+}
+.achat-card .go {
+  display: inline-flex; align-items: center; gap: 5px;
+  margin-top: auto; font-weight: 600; font-size: 13px;
+  color: #374151;
+  border: 1px solid #d1d5db; border-radius: 8px;
+  padding: 8px 16px; align-self: flex-start;
+  background: #fff;
+  transition: background .18s, color .18s, border-color .18s;
+  text-decoration: none;
+}
+.achat-card:hover .go {
+  background: #1a2c4e; color: #fff; border-color: #1a2c4e;
+}
+.is-active {
+  border-left-color: #E87722 !important;
+  box-shadow: 0 0 0 2px rgba(232,119,34,.25), 0 6px 20px rgba(232,119,34,.12) !important;
+}
+
+/* Couleurs par carte */
+.c1 .card-icon { background: rgba(26,44,78,.08);  color: #1a2c4e; }
+.c2 .card-icon { background: rgba(232,119,34,.10); color: #E87722; }
+.c3 .card-icon { background: rgba(26,44,78,.08);  color: #1a2c4e; }
+.c4 .card-icon { background: rgba(232,119,34,.10); color: #E87722; }
+.c5 .card-icon { background: rgba(26,44,78,.08);  color: #1a2c4e; }
+.c6 .card-icon { background: rgba(232,119,34,.10); color: #E87722; }
+
+.c2 { border-left-color: #E87722; }
+.c4 { border-left-color: #E87722; }
+.c6 { border-left-color: #E87722; }
+
+/* Délais animation */
+.a1 { animation-delay:.03s; } .a2 { animation-delay:.08s; }
+.a3 { animation-delay:.13s; } .a4 { animation-delay:.18s; }
+.a5 { animation-delay:.23s; } .a6 { animation-delay:.28s; }
+
+@keyframes fadeInUp {
+  from { opacity:0; transform:translateY(10px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- ══ HERO BANNER ══════════════════════════════════════════ -->
+<div class="wb">
+  <div class="wb-deco wb-deco-1"></div>
+  <div class="wb-deco wb-deco-2"></div>
+  <div class="wb-deco wb-deco-3"></div>
+  <div class="wb-content">
+    <div class="wb-eyebrow">
+      <span class="wb-pulse"></span>Module Achats
+    </div>
+    <div class="wb-title">Achats &amp; <span>Approvisionnement</span></div>
+    <div class="wb-sub">
+      <i class="bi bi-cart-check-fill"></i>
+      Demandes, commandes, livraisons et fournisseurs
+    </div>
+  </div>
+  <div class="wb-right">
+    <div class="wb-logo-ghost">ACH</div>
+    <div>
+      <span class="wb-badge">
+        <i class="bi bi-cart-fill"></i>Achats &amp; Approvisionnement
+      </span>
+    </div>
+  </div>
+</div>
+
+<!-- ══ CARTES MODULES ════════════════════════════════════════ -->
+<div class="sec-hd">
+  <i class="bi bi-grid-1x2"></i>Modules disponibles
+</div>
+
+<div class="row g-3">
+  {% for item in menu_items %}
+    {% if item.key == 'overview' and module_key != 'overview' %}
+      <div class="col-lg-4 col-md-6">
+        <a href="{% url item.url %}" class="achat-card c1 a1 {% if module_key == item.key %}is-active{% endif %}">
+          <div>
+            <div class="card-icon"><i class="bi bi-grid-1x2-fill"></i></div>
+            <h3>{{ item.label }}</h3>
+            <p>Vue globale du processus achats et de l'avancement opérationnel.</p>
+          </div>
+          <span class="go"><i class="bi bi-arrow-right-short"></i>Accéder</span>
+        </a>
+      </div>
+    {% elif item.key == 'purchase_requests' %}
+      <div class="col-lg-4 col-md-6">
+        <a href="{% url item.url %}" class="achat-card c2 a2 {% if module_key == item.key %}is-active{% endif %}">
+          <div>
+            <div class="card-icon"><i class="bi bi-card-checklist"></i></div>
+            <h3>{{ item.label }}</h3>
+            <p>Saisie, suivi et priorisation des demandes émises par les services.</p>
+          </div>
+          <span class="go"><i class="bi bi-arrow-right-short"></i>Accéder</span>
+        </a>
+      </div>
+    {% elif item.key == 'rfq' %}
+      <div class="col-lg-4 col-md-6">
+        <a href="{% url item.url %}" class="achat-card c3 a3 {% if module_key == item.key %}is-active{% endif %}">
+          <div>
+            <div class="card-icon"><i class="bi bi-currency-exchange"></i></div>
+            <h3>{{ item.label }}</h3>
+            <p>Comparaison des offres et sélection fournisseur selon critères métier.</p>
+          </div>
+          <span class="go"><i class="bi bi-arrow-right-short"></i>Accéder</span>
+        </a>
+      </div>
+    {% elif item.key == 'purchase_orders' %}
+      <div class="col-lg-4 col-md-6">
+        <a href="{% url item.url %}" class="achat-card c4 a4 {% if module_key == item.key %}is-active{% endif %}">
+          <div>
+            <div class="card-icon"><i class="bi bi-file-earmark-text-fill"></i></div>
+            <h3>{{ item.label }}</h3>
+            <p>Pilotage des bons validés, montants engagés et état d'exécution.</p>
+          </div>
+          <span class="go"><i class="bi bi-arrow-right-short"></i>Accéder</span>
+        </a>
+      </div>
+    {% elif item.key == 'delivery_tracking' %}
+      <div class="col-lg-4 col-md-6">
+        <a href="{% url item.url %}" class="achat-card c5 a5 {% if module_key == item.key %}is-active{% endif %}">
+          <div>
+            <div class="card-icon"><i class="bi bi-truck"></i></div>
+            <h3>{{ item.label }}</h3>
+            <p>Suivi des délais, réceptions et écarts entre commande et livraison.</p>
+          </div>
+          <span class="go"><i class="bi bi-arrow-right-short"></i>Accéder</span>
+        </a>
+      </div>
+    {% elif item.key == 'suppliers' %}
+      <div class="col-lg-4 col-md-6">
+        <a href="{% url item.url %}" class="achat-card c6 a6 {% if module_key == item.key %}is-active{% endif %}">
+          <div>
+            <div class="card-icon"><i class="bi bi-building-fill"></i></div>
+            <h3>{{ item.label }}</h3>
+            <p>Suivi du panel fournisseurs et évaluation performance qualité / coût / délai.</p>
+          </div>
+          <span class="go"><i class="bi bi-arrow-right-short"></i>Accéder</span>
+        </a>
+      </div>
+    {% endif %}
+  {% endfor %}
+</div>
+
+
+{% endblock %}

@@ -1,0 +1,591 @@
+{% extends 'base.html' %}
+
+{% block title %}Achats — Demandes d'achat{% endblock %}
+
+{% block breadcrumb %}
+  <a href="{% url 'accueil' %}">Accueil</a>
+  <i class="bi bi-chevron-right"></i>
+  <a href="{% url 'achats_overview' %}">Achats &amp; Approvisionnement</a>
+  <i class="bi bi-chevron-right"></i>
+  <span style="color:#1a2c4e; font-weight:600;">Demandes d'achat</span>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ── Hero ─────────────────────────────────────────────────── */
+.hero {
+  background: linear-gradient(135deg, #0f1e38 0%, #1a2c4e 50%, #1e3460 100%);
+  border-radius: 16px; padding: 28px 32px 24px; margin-bottom: 24px;
+  position: relative; overflow: hidden;
+  display: flex; align-items: center; justify-content: space-between; gap: 20px;
+}
+.hero-deco { position:absolute; border-radius:50%; pointer-events:none; }
+.hero-deco-1 { width:280px;height:280px;right:-70px;top:-90px;    background:rgba(232,119,34,.08); }
+.hero-deco-2 { width:160px;height:160px;right:100px;bottom:-80px; background:rgba(255,255,255,.03); }
+.hero-deco-3 { width:90px; height:90px; left:38%;  top:-28px;     background:rgba(232,119,34,.05); }
+.hero-content { position:relative; z-index:1; }
+.hero-eyebrow {
+  font-size:11px; font-weight:600; letter-spacing:1.8px; text-transform:uppercase;
+  color:rgba(255,255,255,.40); margin-bottom:6px;
+  display:flex; align-items:center; gap:8px;
+}
+.hero-pulse {
+  width:7px; height:7px; border-radius:50%; background:#E87722;
+  box-shadow:0 0 0 3px rgba(232,119,34,.22);
+  animation:pulseDA 2.2s infinite;
+}
+@keyframes pulseDA {
+  0%,100%{ box-shadow:0 0 0 3px rgba(232,119,34,.22); }
+  50%    { box-shadow:0 0 0 7px rgba(232,119,34,.08); }
+}
+.hero-title { font-size:24px; font-weight:800; color:#fff; line-height:1.2; margin-bottom:4px; }
+.hero-title span { color:#E87722; }
+.hero-sub  { font-size:13px; color:rgba(255,255,255,.42); display:flex; align-items:center; gap:6px; }
+.hero-right { position:relative; z-index:1; text-align:right; flex-shrink:0; }
+.hero-ghost { font-size:42px; font-weight:900; letter-spacing:5px; color:rgba(255,255,255,.06); user-select:none; line-height:1; }
+.hero-badge {
+  display:inline-flex; align-items:center; gap:6px;
+  background:#E87722; color:#fff; border-radius:99px;
+  padding:6px 16px; font-size:12px; font-weight:700; margin-top:8px;
+}
+
+/* ── KPI cards ───────────────────────────────────────────── */
+.kpi-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:20px; }
+.kpi-card {
+  background:#fff; border:0.5px solid #e5e7eb; border-radius:12px;
+  padding:18px 20px; position:relative; overflow:hidden;
+}
+.kpi-card-navy   { border-left:3px solid #1a2c4e; }
+.kpi-card-orange { border-left:3px solid #E87722; }
+.kpi-card-amber  { border-left:3px solid #b45309; }
+.kpi-card-green  { border-left:3px solid #16a34a; }
+.kpi-ico {
+  width:40px; height:40px; border-radius:10px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:18px; margin-bottom:12px;
+}
+.ico-navy   { background:rgba(26,44,78,.08);  color:#1a2c4e; }
+.ico-orange { background:rgba(232,119,34,.10); color:#E87722; }
+.ico-amber  { background:rgba(180,83,9,.10);   color:#b45309; }
+.ico-green  { background:rgba(22,163,74,.10);  color:#16a34a; }
+.kpi-label { font-size:12px; color:#6b7280; margin-bottom:4px; }
+.kpi-value { font-size:26px; font-weight:700; color:#1a2c4e; line-height:1; }
+
+/* ── Badges état ─────────────────────────────────────────── */
+.badge-etat {
+  border-radius:99px; padding:3px 12px;
+  font-size:11px; font-weight:600; display:inline-block; white-space:nowrap;
+}
+.s-draft    { background:#f3f4f6; color:#6b7280; border:1px solid #e5e7eb; }
+.s-confirm  { background:#dbeafe; color:#1d4ed8; border:1px solid #bfdbfe; }
+.s-approved { background:#dcfce7; color:#15803d; border:1px solid #bbf7d0; }
+.s-rejected { background:#fee2e2; color:#dc2626; border:1px solid #fecaca; }
+.s-sent     { background:#fef3c7; color:#b45309; border:1px solid #fde68a; }
+
+/* ── Filtre card ─────────────────────────────────────────── */
+.filter-card {
+  background:#fff; border:0.5px solid #e5e7eb; border-radius:14px;
+  padding:20px 24px; margin-bottom:20px;
+  box-shadow:0 2px 8px rgba(0,0,0,.04);
+}
+.filter-label {
+  display:block; font-size:11px; font-weight:600; color:#6b7280;
+  text-transform:uppercase; letter-spacing:.5px; margin-bottom:4px;
+}
+.filter-input {
+  height:38px; border:1px solid #e5e7eb; border-radius:8px;
+  font-size:13px; padding:0 12px; width:100%;
+  background:#fff; color:#111827; outline:none;
+  transition:border-color .15s;
+  appearance:none; -webkit-appearance:none;
+}
+.filter-input:focus { border-color:#1a2c4e; box-shadow:0 0 0 3px rgba(26,44,78,.07); }
+select.filter-input {
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 16 16'%3E%3Cpath fill='%236b7280' d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+  background-repeat:no-repeat; background-position:right 10px center;
+  padding-right:30px;
+}
+.btn-filtrer {
+  height:38px; background:#1a2c4e; color:#fff; border:none;
+  border-radius:8px; padding:0 20px; font-weight:600; font-size:13px;
+  cursor:pointer; white-space:nowrap; transition:background .18s;
+  display:inline-flex; align-items:center; gap:6px;
+}
+.btn-filtrer:hover { background:#E87722; color:#fff; }
+.btn-reset {
+  height:38px; background:#fff; color:#374151;
+  border:1px solid #e5e7eb; border-radius:8px; padding:0 16px;
+  font-size:13px; text-decoration:none; cursor:pointer; white-space:nowrap;
+  display:inline-flex; align-items:center; gap:6px;
+  transition:border-color .15s, color .15s;
+}
+.btn-reset:hover { border-color:#1a2c4e; color:#1a2c4e; }
+.btn-export-excel {
+  height:38px; background:#dcfce7; color:#15803d;
+  border:1px solid #bbf7d0; border-radius:8px; padding:0 16px;
+  font-size:13px; text-decoration:none; white-space:nowrap;
+  display:inline-flex; align-items:center; gap:6px;
+  transition:background .15s;
+}
+.btn-export-excel:hover { background:#bbf7d0; color:#15803d; }
+.btn-export-csv {
+  height:38px; background:#dbeafe; color:#1d4ed8;
+  border:1px solid #bfdbfe; border-radius:8px; padding:0 16px;
+  font-size:13px; text-decoration:none; white-space:nowrap;
+  display:inline-flex; align-items:center; gap:6px;
+  transition:background .15s;
+}
+.btn-export-csv:hover { background:#bfdbfe; color:#1d4ed8; }
+.btn-export-pdf {
+  height:38px; background:#fef2f2; color:#dc2626;
+  border:1px solid #fecaca; border-radius:8px; padding:0 16px;
+  font-size:13px; text-decoration:none; white-space:nowrap;
+  display:inline-flex; align-items:center; gap:6px;
+  transition:background .15s;
+}
+.btn-export-pdf:hover { background:#fecaca; color:#dc2626; }
+.badge-filter {
+  display:inline-flex; align-items:center; gap:4px;
+  background:#fff7ed; color:#c2410c; border:1px solid #fed7aa;
+  border-radius:99px; padding:2px 10px; font-size:11px; font-weight:600;
+}
+.badge-filter-rm {
+  cursor:pointer; font-size:13px; line-height:1;
+  border:none; background:none; color:#c2410c; padding:0;
+}
+.badge-filter-rm:hover { color:#dc2626; }
+
+/* ── Table card ──────────────────────────────────────────── */
+.table-card {
+  background:#fff; border:0.5px solid #e5e7eb;
+  border-radius:12px; padding:16px;
+}
+.table thead th {
+  background:#1a2c4e !important; color:#fff !important;
+  font-size:12px; font-weight:600; padding:12px 14px;
+  border:none; white-space:nowrap; vertical-align:middle;
+}
+.table tbody tr:nth-child(even) { background:#f8fafc; }
+.table tbody tr:nth-child(odd)  { background:#fff; }
+.table tbody tr:hover { background:#f0f4ff !important; transition:background .1s; }
+.table td { vertical-align:middle; padding:10px 14px; font-size:13px; }
+.table tfoot td {
+  background:#1a2c4e !important; color:#fff !important;
+  font-weight:700; border:none; padding:11px 14px;
+}
+.col-check  { width:36px; }
+.col-num    { min-width:130px; font-weight:700; color:#1a2c4e; }
+.col-date   { min-width:95px; }
+.col-dem    { min-width:150px; }
+.col-dep    { min-width:150px; }
+.col-desc   { min-width:240px; max-width:380px; white-space:normal; color:#374151; }
+.col-montant{ min-width:130px; }
+
+/* ── Pagination ──────────────────────────────────────────── */
+.page-item.active .page-link { background:#1a2c4e; border-color:#1a2c4e; color:#fff; }
+.page-link { color:#1a2c4e; }
+.page-link:hover { color:#E87722; border-color:#E87722; }
+
+/* ── Empty state ─────────────────────────────────────────── */
+.empty-state { text-align:center; padding:48px 20px; }
+.empty-state i { font-size:48px; color:#d1d5db; display:block; margin-bottom:12px; }
+.empty-state p { color:#6b7280; font-size:14px; margin:0; }
+
+/* ── Responsive ──────────────────────────────────────────── */
+@media (max-width:992px) { .kpi-grid { grid-template-columns:repeat(2,1fr); } }
+@media (max-width:576px) {
+  .kpi-grid  { grid-template-columns:1fr 1fr; }
+  .hero-right{ display:none; }
+  .hero      { padding:20px; }
+  .hero-title{ font-size:20px; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- ══ HERO ═══════════════════════════════════════════════════ -->
+<div class="hero">
+  <div class="hero-deco hero-deco-1"></div>
+  <div class="hero-deco hero-deco-2"></div>
+  <div class="hero-deco hero-deco-3"></div>
+  <div class="hero-content">
+    <div class="hero-eyebrow"><span class="hero-pulse"></span>Module Achats</div>
+    <div class="hero-title">Demandes d'<span>achat</span></div>
+    <div class="hero-sub"><i class="bi bi-card-checklist"></i>Pilotage des demandes internes</div>
+  </div>
+  <div class="hero-right">
+    <div class="hero-ghost">ACH</div>
+    <span class="hero-badge"><i class="bi bi-cart-fill"></i>Achats &amp; Approvisionnement</span>
+  </div>
+</div>
+
+{% if use_fallback %}
+<div class="alert alert-warning py-2 mb-3">
+  <i class="bi bi-info-circle me-2"></i>Source active : <strong>{{ odoo_model_label }}</strong> (fallback — purchase.request non disponible).
+</div>
+{% endif %}
+{% if error %}
+<div class="alert alert-danger mb-3"><i class="bi bi-exclamation-triangle me-2"></i>{{ error }}</div>
+{% endif %}
+
+<!-- ══ KPI CARDS ═══════════════════════════════════════════════ -->
+<div class="kpi-grid">
+  <div class="kpi-card kpi-card-navy">
+    <div class="kpi-ico ico-navy"><i class="bi bi-list-check"></i></div>
+    <div class="kpi-label">Total demandes</div>
+    <div class="kpi-value" data-count="{{ total_demandes }}">{{ total_demandes }}</div>
+  </div>
+  <div class="kpi-card kpi-card-orange">
+    <div class="kpi-ico ico-orange"><i class="bi bi-currency-dollar"></i></div>
+    <div class="kpi-label">Montant total estimé</div>
+    <div class="kpi-value">{{ total_montant|floatformat:"2g" }}</div>
+  </div>
+  <div class="kpi-card kpi-card-amber">
+    <div class="kpi-ico ico-amber"><i class="bi bi-hourglass-split"></i></div>
+    <div class="kpi-label">En attente d'approbation</div>
+    <div class="kpi-value">{{ nb_attente }}</div>
+  </div>
+  <div class="kpi-card kpi-card-green">
+    <div class="kpi-ico ico-green"><i class="bi bi-check-circle"></i></div>
+    <div class="kpi-label">Approuvées</div>
+    <div class="kpi-value">{{ nb_approuvees }}</div>
+  </div>
+</div>
+
+<!-- ══ GRAPHIQUE DÉPARTEMENTS ════════════════════════════════ -->
+<div style="background:#fff;border:0.5px solid #e5e7eb;border-radius:14px;padding:20px 24px;margin-bottom:20px;">
+  <div style="font-weight:700;font-size:14px;color:#1a2c4e;margin-bottom:4px;">
+    <i class="bi bi-bar-chart-horizontal-fill me-2" style="color:#E87722;"></i>Répartition des demandes par département
+  </div>
+  <div style="font-size:12px;color:#6b7280;margin-bottom:14px;">Top 5 départements par montant estimé</div>
+  <div style="position:relative;height:200px;">
+    <canvas id="deptChart"></canvas>
+  </div>
+</div>
+
+<!-- ══ FILTRES ════════════════════════════════════════════════ -->
+<div class="filter-card">
+  <form method="get" id="filter-form-da" class="row g-3 align-items-end">
+    <div class="col-lg-2 col-md-4 col-6">
+      <label class="filter-label">Date début</label>
+      <input type="date" name="date_debut" value="{{ date_debut }}" class="filter-input">
+    </div>
+    <div class="col-lg-2 col-md-4 col-6">
+      <label class="filter-label">Date fin</label>
+      <input type="date" name="date_fin" value="{{ date_fin }}" class="filter-input">
+    </div>
+    <div class="col-lg-2 col-md-4 col-12">
+      <label class="filter-label">Département</label>
+      <input list="deps-da" name="departement" value="{{ departement }}" class="filter-input" placeholder="Tous">
+      <datalist id="deps-da">{% for d in departements %}<option value="{{ d }}">{% endfor %}</datalist>
+    </div>
+    <div class="col-lg-2 col-md-4 col-12">
+      <label class="filter-label">État</label>
+      <select name="etat" class="filter-input">
+        <option value="">Tous</option>
+        <option value="draft"      {% if etat == 'draft'      %}selected{% endif %}>Brouillon</option>
+        <option value="to_approve" {% if etat == 'to_approve' %}selected{% endif %}>En attente</option>
+        <option value="approved"   {% if etat == 'approved'   %}selected{% endif %}>Approuvé</option>
+        <option value="rejected"   {% if etat == 'rejected'   %}selected{% endif %}>Rejeté</option>
+        <option value="done"       {% if etat == 'done'       %}selected{% endif %}>Terminé</option>
+      </select>
+    </div>
+    <div class="col-lg-2 col-md-4 col-12">
+      <label class="filter-label">Demandeur</label>
+      <input list="reqs-da" name="demandeur" value="{{ demandeur }}" class="filter-input" placeholder="Tous">
+      <datalist id="reqs-da">{% for d in demandeurs %}<option value="{{ d }}">{% endfor %}</datalist>
+    </div>
+    <div class="col-lg-2 col-md-4 col-12 d-flex gap-2 flex-wrap">
+      <button type="submit" class="btn-filtrer">
+        <i class="bi bi-funnel-fill"></i>Filtrer
+      </button>
+      <a href="{% url 'achats_purchase_requests' %}" class="btn-reset">
+        <i class="bi bi-arrow-counterclockwise"></i>Réinitialiser
+      </a>
+    </div>
+  </form>
+
+  <div class="mt-3 d-flex gap-2 flex-wrap align-items-center">
+    <a class="btn-export-excel"
+       href="?date_debut={{ date_debut }}&date_fin={{ date_fin }}&departement={{ departement }}&etat={{ etat }}&demandeur={{ demandeur }}&export=excel">
+      <i class="bi bi-file-earmark-excel"></i>Export Excel
+    </a>
+    <a class="btn-export-csv"
+       href="?date_debut={{ date_debut }}&date_fin={{ date_fin }}&departement={{ departement }}&etat={{ etat }}&demandeur={{ demandeur }}&export=csv">
+      <i class="bi bi-filetype-csv"></i>Export CSV
+    </a>
+    <a class="btn-export-pdf"
+       href="?date_debut={{ date_debut }}&date_fin={{ date_fin }}&departement={{ departement }}&etat={{ etat }}&demandeur={{ demandeur }}&export=pdf">
+      <i class="bi bi-file-pdf"></i>Export PDF
+    </a>
+  </div>
+
+  {% if date_debut or date_fin or departement or etat or demandeur %}
+  <div class="mt-3 d-flex flex-wrap gap-2 align-items-center">
+    <span style="font-size:11px;color:#6b7280;font-weight:600;">Filtres actifs :</span>
+    {% if date_debut %}
+    <span class="badge-filter">
+      <i class="bi bi-calendar3"></i>Début : {{ date_debut }}
+      <button class="badge-filter-rm" onclick="removeFilterDA('date_debut')" title="Retirer">×</button>
+    </span>
+    {% endif %}
+    {% if date_fin %}
+    <span class="badge-filter">
+      <i class="bi bi-calendar3"></i>Fin : {{ date_fin }}
+      <button class="badge-filter-rm" onclick="removeFilterDA('date_fin')" title="Retirer">×</button>
+    </span>
+    {% endif %}
+    {% if departement %}
+    <span class="badge-filter">
+      <i class="bi bi-building"></i>{{ departement }}
+      <button class="badge-filter-rm" onclick="removeFilterDA('departement')" title="Retirer">×</button>
+    </span>
+    {% endif %}
+    {% if etat %}
+    <span class="badge-filter">
+      <i class="bi bi-toggle-on"></i>{{ etat|capfirst }}
+      <button class="badge-filter-rm" onclick="removeFilterDA('etat')" title="Retirer">×</button>
+    </span>
+    {% endif %}
+    {% if demandeur %}
+    <span class="badge-filter">
+      <i class="bi bi-person"></i>{{ demandeur }}
+      <button class="badge-filter-rm" onclick="removeFilterDA('demandeur')" title="Retirer">×</button>
+    </span>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+
+<!-- ══ TABLEAU ════════════════════════════════════════════════ -->
+<input type="text" id="searchTable" placeholder="Rechercher dans le tableau…"
+  style="width:100%;padding:8px 14px;border:1px solid #e5e7eb;border-radius:8px;
+         margin-bottom:12px;font-size:13px;outline:none;box-sizing:border-box;">
+
+<div class="table-card">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <span style="font-size:12px; color:#6b7280;">
+      <i class="bi bi-table me-1"></i>{{ total_demandes }} demande(s)
+    </span>
+    <span style="font-size:12px; color:#6b7280;" id="pagination-info"></span>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table align-middle mb-0" id="data-table">
+      <thead>
+        <tr>
+          <th class="col-check">
+            <input type="checkbox" id="select-all" class="form-check-input" title="Tout sélectionner">
+          </th>
+          <th class="col-num">N° Demande</th>
+          <th class="col-date">Date</th>
+          <th class="col-dem">Demandeur</th>
+          <th class="col-dep">Département</th>
+          <th class="col-desc">Description</th>
+          <th class="text-end col-montant">Montant estimé</th>
+          <th>État</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for row in rows %}
+        <tr data-row data-dept="{{ row.departement }}" data-montant="{{ row.montant }}">
+          <td class="col-check">
+            <input type="checkbox" class="form-check-input row-checkbox">
+          </td>
+          <td class="col-num">{{ row.name }}</td>
+          <td class="col-date">{{ row.date }}</td>
+          <td class="col-dem">{{ row.demandeur }}</td>
+          <td class="col-dep">{{ row.departement }}</td>
+          <td class="col-desc">{{ row.description }}</td>
+          <td class="text-end col-montant">
+            {{ row.montant|floatformat:"2g" }}
+            {% if row.montant > 50000 %}
+            <span style="background:#fee2e2;color:#dc2626;border-radius:99px;padding:1px 8px;font-size:10px;font-weight:600;margin-left:4px;">Urgent</span>
+            {% endif %}
+          </td>
+          <td>
+            <span class="badge-etat
+              {% if row.etat_raw == 'draft' %}s-draft
+              {% elif row.etat_raw == 'to_approve' or row.etat_raw == 'confirmed' %}s-confirm
+              {% elif row.etat_raw == 'approved' or row.etat_raw == 'purchase' or row.etat_raw == 'done' %}s-approved
+              {% elif row.etat_raw == 'rejected' or row.etat_raw == 'cancel' %}s-rejected
+              {% elif row.etat_raw == 'sent' %}s-sent
+              {% else %}s-draft{% endif %}">
+              {{ row.etat }}
+            </span>
+          </td>
+        </tr>
+      {% empty %}
+        <tr>
+          <td colspan="8" class="p-0">
+            <div class="empty-state">
+              <i class="bi bi-inbox"></i>
+              <p>Aucune demande trouvée pour ces filtres</p>
+            </div>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+      {% if rows %}
+      <tfoot>
+        <tr>
+          <td class="col-check"></td>
+          <td colspan="5" style="font-weight:700;">TOTAL</td>
+          <td class="text-end">{{ total_montant|floatformat:"2g" }}</td>
+          <td>{{ total_demandes }} demande(s)</td>
+        </tr>
+      </tfoot>
+      {% endif %}
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  <div class="d-flex justify-content-center mt-4">
+    <div id="pagination-container"></div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+/* ── Suppression filtre ───────────────────────────────────────────── */
+function removeFilterDA(key) {
+  var url = new URL(window.location.href);
+  url.searchParams.delete(key);
+  window.location.href = url.toString();
+}
+
+/* ── Compteur animé ──────────────────────────────────────────────── */
+function animateCount(el, target) {
+  if (!target) return;
+  var start = 0, step = target / 60;
+  var timer = setInterval(function () {
+    start += step;
+    if (start >= target) {
+      el.textContent = target.toLocaleString('fr-FR');
+      clearInterval(timer);
+      return;
+    }
+    el.textContent = Math.floor(start).toLocaleString('fr-FR');
+  }, 25);
+}
+document.querySelectorAll('.kpi-value[data-count]').forEach(function (el) {
+  animateCount(el, parseInt(el.dataset.count));
+});
+
+/* ── Recherche temps réel ────────────────────────────────────────── */
+var searchInput = document.getElementById('searchTable');
+if (searchInput) {
+  searchInput.addEventListener('input', function () {
+    var q = this.value.toLowerCase();
+    document.querySelectorAll('#data-table tbody tr[data-row]').forEach(function (tr) {
+      tr.style.display = tr.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+  });
+}
+
+/* ── Pagination ──────────────────────────────────────────────────── */
+(function () {
+  var PAGE_SIZE = 50;
+  var currentPage = 1;
+  var tbody = document.querySelector('#data-table tbody');
+  if (!tbody) return;
+  var rows = Array.from(tbody.querySelectorAll('tr[data-row]'));
+  if (rows.length === 0) return;
+  var totalPages = Math.ceil(rows.length / PAGE_SIZE);
+
+  function showPage(page) {
+    currentPage = page;
+    var start = (page - 1) * PAGE_SIZE;
+    var end = start + PAGE_SIZE;
+    rows.forEach(function (tr, i) {
+      tr.style.display = (i >= start && i < end) ? '' : 'none';
+    });
+    var info = document.getElementById('pagination-info');
+    if (info) info.textContent = 'Page ' + page + ' / ' + totalPages + ' — ' + rows.length + ' ligne(s)';
+    renderPagination();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function renderPagination() {
+    var container = document.getElementById('pagination-container');
+    if (!container || totalPages <= 1) return;
+    var html = '<ul class="pagination pagination-sm mb-0">';
+    html += currentPage > 1
+      ? '<li class="page-item"><a class="page-link" href="#" data-p="' + (currentPage - 1) + '"><i class="bi bi-chevron-left"></i></a></li>'
+      : '<li class="page-item disabled"><span class="page-link"><i class="bi bi-chevron-left"></i></span></li>';
+    for (var i = 1; i <= totalPages; i++) {
+      if (i === 1 || i === totalPages || Math.abs(i - currentPage) <= 2) {
+        html += '<li class="page-item' + (i === currentPage ? ' active' : '') + '">'
+              + '<a class="page-link" href="#" data-p="' + i + '">' + i + '</a></li>';
+      } else if (Math.abs(i - currentPage) === 3) {
+        html += '<li class="page-item disabled"><span class="page-link">…</span></li>';
+      }
+    }
+    html += currentPage < totalPages
+      ? '<li class="page-item"><a class="page-link" href="#" data-p="' + (currentPage + 1) + '"><i class="bi bi-chevron-right"></i></a></li>'
+      : '<li class="page-item disabled"><span class="page-link"><i class="bi bi-chevron-right"></i></span></li>';
+    html += '</ul>';
+    container.innerHTML = html;
+    container.querySelectorAll('[data-p]').forEach(function (el) {
+      el.addEventListener('click', function (e) {
+        e.preventDefault();
+        showPage(parseInt(this.getAttribute('data-p')));
+      });
+    });
+  }
+
+  showPage(1);
+
+  var selectAll = document.getElementById('select-all');
+  if (selectAll) {
+    selectAll.addEventListener('change', function () {
+      tbody.querySelectorAll('.row-checkbox').forEach(function (cb) {
+        cb.checked = selectAll.checked;
+      });
+    });
+  }
+})();
+
+/* ── Graphique départements ──────────────────────────────────────── */
+(function () {
+  if (typeof Chart === 'undefined') return;
+  var allRows = document.querySelectorAll('#data-table tbody tr[data-row]');
+  if (!allRows.length) return;
+  var deptData = {};
+  allRows.forEach(function (r) {
+    var dept = r.dataset.dept || 'Non défini';
+    var montant = parseFloat(r.dataset.montant || 0);
+    deptData[dept] = (deptData[dept] || 0) + montant;
+  });
+  var sorted = Object.entries(deptData).sort(function (a, b) { return b[1] - a[1]; }).slice(0, 5);
+  var labels = sorted.map(function (e) { return e[0]; });
+  var values = sorted.map(function (e) { return e[1]; });
+  var canvas = document.getElementById('deptChart');
+  if (!canvas || !labels.length) return;
+  new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Montant estimé',
+        data: values,
+        backgroundColor: values.map(function (_, i) { return i === 0 ? '#E87722' : '#1a2c4e'; }),
+        hoverBackgroundColor: values.map(function (_, i) { return i === 0 ? '#c9621a' : '#2d4a7a'; }),
+        borderRadius: 6,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { x: { beginAtZero: true } }
+    }
+  });
+})();
+</script>
+{% endblock %}

@@ -1,6 +1,8 @@
 import csv
 import io
 import json
+import calendar
+import ssl
 import xmlrpc.client
 from collections import defaultdict
 from datetime import date
@@ -91,6 +93,88 @@ def extract_matricule(name):
     return str(name).split('/', 1)[0].strip()
 
 
+def _activity_bucket_from_picking(picking, ouvrage_text=''):
+    """
+    Détection métier robuste:
+    - transport
+    - voiture_service
+    - production
+    """
+    if picking.get('service_car'):
+        return 'voiture_service'
+    if picking.get('transport_logistics'):
+        return 'transport'
+
+    parts = [ouvrage_text]
+    for field in ('account_analytic_id', 'affectation_id', 'equipment_id', 'location_id'):
+        val = picking.get(field)
+        if isinstance(val, list) and len(val) > 1 and val[1]:
+            parts.append(val[1])
+    raw = ' '.join(str(v) for v in parts if v).lower()
+    if ('transport' in raw) or ('logist' in raw):
+        return 'transport'
+    return 'production'
+
+
+def _build_project_activity_map(uid, models, invoices):
+    """
+    Construit une map {project_id: 'transport'|'production'} depuis project.project.
+    Utilise le booléen transport_logistics quand disponible.
+    """
+    project_ids = []
+    for inv in invoices:
+        p = inv.get('project_id')
+        if isinstance(p, list) and p:
+            project_ids.append(p[0])
+    project_ids = sorted({pid for pid in project_ids if pid})
+    if not project_ids:
+        return {}
+
+    try:
+        projects = models.execute_kw(
+            settings.ODOO_DB, uid, settings.ODOO_PASS,
+            'project.project', 'search_read',
+            [[('id', 'in', project_ids)]],
+            {'fields': ['id', 'name', 'transport_logistics'], 'limit': len(project_ids)},
+        )
+        out = {}
+        for p in projects:
+            name = (p.get('name') or '').lower()
+            if p.get('transport_logistics') or ('transport' in name) or ('logist' in name):
+                out[p['id']] = 'transport'
+            else:
+                out[p['id']] = 'production'
+        return out
+    except Exception:
+        # Fallback si champ custom absent/inaccessible.
+        return {}
+
+
+def _invoice_activity_bucket(invoice, project_activity_map=None):
+    """
+    Classe une facture vente dans:
+    - transport
+    - production
+    selon project_id + libellés de référence.
+    """
+    parts = []
+    proj = invoice.get('project_id')
+    if project_activity_map and isinstance(proj, list) and proj:
+        mapped = project_activity_map.get(proj[0])
+        if mapped in {'transport', 'production'}:
+            return mapped
+    if isinstance(proj, list) and len(proj) > 1 and proj[1]:
+        parts.append(proj[1])
+    for field in ('invoice_origin', 'ref', 'name'):
+        val = invoice.get(field)
+        if val:
+            parts.append(str(val))
+    raw = ' '.join(parts).lower()
+    if ('transport' in raw) or ('logist' in raw):
+        return 'transport'
+    return 'production'
+
+
 def _enrich_sortie_bon(bon):
     """Ajoute les champs *_fmt pour affichage HTML (après calcul des valeurs brutes)."""
     bon['cpt_initial_fmt'] = format_number_decimals(bon.get('cpt_initial'), 0)
@@ -111,9 +195,21 @@ def _enrich_entree_bon(bon):
 
 def get_odoo_connection():
     """Retourne (uid, models) pour les appels Odoo XML-RPC."""
-    common = xmlrpc.client.ServerProxy(f'{settings.ODOO_URL}/xmlrpc/2/common')
+    verify_ssl = getattr(settings, 'ODOO_SSL_VERIFY', True)
+    server_proxy_kwargs = {}
+    if settings.ODOO_URL.startswith('https://') and not verify_ssl:
+        # Local/dev workaround when corporate/intermediate cert is missing.
+        server_proxy_kwargs['context'] = ssl._create_unverified_context()
+
+    common = xmlrpc.client.ServerProxy(
+        f'{settings.ODOO_URL}/xmlrpc/2/common',
+        **server_proxy_kwargs,
+    )
     uid = common.authenticate(settings.ODOO_DB, settings.ODOO_USER, settings.ODOO_PASS, {})
-    models = xmlrpc.client.ServerProxy(f'{settings.ODOO_URL}/xmlrpc/2/object')
+    models = xmlrpc.client.ServerProxy(
+        f'{settings.ODOO_URL}/xmlrpc/2/object',
+        **server_proxy_kwargs,
+    )
     return uid, models
 
 
@@ -219,6 +315,15 @@ def _fetch_sorties_bons(uid, models, domain, limit=1000):
 
         engin_val = p.get('equipment_id')
 
+        ouvrage_val = (
+            p['account_analytic_id'][1] if isinstance(p.get('account_analytic_id'), list)
+            else (p['affectation_id'][1] if p.get('affectation_id') else '')
+            or extract_matricule(engin_val[1]) if engin_val
+            else '—'
+        )
+
+        activity_bucket = _activity_bucket_from_picking(p, ouvrage_val)
+
         bons.append({
             'id':             p['id'],
             'date':           bon_date,
@@ -231,18 +336,17 @@ def _fetch_sorties_bons(uid, models, domain, limit=1000):
             ),
             'site':           p['location_id'][1]          if p.get('location_id')          else '—',
             'type_operation': p['picking_type_id'][1]      if p.get('picking_type_id')      else '—',
-            'ouvrage': (p['account_analytic_id'][1] if isinstance(p.get('account_analytic_id'), list) 
-            else p.get('x_affectation', '—') if p.get('x_affectation') 
-            else '—'),
+            'ouvrage':        ouvrage_val,
             'affectation':    p['affectation_id'][1]       if p.get('affectation_id')       else '—',
             'engin':          extract_matricule(engin_val[1]) if engin_val else '—',
             'categorie': (
-                'Transport & Log.'  if p.get('transport_logistics') else
-                'Voiture de serv.'  if p.get('service_car')         else
+                'Transport & Log.'  if activity_bucket == 'transport' else
+                'Voiture de serv.'  if activity_bucket == 'voiture_service' else
                 'Production'
             ),
-            'is_transport':   p.get('transport_logistics', False),
+            'is_transport':   activity_bucket == 'transport',
             'service_car':    p.get('service_car', False),
+            'activite_bucket': activity_bucket,
             'cpt_initial':    p.get('initial_counter') or 0,
             'cpt_actuel':     p.get('actual_counter')  or 0,
             'ecart':          round(ecart, 1),
@@ -1263,21 +1367,62 @@ def gasoil_entrees(request):
 @login_required
 def gasoil_bilan(request):
     annee = request.GET.get('annee', '')
+    mois = request.GET.get('mois', '')
     site  = request.GET.get('site', '')
+    activite_filtre = request.GET.get('activite_filtre', '').strip()
+    anomalie_seulement = request.GET.get('anomalie_seulement', '').strip()
+    societe = request.GET.get('societe', '').strip()
+    engin = request.GET.get('engin', '').strip()
 
     error        = None
     entrees_data = []
     sorties_data = []
+    entrees_all = []
+    sorties_all = []
+
+    def _search_read_all(model_name, domain, fields, batch_size=2000):
+        """Read all matching records using paginated search + read."""
+        all_rows = []
+        offset = 0
+        while True:
+            ids = models.execute_kw(
+                settings.ODOO_DB, uid, settings.ODOO_PASS,
+                model_name, 'search',
+                [domain],
+                {'offset': offset, 'limit': batch_size, 'order': 'id desc'}
+            )
+            if not ids:
+                break
+            rows = models.execute_kw(
+                settings.ODOO_DB, uid, settings.ODOO_PASS,
+                model_name, 'read',
+                [ids],
+                {'fields': fields}
+            )
+            all_rows.extend(rows)
+            if len(ids) < batch_size:
+                break
+            offset += batch_size
+        return all_rows
+
+    def _read_moves_chunked(move_ids, fields, batch_size=2000):
+        """Read stock.move records in chunks to avoid truncation/limits."""
+        rows = []
+        for i in range(0, len(move_ids), batch_size):
+            chunk = move_ids[i:i + batch_size]
+            part = models.execute_kw(
+                settings.ODOO_DB, uid, settings.ODOO_PASS,
+                'stock.move', 'search_read',
+                [[['id', 'in', chunk], ['product_id.categ_id', '=', CARBURANT_CATEG_ID]]],
+                {'fields': fields, 'limit': batch_size}
+            )
+            rows.extend(part)
+        return rows
 
     try:
         uid, models = get_odoo_connection()
 
         date_filter = []
-        if annee:
-            date_filter = [
-                ('scheduled_date', '>=', f'{annee}-01-01 00:00:00'),
-                ('scheduled_date', '<=', f'{annee}-12-31 23:59:59'),
-            ]
 
         # ── Sorties ──
         domain_s = [
@@ -1287,16 +1432,26 @@ def gasoil_bilan(request):
         ] + date_filter
         if site:
             domain_s.append(('location_id.complete_name', 'ilike', site))
+        if societe:
+            domain_s.append(('company_id.name', 'ilike', societe))
+        if activite_filtre == 'transport':
+            domain_s.append(('transport_logistics', '=', True))
+        elif activite_filtre == 'voiture_service':
+            domain_s.append(('service_car', '=', True))
+        elif activite_filtre == 'production':
+            domain_s += [('transport_logistics', '=', False), ('service_car', '=', False)]
+        if anomalie_seulement == '1':
+            domain_s.append(('picking_type_is_hors_affectation', '=', True))
+        if engin:
+            domain_s.append(('equipment_id.name', 'ilike', engin))
 
-        pickings_s = models.execute_kw(
-            settings.ODOO_DB, uid, settings.ODOO_PASS,
-            'stock.picking', 'search_read',
-            [domain_s],
-            {'fields': ['name', 'scheduled_date', 'date', 'write_date',
-                        'location_id', 'move_ids', 'equipment_id',
-                        'transport_logistics', 'service_car',
-                        'picking_type_is_hors_affectation'],
-             'order': 'scheduled_date asc', 'limit': 2000}
+        pickings_s = _search_read_all(
+            'stock.picking',
+            domain_s,
+            ['name', 'scheduled_date', 'date', 'write_date',
+             'location_id', 'company_id', 'move_ids', 'equipment_id',
+             'transport_logistics', 'service_car',
+             'picking_type_is_hors_affectation'],
         )
 
         # Quantités sorties
@@ -1304,13 +1459,7 @@ def gasoil_bilan(request):
             all_ids = [mid for p in pickings_s for mid in p.get('move_ids', [])]
             qty_map = {}
             if all_ids:
-                mvs = models.execute_kw(
-                    settings.ODOO_DB, uid, settings.ODOO_PASS,
-                    'stock.move', 'search_read',
-                    [[['id', 'in', all_ids],
-                      ['product_id.categ_id', '=', CARBURANT_CATEG_ID]]],
-                    {'fields': ['picking_id', 'product_qty'], 'limit': 10000}
-                )
+                mvs = _read_moves_chunked(all_ids, ['picking_id', 'product_qty'])
                 for m in mvs:
                     pid = m['picking_id'][0] if m['picking_id'] else None
                     if pid:
@@ -1329,6 +1478,7 @@ def gasoil_bilan(request):
                 sorties_data.append({
                     'date':     raw[:10] if raw else '—',
                     'site':     p['location_id'][1] if p.get('location_id') else '—',
+                    'societe':  p['company_id'][1] if p.get('company_id') else '—',
                     'qty':      qty_map.get(p['id'], 0),
                     'anomalie': p.get('picking_type_is_hors_affectation', False),
                     'name':     p.get('name', '—'),
@@ -1344,14 +1494,14 @@ def gasoil_bilan(request):
         ] + date_filter
         if site:
             domain_e.append(('location_dest_id.complete_name', 'ilike', site))
+        if societe:
+            domain_e.append(('company_id.name', 'ilike', societe))
 
-        pickings_e = models.execute_kw(
-            settings.ODOO_DB, uid, settings.ODOO_PASS,
-            'stock.picking', 'search_read',
-            [domain_e],
-            {'fields': ['scheduled_date', 'date', 'write_date',
-                        'location_dest_id', 'move_ids'],
-             'order': 'scheduled_date asc', 'limit': 2000}
+        pickings_e = _search_read_all(
+            'stock.picking',
+            domain_e,
+            ['scheduled_date', 'date', 'write_date',
+             'location_dest_id', 'company_id', 'move_ids'],
         )
 
         if pickings_e:
@@ -1359,13 +1509,7 @@ def gasoil_bilan(request):
             qty_map_e = {}
             pu_map_e  = {}
             if all_ids_e:
-                mvs_e = models.execute_kw(
-                    settings.ODOO_DB, uid, settings.ODOO_PASS,
-                    'stock.move', 'search_read',
-                    [[['id', 'in', all_ids_e],
-                      ['product_id.categ_id', '=', CARBURANT_CATEG_ID]]],
-                    {'fields': ['picking_id', 'product_qty', 'price_unit'], 'limit': 10000}
-                )
+                mvs_e = _read_moves_chunked(all_ids_e, ['picking_id', 'product_qty', 'price_unit'])
                 for m in mvs_e:
                     pid = m['picking_id'][0] if m['picking_id'] else None
                     if pid:
@@ -1378,9 +1522,24 @@ def gasoil_bilan(request):
                 raw = (p.get('scheduled_date') or p.get('date') or p.get('write_date') or '')
                 entrees_data.append({
                     'date': raw[:10] if raw else '—',
+                    'societe': p['company_id'][1] if p.get('company_id') else '—',
                     'qty':  qty,
                     'cout': qty * pu,
                 })
+
+        # Conserver une copie brute (avant filtres période) pour diagnostics/listes.
+        sorties_all = list(sorties_data)
+        entrees_all = list(entrees_data)
+
+        # Filtrage de période robuste basé sur la date réellement disponible
+        # (scheduled_date ou date ou write_date déjà normalisée en YYYY-MM-DD).
+        if annee:
+            sorties_data = [s for s in sorties_data if (s.get('date') or '').startswith(f'{annee}-')]
+            entrees_data = [e for e in entrees_data if (e.get('date') or '').startswith(f'{annee}-')]
+            if mois and len(mois) == 2 and mois.isdigit():
+                needle = f'{annee}-{mois}'
+                sorties_data = [s for s in sorties_data if (s.get('date') or '').startswith(needle)]
+                entrees_data = [e for e in entrees_data if (e.get('date') or '').startswith(needle)]
 
     except Exception as e:
         error = f"Erreur de connexion Odoo : {e}"
@@ -1491,10 +1650,55 @@ def gasoil_bilan(request):
         key=lambda x: -x['total_litres']
     )[:20]
     nb_equipements_actifs = len(equip_map)
+    societes_list = sorted({s.get('societe') for s in sorties_all if s.get('societe') and s.get('societe') != '—'})
+    engins_list = sorted({s.get('engin') for s in sorties_all if s.get('engin') and s.get('engin') != 'Inconnu'})[:200]
+    years_detected = sorted({
+        d[:4]
+        for d in [*(s.get('date', '') for s in sorties_all), *(e.get('date', '') for e in entrees_all)]
+        if isinstance(d, str) and len(d) >= 4 and d[:4].isdigit()
+    })
+    # N'afficher que les années réellement présentes dans les données Odoo.
+    if not years_detected:
+        years_detected = [str(date.today().year)]
+    no_data_for_filters = (
+        (annee or mois or site or societe or activite_filtre or engin or anomalie_seulement)
+        and total_entrees == 0
+        and total_sorties == 0
+    )
+    month_names = {
+        '01': 'Janvier', '02': 'Février', '03': 'Mars', '04': 'Avril',
+        '05': 'Mai', '06': 'Juin', '07': 'Juillet', '08': 'Août',
+        '09': 'Septembre', '10': 'Octobre', '11': 'Novembre', '12': 'Décembre',
+    }
+    months_detected_for_year = set()
+    if annee:
+        for d in [*(s.get('date', '') for s in sorties_all), *(e.get('date', '') for e in entrees_all)]:
+            if isinstance(d, str) and len(d) >= 7 and d[:4] == annee:
+                mm = d[5:7]
+                if mm in month_names:
+                    months_detected_for_year.add(mm)
+    else:
+        for d in [*(s.get('date', '') for s in sorties_all), *(e.get('date', '') for e in entrees_all)]:
+            if isinstance(d, str) and len(d) >= 7:
+                mm = d[5:7]
+                if mm in month_names:
+                    months_detected_for_year.add(mm)
+    mois_list_dynamic = [(m, month_names[m]) for m in sorted(months_detected_for_year)]
+    if not mois_list_dynamic:
+        mois_list_dynamic = [
+            ('01', 'Janvier'), ('02', 'Février'), ('03', 'Mars'), ('04', 'Avril'),
+            ('05', 'Mai'), ('06', 'Juin'), ('07', 'Juillet'), ('08', 'Août'),
+            ('09', 'Septembre'), ('10', 'Octobre'), ('11', 'Novembre'), ('12', 'Décembre'),
+        ]
+    filtred_rows_count = len(sorties_data) + len(entrees_data)
 
     return render(request, 'gasoil/bilan.html', {
         'error': error,
-        'annee': annee, 'site': site,
+        'annee': annee, 'mois': mois, 'site': site,
+        'activite_filtre': activite_filtre,
+        'anomalie_seulement': anomalie_seulement,
+        'societe': societe,
+        'engin': engin,
         'total_entrees': round(total_entrees, 1),
         'total_sorties': round(total_sorties, 1),
         'stock_estime':  round(stock_estime, 1),
@@ -1506,8 +1710,13 @@ def gasoil_bilan(request):
         'site_labels':        site_labels,
         'site_values':        site_values,
         'recap_sites':        recap_sites,
-        'annees_list':        ['2022', '2023', '2024', '2025', '2026'],
+        'annees_list':        years_detected,
+        'mois_list': mois_list_dynamic,
         'sites':              SITES_LIST,
+        'societes_list': societes_list,
+        'engins_list': engins_list,
+        'no_data_for_filters': no_data_for_filters,
+        'filtred_rows_count': filtred_rows_count,
         # Nouvelles sections analytiques
         'categories_labels_json': categories_labels,
         'categories_values_json': categories_values,
@@ -1561,7 +1770,10 @@ def transport_bons(request):
                 'stock.picking', 'search_read',
                 [domain_with_flag],
                 {
-                    'fields': ['name', 'scheduled_date', 'state', 'partner_id', 'location_id', 'origin'],
+                    'fields': [
+                        'name', 'scheduled_date', 'state', 'partner_id',
+                        'location_id', 'location_dest_id', 'origin',
+                    ],
                     'order': 'scheduled_date desc',
                     'limit': 500,
                 }
@@ -1572,19 +1784,27 @@ def transport_bons(request):
                 'stock.picking', 'search_read',
                 [domain],
                 {
-                    'fields': ['name', 'scheduled_date', 'state', 'partner_id', 'location_id', 'origin'],
+                    'fields': [
+                        'name', 'scheduled_date', 'state', 'partner_id',
+                        'location_id', 'location_dest_id', 'origin',
+                    ],
                     'order': 'scheduled_date desc',
                     'limit': 500,
                 }
             )
 
         for rec in records:
+            origine = (
+                rec.get('origin')
+                or (rec['location_dest_id'][1] if rec.get('location_dest_id') else '')
+                or '—'
+            )
             bons.append({
                 'date': (rec.get('scheduled_date') or '')[:10] or '—',
                 'reference': rec.get('name') or '—',
                 'partenaire': rec['partner_id'][1] if rec.get('partner_id') else '—',
                 'site': rec['location_id'][1] if rec.get('location_id') else '—',
-                'origine': rec.get('origin') or '—',
+                'origine': origine,
                 'etat': rec.get('state') or '—',
             })
     except Exception as exc:
@@ -1709,6 +1929,9 @@ def transport_gasoil(request):
                 amount_by_picking[pid] += qty * pu
             if not driver_by_picking.get(pid) and mv.get('partner_id'):
                 driver_by_picking[pid] = mv['partner_id'][1]
+
+        # Garantit que la page Transport n'affiche que le périmètre transport/logistique.
+        bons = [b for b in bons if b.get('activite_bucket') == 'transport']
 
         if vehicule:
             bons = [b for b in bons if (b.get('engin') or '') == vehicule]
@@ -2044,6 +2267,7 @@ def transport_couts_nature(request):
 def transport_facturation_client(request):
     date_debut = request.GET.get('date_debut', '')
     date_fin = request.GET.get('date_fin', '')
+    numero_facture = request.GET.get('numero_facture', '').strip()
     client_id = request.GET.get('client_id', '').strip()
     shipping_id = request.GET.get('shipping_id', '').strip()
     company_id = request.GET.get('company_id', '').strip()
@@ -2054,6 +2278,12 @@ def transport_facturation_client(request):
     companies = []
     shippings = []
     grouped_rows = []
+    kpi_paid_rate = 0.0
+    kpi_overdue_rate = 0.0
+    kpi_ticket_moyen = 0.0
+    kpi_top_client = '—'
+    kpi_top_client_share = 0.0
+    kpi_ca_evolution = 0.0
     error = None
     try:
         uid, models = get_odoo_connection()
@@ -2064,11 +2294,14 @@ def transport_facturation_client(request):
             settings.ODOO_DB, uid, settings.ODOO_PASS,
             'account.move', 'search_read',
             [base_domain],
-            {'fields': ['partner_id', 'partner_shipping_id', 'company_id'], 'limit': False},
+            {'fields': ['partner_id', 'partner_shipping_id', 'company_id', 'project_id', 'invoice_origin', 'ref', 'name'], 'limit': False},
         )
+        project_activity_map_filters = _build_project_activity_map(uid, models, inv_for_filters)
         seen_clients = {}
         seen_shippings = {}
         seen_companies = {}
+        # Listes de filtres complètes (toutes factures), même si les résultats
+        # de la page restent strictement filtrés sur le périmètre transport.
         for inv in inv_for_filters:
             p = inv.get('partner_id')
             if isinstance(p, list) and len(p) >= 2:
@@ -2094,6 +2327,16 @@ def transport_facturation_client(request):
             domain.append(('partner_shipping_id', '=', int(shipping_id)))
         if company_id.isdigit():
             domain.append(('company_id', '=', int(company_id)))
+        if numero_facture:
+            # Recherche élargie pour les cas où l'utilisateur saisit un code projet
+            # (ex: S00068) au lieu du numéro exact de facture.
+            domain += [
+                '|', '|', '|',
+                ('name', 'ilike', numero_facture),
+                ('ref', 'ilike', numero_facture),
+                ('invoice_origin', 'ilike', numero_facture),
+                ('project_id.name', 'ilike', numero_facture),
+            ]
 
         invoices = models.execute_kw(
             settings.ODOO_DB, uid, settings.ODOO_PASS,
@@ -2103,11 +2346,15 @@ def transport_facturation_client(request):
                 'fields': [
                     'name', 'invoice_date', 'partner_id', 'partner_shipping_id',
                     'company_id', 'amount_untaxed', 'amount_total',
+                    'payment_state', 'invoice_date_due',
+                    'project_id', 'invoice_origin', 'ref',
                 ],
                 'order': 'invoice_date desc',
                 'limit': 1000,
             }
         )
+        project_activity_map = _build_project_activity_map(uid, models, invoices)
+        invoices = [inv for inv in invoices if _invoice_activity_bucket(inv, project_activity_map) == 'transport']
 
         def _fmt_date_fr(iso_date):
             if not iso_date:
@@ -2122,16 +2369,27 @@ def transport_facturation_client(request):
             ht = round(inv.get('amount_untaxed') or 0, 2)
             ttc = round(inv.get('amount_total') or 0, 2)
             tva = round(ttc - ht, 2)
+            projet_ref = '—'
+            proj = inv.get('project_id')
+            if isinstance(proj, list) and len(proj) >= 2 and proj[1]:
+                projet_ref = proj[1]
+            elif inv.get('invoice_origin'):
+                projet_ref = inv.get('invoice_origin')
+            elif inv.get('ref'):
+                projet_ref = inv.get('ref')
             rows.append({
                 'date': _fmt_date_fr(iso_date),
                 'month_key': iso_date[:7] if len(iso_date) >= 7 else '—',
                 'numero': inv.get('name') or '—',
+                'projet_reference': projet_ref,
                 'client': inv['partner_id'][1] if inv.get('partner_id') else '—',
                 'lieu_livraison': inv['partner_shipping_id'][1] if inv.get('partner_shipping_id') else '—',
                 'societe': inv['company_id'][1] if inv.get('company_id') else '—',
                 'ht': ht,
                 'tva': tva,
                 'ttc': ttc,
+                'payment_state': inv.get('payment_state') or '',
+                'invoice_date_due': (inv.get('invoice_date_due') or '')[:10],
             })
 
         if group_by:
@@ -2199,6 +2457,40 @@ def transport_facturation_client(request):
     total_ht = round(sum(r['ht'] for r in rows), 2)
     total_tva = round(sum(r['tva'] for r in rows), 2)
     total_ttc = round(sum(r['ttc'] for r in rows), 2)
+    total_rows = len(rows)
+    kpi_ticket_moyen = round((total_ttc / total_rows), 2) if total_rows else 0.0
+
+    paid_count = sum(1 for r in rows if r.get('payment_state') == 'paid')
+    kpi_paid_rate = round((paid_count / total_rows) * 100, 1) if total_rows else 0.0
+
+    today_iso = date.today().isoformat()
+    overdue_count = sum(
+        1 for r in rows
+        if (r.get('invoice_date_due') and r.get('invoice_date_due') < today_iso and r.get('payment_state') != 'paid')
+    )
+    kpi_overdue_rate = round((overdue_count / total_rows) * 100, 1) if total_rows else 0.0
+
+    # KPI client leader (part du CA TTC)
+    client_totals = defaultdict(float)
+    for r in rows:
+        client_totals[r.get('client') or '—'] += float(r.get('ttc') or 0)
+    if client_totals and total_ttc > 0:
+        best_client, best_value = max(client_totals.items(), key=lambda kv: kv[1])
+        kpi_top_client = best_client
+        kpi_top_client_share = round((best_value / total_ttc) * 100, 1)
+
+    # KPI évolution CA mensuel (% M vs M-1)
+    monthly_totals = defaultdict(float)
+    for r in rows:
+        mk = r.get('month_key') or '—'
+        if mk != '—':
+            monthly_totals[mk] += float(r.get('ttc') or 0)
+    if len(monthly_totals) >= 2:
+        keys = sorted(monthly_totals.keys())
+        prev_v = monthly_totals[keys[-2]]
+        curr_v = monthly_totals[keys[-1]]
+        if prev_v > 0:
+            kpi_ca_evolution = round(((curr_v - prev_v) / prev_v) * 100, 1)
 
     # Section séparée: CA par lieu de livraison.
     delivery_buckets = defaultdict(lambda: {'count': 0, 'ht': 0.0, 'tva': 0.0, 'ttc': 0.0})
@@ -2228,6 +2520,7 @@ def transport_facturation_client(request):
         'error': error,
         'date_debut': date_debut,
         'date_fin': date_fin,
+        'numero_facture': numero_facture,
         'client_id': client_id,
         'clients': clients,
         'shipping_id': shipping_id,
@@ -2236,10 +2529,16 @@ def transport_facturation_client(request):
         'companies': companies,
         'group_by': group_by,
         'grouped_rows': grouped_rows,
-        'total_rows': len(rows),
+        'total_rows': total_rows,
         'total_ht': total_ht,
         'total_tva': total_tva,
         'total_ttc': total_ttc,
+        'kpi_paid_rate': kpi_paid_rate,
+        'kpi_overdue_rate': kpi_overdue_rate,
+        'kpi_ticket_moyen': kpi_ticket_moyen,
+        'kpi_top_client': kpi_top_client,
+        'kpi_top_client_share': kpi_top_client_share,
+        'kpi_ca_evolution': kpi_ca_evolution,
         'delivery_rows': delivery_rows,
         'delivery_total_count': delivery_total_count,
         'delivery_total_ht': delivery_total_ht,
@@ -2311,6 +2610,9 @@ def production_gasoil(request):
         domain.append(('equipment_id.category_id', 'in', CATEGORIES_PRODUCTION))
         limit = 10000 if (date_debut or date_fin or societe or site or chauffeur) else 2000
         bons = _fetch_sorties_bons(uid, models, domain, limit=limit)
+
+        # Garantit que la page Production n'affiche que le périmètre exploitation/production.
+        bons = [b for b in bons if b.get('activite_bucket') == 'production']
 
         if ouvrage:
             o = ouvrage.lower()
@@ -2616,6 +2918,7 @@ def production_couts_nature(request):
 def production_facturation_ventes(request):
     date_debut = request.GET.get('date_debut', '')
     date_fin = request.GET.get('date_fin', '')
+    numero_facture = request.GET.get('numero_facture', '').strip()
     client_id = request.GET.get('client_id', '').strip()
     shipping_id = request.GET.get('shipping_id', '').strip()
     company_id = request.GET.get('company_id', '').strip()
@@ -2631,25 +2934,31 @@ def production_facturation_ventes(request):
     shippings = []
     commercials = []
     grouped_rows = []
+    kpi_paid_rate = 0.0
+    kpi_overdue_rate = 0.0
+    kpi_ticket_moyen = 0.0
+    kpi_top_client = '—'
+    kpi_top_client_share = 0.0
+    kpi_ca_evolution = 0.0
     error = None
     try:
         uid, models = get_odoo_connection()
-        # Champ discriminant sur account.move: project_id (on exclut transport).
-        base_domain = [
-            ('move_type', '=', 'out_invoice'),
-            ('project_id.name', 'not ilike', 'transport'),
-        ]
+        # Base commune factures de vente; séparation métier faite ensuite en Python.
+        base_domain = [('move_type', '=', 'out_invoice')]
 
         inv_for_filters = models.execute_kw(
             settings.ODOO_DB, uid, settings.ODOO_PASS,
             'account.move', 'search_read',
             [base_domain],
-            {'fields': ['partner_id', 'partner_shipping_id', 'company_id', 'invoice_user_id'], 'limit': False},
+            {'fields': ['partner_id', 'partner_shipping_id', 'company_id', 'invoice_user_id', 'project_id', 'invoice_origin', 'ref', 'name'], 'limit': False},
         )
+        project_activity_map_filters = _build_project_activity_map(uid, models, inv_for_filters)
         seen_clients = {}
         seen_shippings = {}
         seen_companies = {}
         seen_commercials = {}
+        # Listes de filtres complètes (toutes factures), même si les résultats
+        # de la page restent strictement filtrés sur le périmètre production.
         for inv in inv_for_filters:
             p = inv.get('partner_id')
             if isinstance(p, list) and len(p) >= 2:
@@ -2687,6 +2996,16 @@ def production_facturation_ventes(request):
             domain.append(('invoice_user_id', '=', int(commercial_id)))
         if due_date:
             domain.append(('invoice_date_due', '=', due_date))
+        if numero_facture:
+            # Recherche élargie pour les cas où l'utilisateur saisit un code projet
+            # (ex: S00068) au lieu du numéro exact de facture.
+            domain += [
+                '|', '|', '|',
+                ('name', 'ilike', numero_facture),
+                ('ref', 'ilike', numero_facture),
+                ('invoice_origin', 'ilike', numero_facture),
+                ('project_id.name', 'ilike', numero_facture),
+            ]
         if etat in {'posted', 'draft', 'cancel'}:
             domain.append(('state', '=', etat))
         if paiement in {'paid', 'not_paid', 'in_payment'}:
@@ -2701,11 +3020,14 @@ def production_facturation_ventes(request):
                     'name', 'invoice_date', 'partner_id', 'partner_shipping_id',
                     'company_id', 'invoice_user_id', 'invoice_date_due',
                     'amount_untaxed', 'amount_total', 'state', 'payment_state',
+                    'project_id', 'invoice_origin', 'ref',
                 ],
                 'order': 'invoice_date desc',
                 'limit': 2000,
             }
         )
+        project_activity_map = _build_project_activity_map(uid, models, invoices)
+        invoices = [inv for inv in invoices if _invoice_activity_bucket(inv, project_activity_map) == 'production']
 
         def _fmt_date_fr(iso_date):
             if not iso_date:
@@ -2720,16 +3042,27 @@ def production_facturation_ventes(request):
             ht = round(inv.get('amount_untaxed') or 0, 2)
             ttc = round(inv.get('amount_total') or 0, 2)
             tva = round(ttc - ht, 2)
+            projet_ref = '—'
+            proj = inv.get('project_id')
+            if isinstance(proj, list) and len(proj) >= 2 and proj[1]:
+                projet_ref = proj[1]
+            elif inv.get('invoice_origin'):
+                projet_ref = inv.get('invoice_origin')
+            elif inv.get('ref'):
+                projet_ref = inv.get('ref')
             rows.append({
                 'numero': inv.get('name') or '—',
                 'date': _fmt_date_fr(iso_date),
                 'month_key': iso_date[:7] if len(iso_date) >= 7 else '—',
+                'projet_reference': projet_ref,
                 'client': inv['partner_id'][1] if inv.get('partner_id') else '—',
                 'lieu_livraison': inv['partner_shipping_id'][1] if inv.get('partner_shipping_id') else '—',
                 'societe': inv['company_id'][1] if inv.get('company_id') else '—',
                 'ht': ht,
                 'tva': tva,
                 'ttc': ttc,
+                'payment_state': inv.get('payment_state') or '',
+                'invoice_date_due': (inv.get('invoice_date_due') or '')[:10],
             })
 
         if group_by:
@@ -2789,6 +3122,40 @@ def production_facturation_ventes(request):
     total_ht = round(sum(r['ht'] for r in rows), 2)
     total_tva = round(sum(r['tva'] for r in rows), 2)
     total_ttc = round(sum(r['ttc'] for r in rows), 2)
+    total_rows = len(rows)
+    kpi_ticket_moyen = round((total_ttc / total_rows), 2) if total_rows else 0.0
+
+    paid_count = sum(1 for r in rows if r.get('payment_state') == 'paid')
+    kpi_paid_rate = round((paid_count / total_rows) * 100, 1) if total_rows else 0.0
+
+    today_iso = date.today().isoformat()
+    overdue_count = sum(
+        1 for r in rows
+        if (r.get('invoice_date_due') and r.get('invoice_date_due') < today_iso and r.get('payment_state') != 'paid')
+    )
+    kpi_overdue_rate = round((overdue_count / total_rows) * 100, 1) if total_rows else 0.0
+
+    # KPI client leader (part du CA TTC)
+    client_totals = defaultdict(float)
+    for r in rows:
+        client_totals[r.get('client') or '—'] += float(r.get('ttc') or 0)
+    if client_totals and total_ttc > 0:
+        best_client, best_value = max(client_totals.items(), key=lambda kv: kv[1])
+        kpi_top_client = best_client
+        kpi_top_client_share = round((best_value / total_ttc) * 100, 1)
+
+    # KPI évolution CA mensuel (% M vs M-1)
+    monthly_totals = defaultdict(float)
+    for r in rows:
+        mk = r.get('month_key') or '—'
+        if mk != '—':
+            monthly_totals[mk] += float(r.get('ttc') or 0)
+    if len(monthly_totals) >= 2:
+        keys = sorted(monthly_totals.keys())
+        prev_v = monthly_totals[keys[-2]]
+        curr_v = monthly_totals[keys[-1]]
+        if prev_v > 0:
+            kpi_ca_evolution = round(((curr_v - prev_v) / prev_v) * 100, 1)
 
     delivery_buckets = defaultdict(lambda: {'count': 0, 'ht': 0.0, 'tva': 0.0, 'ttc': 0.0})
     for r in rows:
@@ -2817,6 +3184,7 @@ def production_facturation_ventes(request):
         'error': error,
         'date_debut': date_debut,
         'date_fin': date_fin,
+        'numero_facture': numero_facture,
         'client_id': client_id,
         'shipping_id': shipping_id,
         'company_id': company_id,
@@ -2830,16 +3198,2210 @@ def production_facturation_ventes(request):
         'commercials': commercials,
         'group_by': group_by,
         'grouped_rows': grouped_rows,
-        'total_rows': len(rows),
+        'total_rows': total_rows,
         'total_ht': total_ht,
         'total_tva': total_tva,
         'total_ttc': total_ttc,
+        'kpi_paid_rate': kpi_paid_rate,
+        'kpi_overdue_rate': kpi_overdue_rate,
+        'kpi_ticket_moyen': kpi_ticket_moyen,
+        'kpi_top_client': kpi_top_client,
+        'kpi_top_client_share': kpi_top_client_share,
+        'kpi_ca_evolution': kpi_ca_evolution,
         'delivery_rows': delivery_rows,
         'delivery_total_count': delivery_total_count,
         'delivery_total_ht': delivery_total_ht,
         'delivery_total_tva': delivery_total_tva,
         'delivery_total_ttc': delivery_total_ttc,
     })
+
+
+@login_required
+def production_sites(request):
+    date_debut = request.GET.get('date_debut', '').strip()
+    date_fin = request.GET.get('date_fin', '').strip()
+    site = request.GET.get('site', '').strip()
+    societe = request.GET.get('societe', '').strip()
+    tri = request.GET.get('tri', 'optimisation').strip() or 'optimisation'
+
+    rows = []
+    sites = []
+    societes = []
+    kpi_sites = 0
+    kpi_bons = 0
+    kpi_litres = 0.0
+    kpi_montant = 0.0
+    kpi_anomalies = 0
+    chart_labels = []
+    chart_values = []
+    top_site_name = '—'
+    top_site_montant = 0.0
+    top_site_score = 0.0
+    worst_site_name = '—'
+    worst_site_ratio = 0.0
+    no_data_for_filters = False
+    error = None
+
+    try:
+        uid, models = get_odoo_connection()
+
+        list_domain = _build_sorties_domain(
+            date_debut='',
+            date_fin='',
+            site='',
+            chauffeur='',
+            ouvrage='',
+            anomalie='',
+            societe='',
+            categorie_engin='',
+            activite_filtre='production',
+        )
+        list_domain.append(('equipment_id.category_id', 'in', CATEGORIES_PRODUCTION))
+        bons_for_filters = _fetch_sorties_bons(uid, models, list_domain, limit=6000)
+        bons_for_filters = [b for b in bons_for_filters if b.get('activite_bucket') == 'production']
+        sites = sorted({b['site'] for b in bons_for_filters if b.get('site') and b.get('site') != '—'})
+        societes = sorted({b['societe'] for b in bons_for_filters if b.get('societe') and b.get('societe') != '—'})
+
+        domain = _build_sorties_domain(
+            date_debut=date_debut,
+            date_fin=date_fin,
+            site=site,
+            chauffeur='',
+            ouvrage='',
+            anomalie='',
+            societe=societe,
+            categorie_engin='',
+            activite_filtre='production',
+        )
+        domain.append(('equipment_id.category_id', 'in', CATEGORIES_PRODUCTION))
+        bons = _fetch_sorties_bons(uid, models, domain, limit=12000)
+        bons = [b for b in bons if b.get('activite_bucket') == 'production']
+
+        move_domain = [
+            ['picking_id', 'in', [b['id'] for b in bons]],
+            ['product_id.categ_id', '=', CARBURANT_CATEG_ID],
+        ]
+        move_lines = models.execute_kw(
+            settings.ODOO_DB, uid, settings.ODOO_PASS,
+            'stock.move', 'search_read',
+            [move_domain],
+            {'fields': ['picking_id', 'product_qty', 'price_total', 'unit_price'], 'limit': 30000},
+        )
+        amount_by_picking = defaultdict(float)
+        for mv in move_lines:
+            pid = mv['picking_id'][0] if mv.get('picking_id') else None
+            if not pid:
+                continue
+            price_total = mv.get('price_total')
+            if price_total not in (None, False):
+                amount_by_picking[pid] += price_total or 0
+            else:
+                amount_by_picking[pid] += (mv.get('product_qty') or 0) * (mv.get('unit_price') or 0)
+
+        site_bucket = defaultdict(lambda: {
+            'site': '—', 'societes': set(), 'nb_bons': 0, 'litres': 0.0, 'montant': 0.0, 'anomalies': 0
+        })
+        for b in bons:
+            site_name = b.get('site') or '—'
+            cur = site_bucket[site_name]
+            cur['site'] = site_name
+            cur['nb_bons'] += 1
+            cur['litres'] += float(b.get('product_qty') or 0)
+            cur['montant'] += float(amount_by_picking.get(b['id'], 0))
+            cur['anomalies'] += 1 if b.get('anomalie') == 'Anomalie' else 0
+            if b.get('societe') and b.get('societe') != '—':
+                cur['societes'].add(b['societe'])
+
+        rows = []
+        for _, item in site_bucket.items():
+            litres = round(item['litres'], 2)
+            montant = round(item['montant'], 2)
+            nb_bons = item['nb_bons']
+            anomalies = item['anomalies']
+            ratio_anomalies = round((anomalies / nb_bons) * 100, 1) if nb_bons else 0
+            litres_par_bon = round((litres / nb_bons), 2) if nb_bons else 0.0
+            rows.append({
+                'site': item['site'],
+                'societe': ', '.join(sorted(item['societes'])) if item['societes'] else '—',
+                'nb_bons': nb_bons,
+                'litres': litres,
+                'montant': montant,
+                'anomalies': anomalies,
+                'ratio_anomalies': ratio_anomalies,
+                'litres_par_bon': litres_par_bon,
+                'optimisation_score': 0.0,
+            })
+
+        # ── Score d'optimisation pondéré (explicite) ─────────────────────────
+        # 60% consommation (litres/bon bas = meilleur)
+        # 30% anomalies (taux bas = meilleur)
+        # 10% volume d'activité (plus de bons = meilleur)
+        if rows:
+            max_lpb = max(r['litres_par_bon'] for r in rows) or 1.0
+            max_anom = max(r['ratio_anomalies'] for r in rows) or 1.0
+            max_bons = max(r['nb_bons'] for r in rows) or 1.0
+
+            for r in rows:
+                consommation_norm = max(0.0, 100 * (1 - (r['litres_par_bon'] / max_lpb)))
+                anomalies_norm = max(0.0, 100 * (1 - (r['ratio_anomalies'] / max_anom))) if max_anom > 0 else 100.0
+                volume_norm = max(0.0, 100 * (r['nb_bons'] / max_bons))
+                score = (0.60 * consommation_norm) + (0.30 * anomalies_norm) + (0.10 * volume_norm)
+                r['optimisation_score'] = round(score, 2)
+
+        if tri == 'optimisation':
+            rows.sort(key=lambda r: (-r['optimisation_score'], r['site']))
+        elif tri == 'bons':
+            rows.sort(key=lambda r: (-r['nb_bons'], r['site']))
+        elif tri == 'litres':
+            rows.sort(key=lambda r: (-r['litres'], r['site']))
+        elif tri == 'anomalies':
+            rows.sort(key=lambda r: (-r['anomalies'], r['site']))
+        else:
+            rows.sort(key=lambda r: (-r['montant'], r['site']))
+
+        kpi_sites = len(rows)
+        kpi_bons = sum(r['nb_bons'] for r in rows)
+        kpi_litres = round(sum(r['litres'] for r in rows), 2)
+        kpi_montant = round(sum(r['montant'] for r in rows), 2)
+        kpi_anomalies = sum(r['anomalies'] for r in rows)
+
+        # Top 8 toujours basé sur l'optimisation (pas sur le montant)
+        top_chart = sorted(rows, key=lambda r: (-r['optimisation_score'], r['site']))[:8]
+        chart_labels = [r['site'] for r in top_chart]
+        chart_values = [r['optimisation_score'] for r in top_chart]
+
+        if rows:
+            best = max(rows, key=lambda r: (r['optimisation_score'], r['nb_bons']))
+            top_site_name = best['site']
+            top_site_montant = best['montant']
+            top_site_score = best['optimisation_score']
+            worst = max(rows, key=lambda r: (r['ratio_anomalies'], r['anomalies']))
+            worst_site_name = worst['site']
+            worst_site_ratio = worst['ratio_anomalies']
+        no_data_for_filters = len(rows) == 0
+    except Exception as exc:
+        error = f'Erreur de connexion Odoo : {exc}'
+
+    return render(request, 'production/sites.html', {
+        'rows': rows,
+        'error': error,
+        'date_debut': date_debut,
+        'date_fin': date_fin,
+        'site': site,
+        'societe': societe,
+        'tri': tri,
+        'sites': sites,
+        'societes': societes,
+        'kpi_sites': kpi_sites,
+        'kpi_bons': kpi_bons,
+        'kpi_litres': kpi_litres,
+        'kpi_montant': kpi_montant,
+        'kpi_anomalies': kpi_anomalies,
+        'top_site_name': top_site_name,
+        'top_site_montant': top_site_montant,
+        'top_site_score': top_site_score,
+        'worst_site_name': worst_site_name,
+        'worst_site_ratio': worst_site_ratio,
+        'no_data_for_filters': no_data_for_filters,
+        'chart_has_data': len(chart_labels) > 0,
+        'chart_labels_json': json.dumps(chart_labels),
+        'chart_values_json': json.dumps(chart_values),
+    })
+
+
+def _render_achats_module(request, current_key, page_title, page_subtitle):
+    menu_items = [
+        {'key': 'overview', 'label': "Vue d'ensemble", 'url': 'achats_overview'},
+        {'key': 'purchase_requests', 'label': "Demandes d'achat", 'url': 'achats_purchase_requests'},
+        {'key': 'rfq', 'label': 'Demandes de prix', 'url': 'achats_rfq'},
+        {'key': 'purchase_orders', 'label': 'Bons de commande', 'url': 'achats_purchase_orders'},
+        {'key': 'delivery_tracking', 'label': 'Suivi livraisons', 'url': 'achats_delivery_tracking'},
+        {'key': 'suppliers', 'label': 'Fournisseurs', 'url': 'achats_suppliers'},
+    ]
+
+    return render(request, 'achats/module.html', {
+        'page_title': page_title,
+        'page_subtitle': page_subtitle,
+        'module_key': current_key,
+        'menu_items': menu_items,
+    })
+
+
+@login_required
+def achats_overview(request):
+    return _render_achats_module(
+        request,
+        current_key='overview',
+        page_title="Vue d'ensemble",
+        page_subtitle="Vision globale du flux achats : demandes, commandes, livraisons et fournisseurs.",
+    )
+
+
+@login_required
+def achats_purchase_requests(request):
+    date_debut  = request.GET.get('date_debut',  '').strip()
+    date_fin    = request.GET.get('date_fin',    '').strip()
+    departement = request.GET.get('departement', '').strip()
+    etat        = request.GET.get('etat',        '').strip()
+    demandeur   = request.GET.get('demandeur',   '').strip()
+    export      = request.GET.get('export',      '').strip().lower()
+
+    STATE_LABELS_PR = {
+        'draft':      'Brouillon',
+        'to_approve': 'Confirmé',
+        'confirmed':  'Confirmé',
+        'approved':   'Approuvé',
+        'rejected':   'Rejeté',
+        'done':       'Terminé',
+        'sent':       'Envoyé',
+        'purchase':   'Bon de commande',
+        'cancel':     'Annulé',
+    }
+
+    rows = []
+    error = None
+    departements = []
+    demandeurs_list = []
+    total_demandes = 0
+    total_montant  = 0.0
+    nb_attente     = 0
+    nb_approuvees  = 0
+    use_fallback   = False
+    odoo_model_label = 'purchase.request'
+
+    def _fmt_date_pr(d):
+        if not d or len(d) < 10:
+            return '—'
+        return f'{d[8:10]}/{d[5:7]}/{d[0:4]}'
+
+    state_options = [
+        ('draft', 'Brouillon'),
+        ('to_approve', 'Confirmé'),
+        ('approved', 'Approuvé'),
+        ('rejected', 'Rejeté'),
+    ]
+
+    try:
+        uid, models = get_odoo_connection()
+
+        # ── Essai purchase.request ──────────────────────────────
+        pr_exists = False
+        try:
+            models.execute_kw(
+                settings.ODOO_DB, uid, settings.ODOO_PASS,
+                'purchase.request', 'search_count', [[]], {},
+            )
+            pr_exists = True
+        except Exception:
+            pr_exists = False
+
+        if pr_exists:
+            fields_meta = models.execute_kw(
+                settings.ODOO_DB, uid, settings.ODOO_PASS,
+                'purchase.request', 'fields_get', [], {'attributes': ['type', 'string', 'relation']},
+            ) or {}
+            available_fields = set(fields_meta.keys())
+
+            date_candidates = [f for f in ('date_start', 'date_required', 'date', 'create_date') if f in available_fields]
+            requester_candidates = [f for f in ('requested_by', 'requested_by_id', 'user_id', 'create_uid') if f in available_fields]
+            department_candidates = [f for f in ('department_id', 'x_department_id', 'service_id', 'company_id') if f in available_fields]
+            description_candidates = [f for f in ('description', 'origin', 'notes') if f in available_fields]
+            amount_candidates = [f for f in ('estimated_cost', 'amount_total', 'amount_untaxed') if f in available_fields]
+            line_field = next((f for f in ('line_ids', 'request_line_ids', 'order_line') if f in available_fields), None)
+
+            date_field = date_candidates[0] if date_candidates else None
+
+            domain = []
+            if date_debut and date_field:
+                domain.append((date_field, '>=', date_debut))
+            if date_fin and date_field:
+                domain.append((date_field, '<=', date_fin + ' 23:59:59'))
+            if etat and 'state' in available_fields:
+                domain.append(('state', '=', etat))
+
+            read_fields = ['name']
+            read_fields.extend(date_candidates)
+            read_fields.extend(requester_candidates)
+            read_fields.extend(department_candidates)
+            read_fields.extend(description_candidates)
+            read_fields.extend(amount_candidates)
+            if 'state' in available_fields:
+                read_fields.append('state')
+            if line_field:
+                read_fields.append(line_field)
+            read_fields = sorted(set(read_fields))
+
+            records = models.execute_kw(
+                settings.ODOO_DB, uid, settings.ODOO_PASS,
+                'purchase.request', 'search_read',
+                [domain],
+                {'fields': read_fields,
+                 'limit': 5000, 'order': f'{date_field} desc' if date_field else 'id desc'},
+            )
+
+            # Si la description principale est vide, on tente de la reconstruire depuis les lignes.
+            line_desc_map = {}
+            if line_field:
+                try:
+                    line_ids = []
+                    for rec in records:
+                        vals = rec.get(line_field) or []
+                        if isinstance(vals, list):
+                            line_ids.extend([int(v) for v in vals if isinstance(v, int)])
+                    line_ids = sorted(set(line_ids))
+                    line_model = (fields_meta.get(line_field) or {}).get('relation') or 'purchase.request.line'
+                    if line_ids and line_model:
+                        line_fields_meta = models.execute_kw(
+                            settings.ODOO_DB, uid, settings.ODOO_PASS,
+                            line_model, 'fields_get', [], {'attributes': ['type']},
+                        ) or {}
+                        line_available = set(line_fields_meta.keys())
+                        line_read_fields = [f for f in ('name', 'description', 'product_id', 'product_qty', 'product_uom_qty') if f in line_available]
+                        line_read_fields = sorted(set(line_read_fields)) if line_read_fields else ['id']
+                        line_records = models.execute_kw(
+                            settings.ODOO_DB, uid, settings.ODOO_PASS,
+                            line_model, 'read',
+                            [line_ids],
+                            {'fields': line_read_fields},
+                        )
+                        for ln in line_records:
+                            txt = ''
+                            if 'description' in ln and ln.get('description'):
+                                txt = str(ln.get('description')).strip()
+                            elif 'name' in ln and ln.get('name'):
+                                txt = str(ln.get('name')).strip()
+                            if not txt and isinstance(ln.get('product_id'), list) and len(ln.get('product_id')) > 1:
+                                qty = ln.get('product_qty') if ln.get('product_qty') not in (None, '') else ln.get('product_uom_qty')
+                                txt = f"{ln['product_id'][1]} x {qty}" if qty not in (None, '') else str(ln['product_id'][1])
+                            line_desc_map[ln.get('id')] = txt
+                except Exception:
+                    line_desc_map = {}
+
+            all_rows = []
+            for r in records:
+                date_raw = ''
+                for f in date_candidates:
+                    val = r.get(f)
+                    if val:
+                        date_raw = str(val)[:10]
+                        break
+
+                req = None
+                for f in requester_candidates:
+                    val = r.get(f)
+                    if val:
+                        req = val
+                        break
+
+                dept = None
+                for f in department_candidates:
+                    val = r.get(f)
+                    if val:
+                        dept = val
+                        break
+
+                desc_val = None
+                for f in description_candidates:
+                    val = r.get(f)
+                    if val:
+                        desc_val = val
+                        break
+                if not desc_val and line_field:
+                    line_ids_row = r.get(line_field) or []
+                    if isinstance(line_ids_row, list):
+                        line_texts = [line_desc_map.get(i) for i in line_ids_row if line_desc_map.get(i)]
+                        if line_texts:
+                            desc_val = ' | '.join(line_texts[:2])
+
+                amount_val = 0
+                for f in amount_candidates:
+                    val = r.get(f)
+                    if val not in (None, ''):
+                        amount_val = val
+                        break
+
+                dept_name = dept[1] if isinstance(dept, list) and len(dept) > 1 else '—'
+                req_name = req[1] if isinstance(req, list) and len(req) > 1 else str(req or '—')
+                all_rows.append({
+                    'name':        r.get('name') or '—',
+                    'date':        _fmt_date_pr(date_raw),
+                    'date_raw':    date_raw,
+                    'demandeur':   req_name,
+                    'departement': dept_name,
+                    'description': (str(desc_val or '—'))[:140],
+                    'montant':     float(amount_val or 0),
+                    'etat_raw':    r.get('state') or 'draft',
+                    'etat':        STATE_LABELS_PR.get(r.get('state') or 'draft', r.get('state') or '—'),
+                })
+
+            departements    = sorted({row['departement'] for row in all_rows if row['departement'] != '—'})
+            demandeurs_list = sorted({row['demandeur']   for row in all_rows if row['demandeur']   != '—'})
+
+            # Filtres côté Python
+            rows = all_rows
+            if departement:
+                rows = [r for r in rows if departement.lower() in r['departement'].lower()]
+            if demandeur:
+                rows = [r for r in rows if demandeur.lower() in r['demandeur'].lower()]
+
+        else:
+            # ── Fallback purchase.order (draft/sent) ───────────
+            po_exists = False
+            try:
+                models.execute_kw(
+                    settings.ODOO_DB, uid, settings.ODOO_PASS,
+                    'purchase.order', 'search_count', [[]], {},
+                )
+                po_exists = True
+            except Exception:
+                po_exists = False
+
+            if not po_exists:
+                error = "Modèle non disponible dans cette instance Odoo"
+                return render(request, 'achats/demandes_achat.html', {
+                    'rows': [],
+                    'error': error,
+                    'date_debut': date_debut,
+                    'date_fin': date_fin,
+                    'departement': departement,
+                    'etat': etat,
+                    'demandeur': demandeur,
+                    'departements': [],
+                    'demandeurs': [],
+                    'total_demandes': 0,
+                    'total_montant': 0.0,
+                    'nb_attente': 0,
+                    'nb_approuvees': 0,
+                    'use_fallback': True,
+                    'odoo_model_label': 'purchase.request / purchase.order',
+                    'state_options': state_options,
+                })
+
+            use_fallback = True
+            odoo_model_label = 'purchase.order (draft/sent)'
+            domain = [('state', 'in', ['draft', 'sent'])]
+            if date_debut:
+                domain.append(('date_order', '>=', date_debut))
+            if date_fin:
+                domain.append(('date_order', '<=', date_fin + ' 23:59:59'))
+            if etat and etat in ('draft', 'sent'):
+                domain.append(('state', '=', etat))
+
+            records = models.execute_kw(
+                settings.ODOO_DB, uid, settings.ODOO_PASS,
+                'purchase.order', 'search_read',
+                [domain],
+                {'fields': ['name', 'date_order', 'partner_id', 'amount_total',
+                             'state', 'user_id', 'notes'],
+                 'limit': 5000, 'order': 'date_order desc'},
+            )
+            all_rows = []
+            for r in records:
+                partner   = r.get('partner_id')
+                dept_name = partner[1] if isinstance(partner, list) and len(partner) > 1 else '—'
+                user      = r.get('user_id')
+                user_name = user[1]    if isinstance(user,    list) and len(user)    > 1 else '—'
+                all_rows.append({
+                    'name':        r.get('name') or '—',
+                    'date':        _fmt_date_pr((r.get('date_order') or '')[:10]),
+                    'date_raw':    (r.get('date_order') or '')[:10],
+                    'demandeur':   user_name,
+                    'departement': dept_name,
+                    'description': (r.get('notes') or '—')[:120],
+                    'montant':     float(r.get('amount_total') or 0),
+                    'etat_raw':    r.get('state') or 'draft',
+                    'etat':        STATE_LABELS_PR.get(r.get('state') or 'draft', '—'),
+                })
+
+            departements    = sorted({row['departement'] for row in all_rows if row['departement'] != '—'})
+            demandeurs_list = sorted({row['demandeur']   for row in all_rows if row['demandeur']   != '—'})
+
+            rows = all_rows
+            if departement:
+                rows = [r for r in rows if departement.lower() in r['departement'].lower()]
+            if demandeur:
+                rows = [r for r in rows if demandeur.lower() in r['demandeur'].lower()]
+
+        # ── KPI ────────────────────────────────────────────────
+        total_demandes = len(rows)
+        total_montant  = round(sum(r['montant'] for r in rows), 2)
+        nb_attente     = sum(1 for r in rows if r['etat_raw'] in ('draft', 'to_approve', 'sent'))
+        nb_approuvees  = sum(1 for r in rows if r['etat_raw'] in ('approved', 'purchase', 'done'))
+        # ── Exports ────────────────────────────────────────────
+        if export == 'csv':
+            out = io.StringIO()
+            w = csv.writer(out, delimiter=';')
+            w.writerow(['N° Demande', 'Date', 'Demandeur', 'Département', 'Description', 'Montant estimé', 'État'])
+            for r in rows:
+                w.writerow([r['name'], r['date'], r['demandeur'], r['departement'],
+                             r['description'], r['montant'], r['etat']])
+            resp = HttpResponse(out.getvalue(), content_type='text/csv; charset=utf-8-sig')
+            resp['Content-Disposition'] = 'attachment; filename=demandes_achat.csv'
+            return resp
+
+        if export == 'excel':
+            wb = openpyxl.Workbook()
+            ws = wb.active
+            ws.title = "Demandes d'achat"
+            header = ['N° Demande', 'Date', 'Demandeur', 'Département', 'Description', 'Montant estimé', 'État']
+            ws.append(header)
+            hdr_fill = PatternFill('solid', fgColor='1A2C4E')
+            hdr_font = Font(color='FFFFFF', bold=True)
+            for cell in ws[1]:
+                cell.fill = hdr_fill
+                cell.font = hdr_font
+                cell.alignment = Alignment(horizontal='center', vertical='center')
+            for r in rows:
+                ws.append([r['name'], r['date'], r['demandeur'], r['departement'],
+                            r['description'], r['montant'], r['etat']])
+            ws.append(['TOTAL', '', '', '', '', total_montant, ''])
+
+            last_row = ws.max_row
+            total_fill = PatternFill('solid', fgColor='1A2C4E')
+            total_font = Font(color='FFFFFF', bold=True)
+            for cell in ws[last_row]:
+                cell.fill = total_fill
+                cell.font = total_font
+                cell.alignment = Alignment(horizontal='center', vertical='center')
+
+            # Mise en forme des colonnes pour un rendu lisible dans Excel.
+            ws.column_dimensions['A'].width = 18
+            ws.column_dimensions['B'].width = 14
+            ws.column_dimensions['C'].width = 24
+            ws.column_dimensions['D'].width = 24
+            ws.column_dimensions['E'].width = 52
+            ws.column_dimensions['F'].width = 18
+            ws.column_dimensions['G'].width = 16
+
+            ws.freeze_panes = 'A2'
+            ws.auto_filter.ref = f'A1:G{last_row}'
+
+            for row_idx in range(2, last_row):
+                ws[f'F{row_idx}'].number_format = '#,##0.00'
+                ws[f'F{row_idx}'].alignment = Alignment(horizontal='right')
+                ws[f'B{row_idx}'].alignment = Alignment(horizontal='center')
+
+            ws[f'F{last_row}'].number_format = '#,##0.00'
+            ws[f'F{last_row}'].alignment = Alignment(horizontal='right')
+
+            bio = io.BytesIO()
+            wb.save(bio)
+            bio.seek(0)
+            resp = HttpResponse(
+                bio.getvalue(),
+                content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            )
+            resp['Content-Disposition'] = 'attachment; filename=demandes_achat.xlsx'
+            return resp
+
+        if export == 'pdf':
+            bio_pdf = io.BytesIO()
+            logo_path = settings.BASE_DIR / 'static' / 'images' / 'logo_somatrin.png'
+            pw, ph = landscape(A4)
+
+            class _PagedCanvasDA(rl_canvas.Canvas):
+                def __init__(self, *args, **kw):
+                    super().__init__(*args, **kw)
+                    self._saved_states = []
+                def showPage(self):
+                    self._saved_states.append(dict(self.__dict__))
+                    self._startPage()
+                def save(self):
+                    total = len(self._saved_states)
+                    for state in self._saved_states:
+                        self.__dict__.update(state)
+                        self.setFont('Helvetica', 7.5)
+                        self.setFillColor(colors.HexColor('#6B7280'))
+                        self.drawRightString(pw - 15 * mm, 10 * mm,
+                                             f'Page {self._pageNumber} / {total}')
+                        super().showPage()
+                    super().save()
+
+            def _header_da(c, d):
+                c.saveState()
+                logo_x = 15 * mm
+                logo_y = ph - 22 * mm
+                logo_w = 32 * mm
+                logo_h = 11 * mm
+                if logo_path.is_file():
+                    c.drawImage(str(logo_path), logo_x, logo_y,
+                                width=logo_w, height=logo_h,
+                                preserveAspectRatio=True, mask='auto')
+                # Alignement vertical sur le centre du logo
+                header_y = logo_y + (logo_h / 2.0) - (3 * mm)
+                c.setFont('Helvetica-Bold', 11)
+                c.setFillColor(colors.HexColor('#1A2C4E'))
+                c.drawString(logo_x + logo_w + (6 * mm), header_y, "Demandes d'achat — SOMATRIN")
+                c.setFont('Helvetica', 8)
+                c.setFillColor(colors.HexColor('#6B7280'))
+                c.drawRightString(pw - 15 * mm, header_y, 'Document Confidentiel')
+                c.setStrokeColor(colors.HexColor('#E87722'))
+                c.setLineWidth(1.2)
+                c.line(15 * mm, ph - 26 * mm, pw - 15 * mm, ph - 26 * mm)
+                c.restoreState()
+
+            wrap_da = ParagraphStyle('wda', fontSize=7, leading=9)
+            navy_da = colors.HexColor('#1A2C4E')
+            lgray   = colors.HexColor('#F8FAFC')
+
+            pdf_data = [['N° Demande', 'Date', 'Demandeur', 'Département',
+                          'Description', 'Montant estimé', 'État']]
+            for r in rows:
+                pdf_data.append([
+                    r['name'], r['date'], r['demandeur'], r['departement'],
+                    Paragraph(str(r['description'])[:80], wrap_da),
+                    f"{r['montant']:,.2f}", r['etat'],
+                ])
+            pdf_data.append(['TOTAL', '', '', '', '',
+                              f"{total_montant:,.2f}", f"{total_demandes} demande(s)"])
+
+            cw_da = [35 * mm, 22 * mm, 40 * mm, 40 * mm, 68 * mm, 30 * mm, 22 * mm]
+            tbl_da = Table(pdf_data, colWidths=cw_da, repeatRows=1)
+            tbl_da.setStyle(TableStyle([
+                ('BACKGROUND',    (0, 0),  (-1, 0),  navy_da),
+                ('TEXTCOLOR',     (0, 0),  (-1, 0),  colors.white),
+                ('FONTNAME',      (0, 0),  (-1, 0),  'Helvetica-Bold'),
+                ('FONTSIZE',      (0, 0),  (-1, 0),  8),
+                ('ALIGN',         (0, 0),  (-1, 0),  'CENTER'),
+                ('VALIGN',        (0, 0),  (-1, -1), 'MIDDLE'),
+                ('FONTNAME',      (0, 1),  (-1, -2), 'Helvetica'),
+                ('FONTSIZE',      (0, 1),  (-1, -2), 7.5),
+                ('ROWBACKGROUNDS',(0, 1),  (-1, -2), [colors.white, lgray]),
+                ('ALIGN',         (5, 1),  (5, -2),  'RIGHT'),
+                ('GRID',          (0, 0),  (-1, -1), 0.3, colors.HexColor('#E5E7EB')),
+                ('BACKGROUND',    (0, -1), (-1, -1), navy_da),
+                ('TEXTCOLOR',     (0, -1), (-1, -1), colors.white),
+                ('FONTNAME',      (0, -1), (-1, -1), 'Helvetica-Bold'),
+                ('FONTSIZE',      (0, -1), (-1, -1), 8),
+                ('ALIGN',         (5, -1), (5, -1),  'RIGHT'),
+            ]))
+
+            doc_da = SimpleDocTemplate(
+                bio_pdf, pagesize=landscape(A4),
+                leftMargin=15 * mm, rightMargin=15 * mm,
+                topMargin=32 * mm, bottomMargin=22 * mm,
+            )
+            doc_da.build([tbl_da], onFirstPage=_header_da, onLaterPages=_header_da,
+                         canvasmaker=_PagedCanvasDA)
+            bio_pdf.seek(0)
+            resp = HttpResponse(bio_pdf.getvalue(), content_type='application/pdf')
+            resp['Content-Disposition'] = "attachment; filename=demandes_achat.pdf"
+            return resp
+
+    except Exception as exc:
+        error = f'Erreur de connexion Odoo : {exc}'
+
+    return render(request, 'achats/demandes_achat.html', {
+        'rows':             rows,
+        'error':            error,
+        'date_debut':       date_debut,
+        'date_fin':         date_fin,
+        'departement':      departement,
+        'etat':             etat,
+        'demandeur':        demandeur,
+        'departements':     departements,
+        'demandeurs':       demandeurs_list,
+        'total_demandes':   total_demandes,
+        'total_montant':    total_montant,
+        'nb_attente':       nb_attente,
+        'nb_approuvees':    nb_approuvees,
+        'use_fallback':     use_fallback,
+        'odoo_model_label': odoo_model_label,
+        'state_options':    state_options,
+    })
+
+
+@login_required
+def achats_rfq(request):
+    date_debut  = request.GET.get('date_debut',   '').strip()
+    date_fin    = request.GET.get('date_fin',     '').strip()
+    fournisseur = request.GET.get('fournisseur',  '').strip()
+    etat        = request.GET.get('etat',         '').strip()
+    responsable = request.GET.get('responsable',  '').strip()
+    export      = request.GET.get('export',       '').strip().lower()
+
+    STATE_LABELS_RFQ = {
+        'draft':    'Brouillon',
+        'sent':     'Envoyé',
+        'purchase': 'Bon de commande',
+        'cancel':   'Annulé',
+    }
+
+    rows = []
+    error = None
+    fournisseurs = []
+    responsables = []
+    total_dp     = 0
+    total_montant = 0.0
+    nb_attente    = 0
+    nb_expirees   = 0
+
+    def _fmt_date_rfq(d):
+        if not d or len(d) < 10:
+            return '—'
+        return f'{d[8:10]}/{d[5:7]}/{d[0:4]}'
+
+    try:
+        from datetime import datetime as _dt, timedelta as _td
+        uid, models = get_odoo_connection()
+
+        po_exists = False
+        try:
+            models.execute_kw(
+                settings.ODOO_DB, uid, settings.ODOO_PASS,
+                'purchase.order', 'search_count', [[]], {},
+            )
+            po_exists = True
+        except Exception:
+            po_exists = False
+
+        if not po_exists:
+            return render(request, 'achats/demandes_prix.html', {
+                'rows': [],
+                'error': "Modèle non disponible dans cette instance Odoo",
+                'date_debut': date_debut,
+                'date_fin': date_fin,
+                'fournisseur': fournisseur,
+                'etat': etat,
+                'responsable': responsable,
+                'fournisseurs': [],
+                'responsables': [],
+                'total_dp': 0,
+                'total_montant': 0.0,
+                'nb_attente': 0,
+                'nb_expirees': 0,
+            })
+
+        domain = []
+        if date_debut:
+            domain.append(('date_order', '>=', date_debut))
+        if date_fin:
+            domain.append(('date_order', '<=', date_fin + ' 23:59:59'))
+        if etat:
+            domain.append(('state', '=', etat))
+
+        # Champs disponibles (pour utiliser une vraie date d'expiration si présente)
+        po_fields = {}
+        try:
+            po_fields = models.execute_kw(
+                settings.ODOO_DB, uid, settings.ODOO_PASS,
+                'purchase.order', 'fields_get', [], {'attributes': ['type']},
+            ) or {}
+        except Exception:
+            po_fields = {}
+        po_available = set(po_fields.keys())
+
+        read_fields = ['name', 'date_order', 'partner_id', 'amount_total', 'state', 'currency_id', 'user_id']
+        # Certaines instances Odoo exposent une date de validité/expiration des RFQ
+        if 'validity_date' in po_available:
+            read_fields.append('validity_date')
+
+        records = models.execute_kw(
+            settings.ODOO_DB, uid, settings.ODOO_PASS,
+            'purchase.order', 'search_read',
+            [domain],
+            {'fields': read_fields,
+             'limit': 5000, 'order': 'date_order desc'},
+        )
+
+        today = date.today()
+        all_rows = []
+        for r in records:
+            partner    = r.get('partner_id')
+            fournisseur_name = partner[1] if isinstance(partner, list) and len(partner) > 1 else '—'
+            user       = r.get('user_id')
+            user_name  = user[1]    if isinstance(user,    list) and len(user)    > 1 else '—'
+            currency   = r.get('currency_id')
+            devise     = currency[1] if isinstance(currency, list) and len(currency) > 1 else 'MAD'
+
+            raw_date = (r.get('date_order') or '')[:10]
+            validity_raw = (r.get('validity_date') or '')[:10] if 'validity_date' in po_available else ''
+            expire_raw = ''
+            is_expired = False
+            if raw_date and len(raw_date) == 10:
+                try:
+                    order_date = _dt.strptime(raw_date, '%Y-%m-%d').date()
+                    if validity_raw and len(validity_raw) == 10:
+                        exp_date = _dt.strptime(validity_raw, '%Y-%m-%d').date()
+                        expire_raw = validity_raw
+                    else:
+                        exp_date = order_date + _td(days=15)
+                        expire_raw = exp_date.isoformat()
+                    if r.get('state') == 'sent':
+                        is_expired = today > exp_date
+                except Exception:
+                    pass
+
+            all_rows.append({
+                'name':        r.get('name') or '—',
+                'date':        raw_date,
+                'expire_raw':  expire_raw,
+                'has_validity_date': bool(validity_raw),
+                'fournisseur': fournisseur_name,
+                'responsable': user_name,
+                'montant':     float(r.get('amount_total') or 0),
+                'devise':      devise,
+                'etat_raw':    r.get('state') or 'draft',
+                'etat':        STATE_LABELS_RFQ.get(r.get('state') or 'draft', '—'),
+                'is_expired':  is_expired,
+            })
+
+        fournisseurs = sorted({row['fournisseur'] for row in all_rows if row['fournisseur'] != '—'})
+        responsables = sorted({row['responsable'] for row in all_rows if row['responsable'] != '—'})
+
+        # Filtres côté Python
+        rows = all_rows
+        if fournisseur:
+            rows = [r for r in rows if fournisseur.lower() in r['fournisseur'].lower()]
+        if responsable:
+            rows = [r for r in rows if responsable.lower() in r['responsable'].lower()]
+
+        # ── KPI ────────────────────────────────────────────────
+        total_dp      = len(rows)
+        total_montant = round(sum(r['montant'] for r in rows), 2)
+        # "En attente réponse fournisseur" = RFQ envoyées au fournisseur.
+        nb_attente    = sum(1 for r in rows if r['etat_raw'] == 'sent')
+        nb_expirees   = sum(1 for r in rows if r.get('is_expired'))
+
+        # Formatage dates après calcul is_expired
+        for r in rows:
+            r['date'] = _fmt_date_rfq(r['date'])
+            r['expire'] = _fmt_date_rfq(r.get('expire_raw') or '')
+
+        # ── Exports ────────────────────────────────────────────
+        if export == 'csv':
+            out = io.StringIO()
+            w = csv.writer(out, delimiter=';')
+            w.writerow(['N° Demande', 'Date', 'Fournisseur', 'Responsable', 'Montant HT', 'Devise', 'État'])
+            for r in rows:
+                w.writerow([r['name'], r['date'], r['fournisseur'], r['responsable'],
+                             r['montant'], r['devise'], r['etat']])
+            resp = HttpResponse(out.getvalue(), content_type='text/csv; charset=utf-8-sig')
+            resp['Content-Disposition'] = 'attachment; filename=demandes_prix.csv'
+            return resp
+
+        if export == 'excel':
+            wb = openpyxl.Workbook()
+            ws = wb.active
+            ws.title = 'Demandes de prix'
+            header = ['N° Demande', 'Date', 'Fournisseur', 'Responsable', 'Montant HT', 'Devise', 'État']
+            ws.append(header)
+            hdr_fill = PatternFill('solid', fgColor='1A2C4E')
+            hdr_font = Font(color='FFFFFF', bold=True)
+            for cell in ws[1]:
+                cell.fill = hdr_fill
+                cell.font = hdr_font
+                cell.alignment = Alignment(horizontal='center', vertical='center')
+            for r in rows:
+                ws.append([r['name'], r['date'], r['fournisseur'], r['responsable'],
+                            r['montant'], r['devise'], r['etat']])
+            ws.append(['TOTAL', '', '', '', total_montant, '', ''])
+
+            last_row = ws.max_row
+            total_fill = PatternFill('solid', fgColor='1A2C4E')
+            total_font = Font(color='FFFFFF', bold=True)
+            for cell in ws[last_row]:
+                cell.fill = total_fill
+                cell.font = total_font
+                cell.alignment = Alignment(horizontal='center', vertical='center')
+
+            ws.column_dimensions['A'].width = 18
+            ws.column_dimensions['B'].width = 14
+            ws.column_dimensions['C'].width = 30
+            ws.column_dimensions['D'].width = 24
+            ws.column_dimensions['E'].width = 18
+            ws.column_dimensions['F'].width = 14
+            ws.column_dimensions['G'].width = 14
+
+            ws.freeze_panes = 'A2'
+            ws.auto_filter.ref = f'A1:G{last_row}'
+
+            for row_idx in range(2, last_row):
+                ws[f'E{row_idx}'].number_format = '#,##0.00'
+                ws[f'E{row_idx}'].alignment = Alignment(horizontal='right')
+                ws[f'B{row_idx}'].alignment = Alignment(horizontal='center')
+
+            ws[f'E{last_row}'].number_format = '#,##0.00'
+            ws[f'E{last_row}'].alignment = Alignment(horizontal='right')
+
+            bio = io.BytesIO()
+            wb.save(bio)
+            bio.seek(0)
+            resp = HttpResponse(
+                bio.getvalue(),
+                content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            )
+            resp['Content-Disposition'] = 'attachment; filename=demandes_prix.xlsx'
+            return resp
+
+        if export == 'pdf':
+            bio_pdf = io.BytesIO()
+            logo_path = settings.BASE_DIR / 'static' / 'images' / 'logo_somatrin.png'
+            pw, ph = landscape(A4)
+
+            class _PagedCanvasDP(rl_canvas.Canvas):
+                def __init__(self, *args, **kw):
+                    super().__init__(*args, **kw)
+                    self._saved_states = []
+                def showPage(self):
+                    self._saved_states.append(dict(self.__dict__))
+                    self._startPage()
+                def save(self):
+                    total = len(self._saved_states)
+                    for state in self._saved_states:
+                        self.__dict__.update(state)
+                        self.setFont('Helvetica', 7.5)
+                        self.setFillColor(colors.HexColor('#6B7280'))
+                        self.drawRightString(pw - 15 * mm, 10 * mm,
+                                             f'Page {self._pageNumber} / {total}')
+                        super().showPage()
+                    super().save()
+
+            def _header_dp(c, d):
+                c.saveState()
+                logo_x = 15 * mm
+                logo_y = ph - 22 * mm
+                logo_w = 32 * mm
+                logo_h = 11 * mm
+                if logo_path.is_file():
+                    c.drawImage(str(logo_path), logo_x, logo_y,
+                                width=logo_w, height=logo_h,
+                                preserveAspectRatio=True, mask='auto')
+                header_y = logo_y + (logo_h / 2.0) - (3 * mm)
+                c.setFont('Helvetica-Bold', 11)
+                c.setFillColor(colors.HexColor('#1A2C4E'))
+                c.drawString(logo_x + logo_w + (6 * mm), header_y, 'Demandes de prix — SOMATRIN')
+                c.setFont('Helvetica', 8)
+                c.setFillColor(colors.HexColor('#6B7280'))
+                c.drawRightString(pw - 15 * mm, header_y, 'Document Confidentiel')
+                c.setStrokeColor(colors.HexColor('#E87722'))
+                c.setLineWidth(1.2)
+                c.line(15 * mm, ph - 26 * mm, pw - 15 * mm, ph - 26 * mm)
+                c.restoreState()
+
+            navy_dp = colors.HexColor('#1A2C4E')
+            lgray_dp = colors.HexColor('#F8FAFC')
+
+            pdf_data = [['N° Demande', 'Date', 'Fournisseur',
+                          'Responsable', 'Montant HT', 'Devise', 'État']]
+            for r in rows:
+                pdf_data.append([
+                    r['name'], r['date'], r['fournisseur'],
+                    r['responsable'], f"{r['montant']:,.2f}", r['devise'], r['etat'],
+                ])
+            pdf_data.append(['TOTAL', '', '', '',
+                              f"{total_montant:,.2f}", '', f"{total_dp} demande(s)"])
+
+            cw_dp = [38 * mm, 24 * mm, 55 * mm, 45 * mm, 32 * mm, 18 * mm, 22 * mm]
+            tbl_dp = Table(pdf_data, colWidths=cw_dp, repeatRows=1)
+            tbl_dp.setStyle(TableStyle([
+                ('BACKGROUND',    (0, 0),  (-1, 0),  navy_dp),
+                ('TEXTCOLOR',     (0, 0),  (-1, 0),  colors.white),
+                ('FONTNAME',      (0, 0),  (-1, 0),  'Helvetica-Bold'),
+                ('FONTSIZE',      (0, 0),  (-1, 0),  8),
+                ('ALIGN',         (0, 0),  (-1, 0),  'CENTER'),
+                ('VALIGN',        (0, 0),  (-1, -1), 'MIDDLE'),
+                ('FONTNAME',      (0, 1),  (-1, -2), 'Helvetica'),
+                ('FONTSIZE',      (0, 1),  (-1, -2), 7.5),
+                ('ROWBACKGROUNDS',(0, 1),  (-1, -2), [colors.white, lgray_dp]),
+                ('ALIGN',         (4, 1),  (4, -2),  'RIGHT'),
+                ('GRID',          (0, 0),  (-1, -1), 0.3, colors.HexColor('#E5E7EB')),
+                ('BACKGROUND',    (0, -1), (-1, -1), navy_dp),
+                ('TEXTCOLOR',     (0, -1), (-1, -1), colors.white),
+                ('FONTNAME',      (0, -1), (-1, -1), 'Helvetica-Bold'),
+                ('FONTSIZE',      (0, -1), (-1, -1), 8),
+                ('ALIGN',         (4, -1), (4, -1),  'RIGHT'),
+            ]))
+
+            doc_dp = SimpleDocTemplate(
+                bio_pdf, pagesize=landscape(A4),
+                leftMargin=15 * mm, rightMargin=15 * mm,
+                topMargin=32 * mm, bottomMargin=22 * mm,
+            )
+            doc_dp.build([tbl_dp], onFirstPage=_header_dp, onLaterPages=_header_dp,
+                         canvasmaker=_PagedCanvasDP)
+            bio_pdf.seek(0)
+            resp = HttpResponse(bio_pdf.getvalue(), content_type='application/pdf')
+            resp['Content-Disposition'] = "attachment; filename=demandes_prix.pdf"
+            return resp
+
+    except Exception as exc:
+        error = f'Erreur de connexion Odoo : {exc}'
+
+    return render(request, 'achats/demandes_prix.html', {
+        'rows':         rows,
+        'error':        error,
+        'date_debut':   date_debut,
+        'date_fin':     date_fin,
+        'fournisseur':  fournisseur,
+        'etat':         etat,
+        'responsable':  responsable,
+        'fournisseurs': fournisseurs,
+        'responsables': responsables,
+        'total_dp':     total_dp,
+        'total_montant': total_montant,
+        'nb_attente':   nb_attente,
+        'nb_expirees':  nb_expirees,
+    })
+
+
+@login_required
+def achats_purchase_orders(request):
+    date_debut  = request.GET.get('date_debut',   '').strip()
+    date_fin    = request.GET.get('date_fin',     '').strip()
+    fournisseur = request.GET.get('fournisseur',  '').strip()
+    etat        = request.GET.get('etat',         '').strip()
+    responsable = request.GET.get('responsable',  '').strip()
+    societe     = request.GET.get('societe',      '').strip()
+    export      = request.GET.get('export',       '').strip().lower()
+
+    STATE_LABELS_PO = {
+        'draft':    'Brouillon',
+        'sent':     'Envoyé',
+        'purchase': 'Confirmé',
+        'done':     'Terminé',
+        'cancel':   'Annulé',
+    }
+
+    rows        = []
+    error       = None
+    fournisseurs = []
+    responsables = []
+    societes    = []
+    total_bons  = 0
+    total_ht    = 0.0
+    nb_confirmes = 0
+    nb_attente  = 0
+
+    def _fmt_date_po(d):
+        if not d or len(d) < 10:
+            return '—'
+        return f'{d[8:10]}/{d[5:7]}/{d[0:4]}'
+
+    try:
+        uid, models = get_odoo_connection()
+
+        po_exists = False
+        try:
+            models.execute_kw(
+                settings.ODOO_DB, uid, settings.ODOO_PASS,
+                'purchase.order', 'search_count', [[]], {},
+            )
+            po_exists = True
+        except Exception:
+            po_exists = False
+
+        if not po_exists:
+            return render(request, 'achats/bons_commande.html', {
+                'rows': [], 'error': "Modèle purchase.order non disponible dans cette instance Odoo",
+                'date_debut': date_debut, 'date_fin': date_fin,
+                'fournisseur': fournisseur, 'etat': etat,
+                'responsable': responsable, 'societe': societe,
+                'fournisseurs': [], 'responsables': [], 'societes': [],
+                'total_bons': 0, 'total_ht': 0.0, 'nb_confirmes': 0, 'nb_attente': 0,
+            })
+
+        domain = []
+        if date_debut:
+            domain.append(('date_order', '>=', date_debut))
+        if date_fin:
+            domain.append(('date_order', '<=', date_fin + ' 23:59:59'))
+        if etat:
+            domain.append(('state', '=', etat))
+
+        records = models.execute_kw(
+            settings.ODOO_DB, uid, settings.ODOO_PASS,
+            'purchase.order', 'search_read',
+            [domain],
+            {'fields': ['name', 'date_order', 'partner_id', 'user_id',
+                        'amount_untaxed', 'amount_tax', 'amount_total',
+                        'state', 'currency_id', 'date_planned', 'company_id'],
+             'limit': 5000, 'order': 'date_order desc'},
+        )
+
+        all_rows = []
+        for r in records:
+            partner      = r.get('partner_id')
+            fourn_name   = partner[1]  if isinstance(partner,  list) and len(partner)  > 1 else '—'
+            user         = r.get('user_id')
+            user_name    = user[1]     if isinstance(user,     list) and len(user)     > 1 else '—'
+            currency     = r.get('currency_id')
+            devise       = currency[1] if isinstance(currency, list) and len(currency) > 1 else 'MAD'
+            company      = r.get('company_id')
+            company_name = company[1]  if isinstance(company,  list) and len(company)  > 1 else '—'
+            all_rows.append({
+                'name':         r.get('name') or '—',
+                'date':         (r.get('date_order') or '')[:10],
+                'date_planned': (r.get('date_planned') or '')[:10],
+                'fournisseur':  fourn_name,
+                'responsable':  user_name,
+                'societe':      company_name,
+                'montant_ht':   float(r.get('amount_untaxed') or 0),
+                'montant_tax':  float(r.get('amount_tax')      or 0),
+                'montant_ttc':  float(r.get('amount_total')    or 0),
+                'devise':       devise,
+                'etat_raw':     r.get('state') or 'draft',
+                'etat':         STATE_LABELS_PO.get(r.get('state') or 'draft', '—'),
+            })
+
+        fournisseurs = sorted({row['fournisseur'] for row in all_rows if row['fournisseur'] != '—'})
+        responsables = sorted({row['responsable'] for row in all_rows if row['responsable'] != '—'})
+        societes     = sorted({row['societe']     for row in all_rows if row['societe']     != '—'})
+
+        rows = all_rows
+        if fournisseur:
+            rows = [r for r in rows if fournisseur.lower() in r['fournisseur'].lower()]
+        if responsable:
+            rows = [r for r in rows if responsable.lower() in r['responsable'].lower()]
+        if societe:
+            rows = [r for r in rows if societe == r['societe']]
+
+        total_bons   = len(rows)
+        total_ht     = round(sum(r['montant_ht']  for r in rows), 2)
+        nb_confirmes = sum(1 for r in rows if r['etat_raw'] in ('purchase', 'done'))
+        nb_attente   = sum(1 for r in rows if r['etat_raw'] in ('draft', 'sent'))
+
+        for r in rows:
+            r['date']         = _fmt_date_po(r['date'])
+            r['date_planned'] = _fmt_date_po(r['date_planned'])
+
+        if export == 'csv':
+            out = io.StringIO()
+            w = csv.writer(out, delimiter=';')
+            w.writerow(['N° Commande', 'Date', 'Date prévue', 'Fournisseur', 'Responsable',
+                        'Société', 'Montant HT', 'Taxes', 'Montant TTC', 'Devise', 'État'])
+            for r in rows:
+                w.writerow([r['name'], r['date'], r['date_planned'], r['fournisseur'],
+                             r['responsable'], r['societe'], r['montant_ht'],
+                            r['montant_tax'], r['montant_ttc'], r['devise'], r['etat']])
+            resp = HttpResponse(out.getvalue(), content_type='text/csv; charset=utf-8-sig')
+            resp['Content-Disposition'] = 'attachment; filename=bons_commande.csv'
+            return resp
+
+        if export == 'excel':
+            wb = openpyxl.Workbook()
+            ws = wb.active
+            ws.title = 'Bons de commande'
+            header = ['N° Commande', 'Date', 'Date prévue', 'Fournisseur', 'Responsable',
+                      'Société', 'Montant HT', 'Taxes', 'Montant TTC', 'Devise', 'État']
+            ws.append(header)
+            hdr_fill = PatternFill('solid', fgColor='1A2C4E')
+            hdr_font = Font(color='FFFFFF', bold=True)
+            for cell in ws[1]:
+                cell.fill = hdr_fill
+                cell.font = hdr_font
+                cell.alignment = Alignment(horizontal='center', vertical='center')
+            for r in rows:
+                ws.append([r['name'], r['date'], r['date_planned'], r['fournisseur'],
+                            r['responsable'], r['societe'], r['montant_ht'],
+                            r['montant_tax'], r['montant_ttc'], r['devise'], r['etat']])
+            ws.append(['TOTAL', '', '', '', '', '', total_ht, '', '', '', ''])
+
+            last_row = ws.max_row
+            for cell in ws[last_row]:
+                cell.fill = PatternFill('solid', fgColor='1A2C4E')
+                cell.font = Font(color='FFFFFF', bold=True)
+                cell.alignment = Alignment(horizontal='center', vertical='center')
+
+            col_widths = {'A': 18, 'B': 14, 'C': 14, 'D': 30, 'E': 24,
+                          'F': 20, 'G': 16, 'H': 16, 'I': 16, 'J': 10, 'K': 14}
+            for col, w_val in col_widths.items():
+                ws.column_dimensions[col].width = w_val
+
+            ws.freeze_panes = 'A2'
+            ws.auto_filter.ref = f'A1:K{last_row}'
+
+            for row_idx in range(2, last_row):
+                for col in ('G', 'H', 'I'):
+                    ws[f'{col}{row_idx}'].number_format = '#,##0.00'
+                    ws[f'{col}{row_idx}'].alignment = Alignment(horizontal='right')
+                ws[f'B{row_idx}'].alignment = Alignment(horizontal='center')
+                ws[f'C{row_idx}'].alignment = Alignment(horizontal='center')
+            for col in ('G', 'H', 'I'):
+                ws[f'{col}{last_row}'].number_format = '#,##0.00'
+                ws[f'{col}{last_row}'].alignment = Alignment(horizontal='right')
+
+            bio = io.BytesIO()
+            wb.save(bio)
+            bio.seek(0)
+            resp = HttpResponse(
+                bio.getvalue(),
+                content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            )
+            resp['Content-Disposition'] = 'attachment; filename=bons_commande.xlsx'
+            return resp
+
+        if export == 'pdf':
+            bio_pdf = io.BytesIO()
+            logo_path = settings.BASE_DIR / 'static' / 'images' / 'logo_somatrin.png'
+            pw, ph = landscape(A4)
+
+            class _PagedCanvasPO(rl_canvas.Canvas):
+                def __init__(self, *args, **kw):
+                    super().__init__(*args, **kw)
+                    self._saved_states = []
+                def showPage(self):
+                    self._saved_states.append(dict(self.__dict__))
+                    self._startPage()
+                def save(self):
+                    total = len(self._saved_states)
+                    for state in self._saved_states:
+                        self.__dict__.update(state)
+                        self.setFont('Helvetica', 7.5)
+                        self.setFillColor(colors.HexColor('#6B7280'))
+                        self.drawRightString(pw - 15 * mm, 10 * mm, f'Page {self._pageNumber} / {total}')
+                        super().showPage()
+                    super().save()
+
+            def _header_po(c, d):
+                c.saveState()
+                logo_x = 15 * mm
+                logo_y = ph - 22 * mm
+                logo_w = 32 * mm
+                logo_h = 11 * mm
+                if logo_path.is_file():
+                    c.drawImage(str(logo_path), logo_x, logo_y,
+                                width=logo_w, height=logo_h,
+                                preserveAspectRatio=True, mask='auto')
+                header_y = logo_y + (logo_h / 2.0) - (3 * mm)
+                c.setFont('Helvetica-Bold', 11)
+                c.setFillColor(colors.HexColor('#1A2C4E'))
+                c.drawString(logo_x + logo_w + (6 * mm), header_y, 'Bons de commande — SOMATRIN')
+                c.setFont('Helvetica', 8)
+                c.setFillColor(colors.HexColor('#6B7280'))
+                c.drawRightString(pw - 15 * mm, header_y, 'Document Confidentiel')
+                c.setStrokeColor(colors.HexColor('#E87722'))
+                c.setLineWidth(1.2)
+                c.line(15 * mm, ph - 26 * mm, pw - 15 * mm, ph - 26 * mm)
+                c.restoreState()
+
+            navy_po = colors.HexColor('#1A2C4E')
+            lgray_po = colors.HexColor('#F8FAFC')
+            pdf_data = [['N° Commande', 'Date', 'Date prévue', 'Fournisseur', 'Responsable',
+                         'Société', 'Montant HT', 'Taxes', 'Montant TTC', 'État']]
+            for r in rows:
+                pdf_data.append([
+                    r['name'], r['date'], r['date_planned'], r['fournisseur'], r['responsable'],
+                    r['societe'], f"{r['montant_ht']:,.2f}", f"{r['montant_tax']:,.2f}",
+                    f"{r['montant_ttc']:,.2f}", r['etat'],
+                ])
+            pdf_data.append(['TOTAL', '', '', '', '', '', f"{total_ht:,.2f}", '', '', f"{total_bons} bon(s)"])
+
+            cw_po = [33 * mm, 20 * mm, 24 * mm, 42 * mm, 32 * mm, 30 * mm, 24 * mm, 20 * mm, 24 * mm, 20 * mm]
+            tbl_po = Table(pdf_data, colWidths=cw_po, repeatRows=1)
+            tbl_po.setStyle(TableStyle([
+                ('BACKGROUND',    (0, 0),  (-1, 0),  navy_po),
+                ('TEXTCOLOR',     (0, 0),  (-1, 0),  colors.white),
+                ('FONTNAME',      (0, 0),  (-1, 0),  'Helvetica-Bold'),
+                ('FONTSIZE',      (0, 0),  (-1, 0),  8),
+                ('ALIGN',         (0, 0),  (-1, 0),  'CENTER'),
+                ('VALIGN',        (0, 0),  (-1, -1), 'MIDDLE'),
+                ('FONTNAME',      (0, 1),  (-1, -2), 'Helvetica'),
+                ('FONTSIZE',      (0, 1),  (-1, -2), 7.2),
+                ('ROWBACKGROUNDS',(0, 1),  (-1, -2), [colors.white, lgray_po]),
+                ('ALIGN',         (6, 1),  (8, -1),  'RIGHT'),
+                ('GRID',          (0, 0),  (-1, -1), 0.3, colors.HexColor('#E5E7EB')),
+                ('BACKGROUND',    (0, -1), (-1, -1), navy_po),
+                ('TEXTCOLOR',     (0, -1), (-1, -1), colors.white),
+                ('FONTNAME',      (0, -1), (-1, -1), 'Helvetica-Bold'),
+                ('FONTSIZE',      (0, -1), (-1, -1), 8),
+            ]))
+
+            doc_po = SimpleDocTemplate(
+                bio_pdf, pagesize=landscape(A4),
+                leftMargin=15 * mm, rightMargin=15 * mm,
+                topMargin=32 * mm, bottomMargin=22 * mm,
+            )
+            doc_po.build([tbl_po], onFirstPage=_header_po, onLaterPages=_header_po, canvasmaker=_PagedCanvasPO)
+            bio_pdf.seek(0)
+            resp = HttpResponse(bio_pdf.getvalue(), content_type='application/pdf')
+            resp['Content-Disposition'] = "attachment; filename=bons_commande.pdf"
+            return resp
+
+    except Exception as exc:
+        error = f'Erreur de connexion Odoo : {exc}'
+
+    return render(request, 'achats/bons_commande.html', {
+        'rows':         rows,
+        'error':        error,
+        'date_debut':   date_debut,
+        'date_fin':     date_fin,
+        'fournisseur':  fournisseur,
+        'etat':         etat,
+        'responsable':  responsable,
+        'societe':      societe,
+        'fournisseurs': fournisseurs,
+        'responsables': responsables,
+        'societes':     societes,
+        'total_bons':   total_bons,
+        'total_ht':     total_ht,
+        'nb_confirmes': nb_confirmes,
+        'nb_attente':   nb_attente,
+    })
+
+
+@login_required
+def achats_delivery_tracking(request):
+    date_debut = request.GET.get('date_debut', '').strip()
+    date_fin = request.GET.get('date_fin', '').strip()
+    fournisseur = request.GET.get('fournisseur', '').strip()
+    statut = request.GET.get('statut', '').strip()
+    responsable = request.GET.get('responsable', '').strip()
+    export = request.GET.get('export', '').strip().lower()
+
+    rows = []
+    error = None
+    fournisseurs = []
+    responsables = []
+    total_livraisons = 0
+    total_ttc = 0.0
+    nb_recues = 0
+    nb_retard = 0
+    nb_en_cours = 0
+
+    def _fmt_date(v):
+        if not v or len(v) < 10:
+            return '—'
+        return f'{v[8:10]}/{v[5:7]}/{v[0:4]}'
+
+    try:
+        from datetime import datetime as _dt
+
+        uid, models = get_odoo_connection()
+        po_exists = False
+        try:
+            models.execute_kw(
+                settings.ODOO_DB, uid, settings.ODOO_PASS,
+                'purchase.order', 'search_count', [[]], {},
+            )
+            po_exists = True
+        except Exception:
+            po_exists = False
+
+        if not po_exists:
+            return render(request, 'achats/suivi_livraisons.html', {
+                'rows': [],
+                'error': "Modèle purchase.order non disponible dans cette instance Odoo",
+                'date_debut': date_debut,
+                'date_fin': date_fin,
+                'fournisseur': fournisseur,
+                'statut': statut,
+                'responsable': responsable,
+                'fournisseurs': [],
+                'responsables': [],
+                'total_livraisons': 0,
+                'total_ttc': 0.0,
+                'nb_recues': 0,
+                'nb_retard': 0,
+                'nb_en_cours': 0,
+                'stats_statut': {'en_retard': 0, 'en_cours': 0, 'recue': 0},
+            })
+
+        domain = []
+        if date_debut:
+            domain.append(('date_order', '>=', date_debut))
+        if date_fin:
+            domain.append(('date_order', '<=', date_fin + ' 23:59:59'))
+
+        records = models.execute_kw(
+            settings.ODOO_DB, uid, settings.ODOO_PASS,
+            'purchase.order', 'search_read',
+            [domain],
+            {'fields': ['name', 'date_order', 'date_planned', 'partner_id', 'user_id', 'amount_total', 'state', 'currency_id'],
+             'limit': 5000, 'order': 'date_order desc'},
+        )
+
+        today = date.today()
+        for r in records:
+            partner = r.get('partner_id')
+            fourn_name = partner[1] if isinstance(partner, list) and len(partner) > 1 else '—'
+            user = r.get('user_id')
+            user_name = user[1] if isinstance(user, list) and len(user) > 1 else '—'
+            cur = r.get('currency_id')
+            devise = cur[1] if isinstance(cur, list) and len(cur) > 1 else 'MAD'
+            state_raw = r.get('state') or 'draft'
+
+            raw_order = (r.get('date_order') or '')[:10]
+            raw_planned = (r.get('date_planned') or '')[:10]
+            delay_days = None
+            if raw_order and raw_planned and len(raw_order) == 10 and len(raw_planned) == 10:
+                try:
+                    d_order = _dt.strptime(raw_order, '%Y-%m-%d').date()
+                    d_plan = _dt.strptime(raw_planned, '%Y-%m-%d').date()
+                    delay_days = (d_plan - d_order).days
+                except Exception:
+                    delay_days = None
+
+            is_received = state_raw in ('done',)
+            is_cancel = state_raw in ('cancel',)
+            is_late = False
+            if raw_planned and len(raw_planned) == 10 and not is_received and not is_cancel:
+                try:
+                    d_plan = _dt.strptime(raw_planned, '%Y-%m-%d').date()
+                    is_late = d_plan < today
+                except Exception:
+                    is_late = False
+
+            if is_cancel:
+                statut_livraison = 'Annulée'
+            elif is_received:
+                statut_livraison = 'Reçue'
+            elif is_late:
+                statut_livraison = 'En retard'
+            else:
+                statut_livraison = 'En cours'
+
+            row = {
+                'name': r.get('name') or '—',
+                'date_order': _fmt_date(raw_order),
+                'date_planned': _fmt_date(raw_planned),
+                'fournisseur': fourn_name,
+                'responsable': user_name,
+                'montant_ttc': float(r.get('amount_total') or 0),
+                'devise': devise,
+                'state_raw': state_raw,
+                'statut_livraison': statut_livraison,
+                'delay_days': delay_days,
+            }
+            rows.append(row)
+
+        fournisseurs = sorted({r['fournisseur'] for r in rows if r['fournisseur'] != '—'})
+        responsables = sorted({r['responsable'] for r in rows if r['responsable'] != '—'})
+
+        if fournisseur:
+            rows = [r for r in rows if fournisseur.lower() in r['fournisseur'].lower()]
+        if responsable:
+            rows = [r for r in rows if responsable.lower() in r['responsable'].lower()]
+        if statut:
+            rows = [r for r in rows if r['statut_livraison'] == statut]
+
+        total_livraisons = len(rows)
+        total_ttc = round(sum(r['montant_ttc'] for r in rows), 2)
+        nb_recues = sum(1 for r in rows if r['statut_livraison'] == 'Reçue')
+        nb_retard = sum(1 for r in rows if r['statut_livraison'] == 'En retard')
+        nb_en_cours = sum(1 for r in rows if r['statut_livraison'] == 'En cours')
+
+        if export == 'csv':
+            out = io.StringIO()
+            w = csv.writer(out, delimiter=';')
+            w.writerow(['N° Commande', 'Date commande', 'Date prévue', 'Fournisseur', 'Responsable',
+                        'Montant TTC', 'Devise', 'Statut livraison', 'Délai (j)'])
+            for r in rows:
+                w.writerow([r['name'], r['date_order'], r['date_planned'], r['fournisseur'], r['responsable'],
+                            r['montant_ttc'], r['devise'], r['statut_livraison'], r['delay_days'] if r['delay_days'] is not None else '—'])
+            resp = HttpResponse(out.getvalue(), content_type='text/csv; charset=utf-8-sig')
+            resp['Content-Disposition'] = 'attachment; filename=suivi_livraisons.csv'
+            return resp
+
+        if export == 'excel':
+            wb = openpyxl.Workbook()
+            ws = wb.active
+            ws.title = 'Suivi livraisons'
+            ws.append(['N° Commande', 'Date commande', 'Date prévue', 'Fournisseur', 'Responsable',
+                       'Montant TTC', 'Devise', 'Statut livraison', 'Délai (j)'])
+            hdr_fill = PatternFill('solid', fgColor='1A2C4E')
+            hdr_font = Font(color='FFFFFF', bold=True)
+            for cell in ws[1]:
+                cell.fill = hdr_fill
+                cell.font = hdr_font
+                cell.alignment = Alignment(horizontal='center', vertical='center')
+            for r in rows:
+                ws.append([r['name'], r['date_order'], r['date_planned'], r['fournisseur'], r['responsable'],
+                          r['montant_ttc'], r['devise'], r['statut_livraison'], r['delay_days'] if r['delay_days'] is not None else ''])
+            ws.append(['TOTAL', '', '', '', '', total_ttc, '', '', ''])
+            last_row = ws.max_row
+            for cell in ws[last_row]:
+                cell.fill = PatternFill('solid', fgColor='1A2C4E')
+                cell.font = Font(color='FFFFFF', bold=True)
+            ws.column_dimensions['A'].width = 18
+            ws.column_dimensions['B'].width = 14
+            ws.column_dimensions['C'].width = 14
+            ws.column_dimensions['D'].width = 28
+            ws.column_dimensions['E'].width = 20
+            ws.column_dimensions['F'].width = 16
+            ws.column_dimensions['G'].width = 10
+            ws.column_dimensions['H'].width = 18
+            ws.column_dimensions['I'].width = 11
+            bio = io.BytesIO()
+            wb.save(bio)
+            bio.seek(0)
+            resp = HttpResponse(
+                bio.getvalue(),
+                content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            )
+            resp['Content-Disposition'] = 'attachment; filename=suivi_livraisons.xlsx'
+            return resp
+
+        if export == 'pdf':
+            bio_pdf = io.BytesIO()
+            logo_path = settings.BASE_DIR / 'static' / 'images' / 'logo_somatrin.png'
+            pw, ph = landscape(A4)
+
+            class _PagedCanvasSL(rl_canvas.Canvas):
+                def __init__(self, *args, **kw):
+                    super().__init__(*args, **kw)
+                    self._saved_states = []
+                def showPage(self):
+                    self._saved_states.append(dict(self.__dict__))
+                    self._startPage()
+                def save(self):
+                    total = len(self._saved_states)
+                    for state in self._saved_states:
+                        self.__dict__.update(state)
+                        self.setFont('Helvetica', 7.5)
+                        self.setFillColor(colors.HexColor('#6B7280'))
+                        self.drawRightString(pw - 15 * mm, 10 * mm,
+                                             f'Page {self._pageNumber} / {total}')
+                        super().showPage()
+                    super().save()
+
+            from datetime import datetime as _dtpdf
+            gen_date = _dtpdf.now().strftime('%d/%m/%Y %H:%M')
+
+            def _header_sl(c, d):
+                c.saveState()
+                if logo_path.is_file():
+                    c.drawImage(str(logo_path), 15 * mm, ph - 22 * mm,
+                                width=32 * mm, height=11 * mm,
+                                preserveAspectRatio=True, mask='auto')
+                c.setFont('Helvetica-Bold', 11)
+                c.setFillColor(colors.HexColor('#1A2C4E'))
+                c.drawString(52 * mm, ph - 13 * mm, 'SUIVI LIVRAISONS — SOMATRIN')
+                c.setFont('Helvetica', 8)
+                c.setFillColor(colors.HexColor('#6B7280'))
+                c.drawString(52 * mm, ph - 20 * mm,
+                             'Contrôle des délais et statut des réceptions fournisseurs')
+                c.drawRightString(pw - 15 * mm, ph - 13 * mm, f'Généré le {gen_date}')
+                c.drawRightString(pw - 15 * mm, ph - 20 * mm, 'Document Confidentiel')
+                c.setStrokeColor(colors.HexColor('#E87722'))
+                c.setLineWidth(1.2)
+                c.line(15 * mm, ph - 26 * mm, pw - 15 * mm, ph - 26 * mm)
+                c.restoreState()
+
+            navy_sl = colors.HexColor('#1A2C4E')
+            lgray_sl = colors.HexColor('#F8FAFC')
+
+            pdf_data = [['N° Commande', 'Date cmd', 'Date prévue', 'Fournisseur',
+                          'Responsable', 'Montant TTC', 'Devise', 'Statut', 'Délai (j)']]
+            for r in rows:
+                pdf_data.append([
+                    r['name'], r['date_order'], r['date_planned'],
+                    r['fournisseur'], r['responsable'],
+                    f"{r['montant_ttc']:,.2f}", r['devise'],
+                    r['statut_livraison'],
+                    str(r['delay_days']) if r['delay_days'] is not None else '—',
+                ])
+            pdf_data.append(['TOTAL', '', '', '', '',
+                              f"{total_ttc:,.2f}", '', '', ''])
+
+            cw_sl = [30 * mm, 20 * mm, 20 * mm, 45 * mm, 35 * mm,
+                     28 * mm, 14 * mm, 22 * mm, 18 * mm]
+            tbl_sl = Table(pdf_data, colWidths=cw_sl, repeatRows=1)
+            tbl_sl.setStyle(TableStyle([
+                ('BACKGROUND',    (0, 0),  (-1, 0),  navy_sl),
+                ('TEXTCOLOR',     (0, 0),  (-1, 0),  colors.white),
+                ('FONTNAME',      (0, 0),  (-1, 0),  'Helvetica-Bold'),
+                ('FONTSIZE',      (0, 0),  (-1, 0),  8),
+                ('ALIGN',         (0, 0),  (-1, 0),  'CENTER'),
+                ('VALIGN',        (0, 0),  (-1, -1), 'MIDDLE'),
+                ('FONTNAME',      (0, 1),  (-1, -2), 'Helvetica'),
+                ('FONTSIZE',      (0, 1),  (-1, -2), 7.5),
+                ('ROWBACKGROUNDS',(0, 1),  (-1, -2), [colors.white, lgray_sl]),
+                ('ALIGN',         (5, 1),  (5, -2),  'RIGHT'),
+                ('ALIGN',         (8, 1),  (8, -2),  'CENTER'),
+                ('GRID',          (0, 0),  (-1, -1), 0.3, colors.HexColor('#E5E7EB')),
+                ('BACKGROUND',    (0, -1), (-1, -1), navy_sl),
+                ('TEXTCOLOR',     (0, -1), (-1, -1), colors.white),
+                ('FONTNAME',      (0, -1), (-1, -1), 'Helvetica-Bold'),
+                ('FONTSIZE',      (0, -1), (-1, -1), 8),
+                ('ALIGN',         (5, -1), (5, -1),  'RIGHT'),
+            ]))
+
+            doc_sl = SimpleDocTemplate(
+                bio_pdf, pagesize=landscape(A4),
+                leftMargin=15 * mm, rightMargin=15 * mm,
+                topMargin=32 * mm, bottomMargin=22 * mm,
+            )
+            doc_sl.build([tbl_sl], onFirstPage=_header_sl, onLaterPages=_header_sl,
+                         canvasmaker=_PagedCanvasSL)
+            bio_pdf.seek(0)
+            resp = HttpResponse(bio_pdf.getvalue(), content_type='application/pdf')
+            resp['Content-Disposition'] = "attachment; filename=suivi_livraisons.pdf"
+            return resp
+
+    except Exception as exc:
+        error = f'Erreur de connexion Odoo : {exc}'
+
+    stats_statut = {
+        'en_retard': nb_retard,
+        'en_cours':  nb_en_cours,
+        'recue':     nb_recues,
+    }
+
+    return render(request, 'achats/suivi_livraisons.html', {
+        'rows': rows,
+        'error': error,
+        'date_debut': date_debut,
+        'date_fin': date_fin,
+        'fournisseur': fournisseur,
+        'statut': statut,
+        'responsable': responsable,
+        'fournisseurs': fournisseurs,
+        'responsables': responsables,
+        'total_livraisons': total_livraisons,
+        'total_ttc': total_ttc,
+        'nb_recues': nb_recues,
+        'nb_retard': nb_retard,
+        'nb_en_cours': nb_en_cours,
+        'stats_statut': stats_statut,
+    })
+
+
+@login_required
+def achats_suppliers(request):
+    export = request.GET.get('export', '')
+    nom_filter = request.GET.get('nom', '').strip()
+    ville_filter = request.GET.get('ville', '').strip()
+    pays_filter = request.GET.get('pays', '').strip()
+    statut_filter = request.GET.get('statut', '').strip()
+
+    _error_ctx = {
+        'rows': [], 'total_fournisseurs': 0,
+        'fournisseurs_actifs': 0, 'total_commandes': 0,
+        'top_fournisseur': '—', 'nb_avec_email': 0, 'nb_avec_phone': 0,
+        'stats_ville_json': '{}',
+        'nom': nom_filter, 'ville': ville_filter, 'pays': pays_filter, 'statut': statut_filter,
+        'villes': [], 'pays_list': [],
+    }
+
+    try:
+        uid, models = get_odoo_connection()
+    except Exception as e:
+        _error_ctx['error'] = str(e)
+        return render(request, 'achats/fournisseurs.html', _error_ctx)
+
+    domain = [('is_company', '=', True), ('supplier_rank', '>', 0)]
+    fields = ['id', 'name', 'phone', 'mobile', 'email', 'city', 'country_id',
+              'supplier_rank', 'purchase_order_count', 'ref', 'vat', 'street', 'zip']
+
+    try:
+        records = models.execute_kw(
+            settings.ODOO_DB, uid, settings.ODOO_PASS,
+            'res.partner', 'search_read',
+            [domain], {'fields': fields, 'limit': 5000, 'order': 'name asc'}
+        )
+    except Exception as e:
+        _error_ctx['error'] = str(e)
+        return render(request, 'achats/fournisseurs.html', _error_ctx)
+
+    # ── Dédoublonnage par (nom + ville) ──────────────────────────
+    _seen = set()
+    records_uniq = []
+    for r in records:
+        key = (
+            (r.get('name') or '').strip().upper(),
+            (r.get('city') or '').strip().upper(),
+        )
+        if key not in _seen:
+            _seen.add(key)
+            records_uniq.append(r)
+    records = records_uniq
+
+    # ── Traduction pays ──────────────────────────────────────────
+    _PAYS_FR = {
+        'Morocco': 'Maroc', 'France': 'France',
+        'Algeria': 'Algérie', 'Tunisia': 'Tunisie',
+        'Spain': 'Espagne', 'Belgium': 'Belgique',
+        'Germany': 'Allemagne', 'Italy': 'Italie',
+        'United Arab Emirates': 'Émirats Arabes Unis',
+        'Saudi Arabia': 'Arabie Saoudite',
+        'United States': 'États-Unis', 'China': 'Chine',
+        'United Kingdom': 'Royaume-Uni', 'Netherlands': 'Pays-Bas',
+        'Switzerland': 'Suisse', 'Portugal': 'Portugal',
+        'Turkey': 'Turquie', 'Egypt': 'Égypte',
+    }
+
+    # ── Normalisation complète avant tout filtrage ───────────────
+    def _clean(val):
+        if not val or val is False:
+            return ''
+        return str(val).strip()
+
+    all_rows = []
+    for r in records:
+        nom   = _clean(r.get('name')) or '—'
+        ville = (_clean(r.get('city')) or '—').upper()
+        pays_raw = r.get('country_id')
+        if isinstance(pays_raw, (list, tuple)) and len(pays_raw) > 1:
+            pays = _PAYS_FR.get(_clean(pays_raw[1]), _clean(pays_raw[1])) or '—'
+        else:
+            pays = '—'
+        phone = _clean(r.get('phone')) or _clean(r.get('mobile')) or '—'
+        email = _clean(r.get('email')) or '—'
+        ref   = _clean(r.get('ref'))   or '—'
+        vat   = _clean(r.get('vat'))   or '—'
+        nb_cmd        = r.get('purchase_order_count') or 0
+        supplier_rank = r.get('supplier_rank') or 0
+        statut = 'Actif' if supplier_rank > 0 else 'Inactif'
+        all_rows.append({
+            'nom': nom, 'ville': ville, 'pays': pays,
+            'phone': phone, 'email': email, 'ref': ref, 'vat': vat,
+            'nb_commandes': nb_cmd, 'statut': statut,
+        })
+
+    # Totaux globaux et listes de choix calculés sur l'ensemble
+    total_commandes = sum(r['nb_commandes'] for r in all_rows)
+    villes_all = sorted({r['ville'].upper() for r in all_rows if r['ville'] != '—'})
+    pays_all = sorted({r['pays'] for r in all_rows if r['pays'] != '—'})
+
+    top_fournisseur = '—'
+    if all_rows:
+        top = max(all_rows, key=lambda r: r['nb_commandes'])
+        top_fournisseur = top['nom']
+
+    # ── Application des filtres ──────────────────────────────────
+    rows = []
+    for r in all_rows:
+        if nom_filter and nom_filter.lower() not in r['nom'].lower():
+            continue
+        if ville_filter and ville_filter.upper() != r['ville'].upper():
+            continue
+        if pays_filter and pays_filter != r['pays']:
+            continue
+        if statut_filter and statut_filter != r['statut']:
+            continue
+        rows.append(r)
+
+    total_fournisseurs = len(rows)
+    fournisseurs_actifs = sum(1 for r in rows if r['statut'] == 'Actif')
+    nb_avec_email = sum(1 for r in rows if r['email'] != '—')
+    nb_avec_phone = sum(1 for r in rows if r['phone'] != '—')
+
+    stats_ville: dict = defaultdict(int)
+    for r in all_rows:
+        if r['ville'] != '—':
+            stats_ville[r['ville'].upper()] += 1
+    top_villes = sorted(stats_ville.items(), key=lambda x: x[1], reverse=True)[:6]
+    stats_ville_json = json.dumps({k: v for k, v in top_villes})
+
+    # ── CSV ─────────────────────────────────────────────────────
+    if export == 'csv':
+        resp = HttpResponse(content_type='text/csv; charset=utf-8-sig')
+        resp['Content-Disposition'] = 'attachment; filename="fournisseurs.csv"'
+        w = csv.writer(resp, delimiter=';')
+        w.writerow(['Nom', 'Ville', 'Pays', 'Téléphone', 'Email', 'Réf.', 'TVA', 'Nb Commandes', 'Statut'])
+        for r in rows:
+            w.writerow([r['nom'], r['ville'], r['pays'], r['phone'], r['email'],
+                        r['ref'], r['vat'], r['nb_commandes'], r['statut']])
+        return resp
+
+    # ── Excel ────────────────────────────────────────────────────
+    if export == 'excel':
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = 'Fournisseurs'
+        hdr_fill = PatternFill('solid', fgColor='1A2C4E')
+        hdr_font = Font(bold=True, color='FFFFFF', size=10)
+        hdr_align = Alignment(horizontal='center', vertical='center', wrap_text=True)
+        headers = ['Nom', 'Ville', 'Pays', 'Téléphone', 'Email', 'Réf.', 'TVA', 'Nb Commandes', 'Statut']
+        ws.append(headers)
+        for cell in ws[1]:
+            cell.fill = hdr_fill
+            cell.font = hdr_font
+            cell.alignment = hdr_align
+        for r in rows:
+            ws.append([r['nom'], r['ville'], r['pays'], r['phone'], r['email'],
+                       r['ref'], r['vat'], r['nb_commandes'], r['statut']])
+        for col in ws.columns:
+            max_len = max((len(str(c.value or '')) for c in col), default=0)
+            ws.column_dimensions[col[0].column_letter].width = min(max_len + 4, 40)
+        bio = io.BytesIO()
+        wb.save(bio)
+        bio.seek(0)
+        resp = HttpResponse(bio.read(), content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        resp['Content-Disposition'] = 'attachment; filename="fournisseurs.xlsx"'
+        return resp
+
+    # ── PDF ──────────────────────────────────────────────────────
+    if export == 'pdf':
+        bio_pdf = io.BytesIO()
+        logo_path = settings.BASE_DIR / 'static' / 'images' / 'logo_somatrin.png'
+        pw, ph = landscape(A4)
+
+        class _PagedCanvasFN(rl_canvas.Canvas):
+            def __init__(self, *args, **kw):
+                super().__init__(*args, **kw)
+                self._saved_states = []
+            def showPage(self):
+                self._saved_states.append(dict(self.__dict__))
+                self._startPage()
+            def save(self):
+                total = len(self._saved_states)
+                for state in self._saved_states:
+                    self.__dict__.update(state)
+                    self.setFont('Helvetica', 7.5)
+                    self.setFillColor(colors.HexColor('#6B7280'))
+                    self.drawRightString(pw - 15 * mm, 10 * mm,
+                                        f'Page {self._pageNumber} / {total}')
+                    super().showPage()
+                super().save()
+
+        def _header_fn(c, d):
+            c.saveState()
+            if logo_path.is_file():
+                c.drawImage(str(logo_path), 15 * mm, ph - 22 * mm,
+                            width=32 * mm, height=11 * mm,
+                            preserveAspectRatio=True, mask='auto')
+            c.setFont('Helvetica-Bold', 11)
+            c.setFillColor(colors.HexColor('#1A2C4E'))
+            c.drawString(52 * mm, ph - 13 * mm, 'Référentiel Fournisseurs — SOMATRIN')
+            c.setFont('Helvetica', 8)
+            c.setFillColor(colors.HexColor('#6B7280'))
+            c.drawRightString(pw - 15 * mm, ph - 13 * mm, 'Document Confidentiel')
+            c.setStrokeColor(colors.HexColor('#E87722'))
+            c.setLineWidth(1.2)
+            c.line(15 * mm, ph - 26 * mm, pw - 15 * mm, ph - 26 * mm)
+            c.restoreState()
+
+        styles = getSampleStyleSheet()
+        cell_style = ParagraphStyle('cell', parent=styles['Normal'],
+                                    fontSize=7.5, leading=10)
+
+        col_widths = [60*mm, 35*mm, 35*mm, 38*mm, 60*mm, 25*mm, 25*mm]
+        table_headers = ['Nom', 'Ville', 'Pays', 'Téléphone', 'Email', 'Nb Cmd', 'Statut']
+
+        data = [table_headers]
+        for r in rows:
+            data.append([
+                Paragraph(r['nom'], cell_style),
+                r['ville'], r['pays'], r['phone'],
+                Paragraph(r['email'], cell_style),
+                str(r['nb_commandes']), r['statut'],
+            ])
+
+        tbl = Table(data, colWidths=col_widths, repeatRows=1)
+        tbl.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1A2C4E')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 8),
+            ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#F8FAFC')]),
+            ('FONTSIZE', (0, 1), (-1, -1), 7.5),
+            ('GRID', (0, 0), (-1, -1), 0.4, colors.HexColor('#E5E7EB')),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('TOPPADDING', (0, 0), (-1, -1), 4),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ]))
+
+        doc = SimpleDocTemplate(
+            bio_pdf, pagesize=landscape(A4),
+            leftMargin=15*mm, rightMargin=15*mm,
+            topMargin=32*mm, bottomMargin=18*mm,
+        )
+        doc.build([tbl], onFirstPage=_header_fn, onLaterPages=_header_fn,
+                  canvasmaker=_PagedCanvasFN)
+        bio_pdf.seek(0)
+        resp = HttpResponse(bio_pdf.read(), content_type='application/pdf')
+        resp['Content-Disposition'] = 'attachment; filename="fournisseurs.pdf"'
+        return resp
+
+    return render(request, 'achats/fournisseurs.html', {
+        'rows': rows,
+        'total_fournisseurs': total_fournisseurs,
+        'fournisseurs_actifs': fournisseurs_actifs,
+        'total_commandes': total_commandes,
+        'top_fournisseur': top_fournisseur,
+        'nb_avec_email': nb_avec_email,
+        'nb_avec_phone': nb_avec_phone,
+        'stats_ville_json': stats_ville_json,
+        'nom': nom_filter,
+        'ville': ville_filter,
+        'pays': pays_filter,
+        'statut': statut_filter,
+        'villes': villes_all,
+        'pays_list': pays_all,
+    })
+
+
+def _render_parc_module(request, current_key, page_title, page_subtitle, rows=None, extra_context=None):
+    menu_items = [
+        {'key': 'overview', 'label': "Vue d'ensemble", 'url': 'parc_overview', 'icon': 'bi-grid-1x2-fill'},
+        {'key': 'equipements', 'label': "Équipements", 'url': 'parc_equipements', 'icon': 'bi-truck-front-fill'},
+        {'key': 'disponibilite', 'label': 'Disponibilité', 'url': 'parc_disponibilite', 'icon': 'bi-speedometer2'},
+        {'key': 'ordres_maintenance', 'label': 'Ordres maintenance', 'url': 'parc_ordres_maintenance', 'icon': 'bi-tools'},
+        {'key': 'interventions', 'label': 'Interventions', 'url': 'parc_interventions', 'icon': 'bi-wrench-adjustable'},
+        {'key': 'couts', 'label': 'Coûts maintenance', 'url': 'parc_couts', 'icon': 'bi-cash-coin'},
+    ]
+    ctx = {
+        'page_title': page_title,
+        'page_subtitle': page_subtitle,
+        'module_key': current_key,
+        'menu_items': menu_items,
+        'rows': rows or [],
+    }
+    if extra_context:
+        ctx.update(extra_context)
+    return render(request, 'parc/module.html', ctx)
+
+
+@login_required
+def parc_overview(request):
+    return _render_parc_module(
+        request,
+        current_key='overview',
+        page_title="Vue d'ensemble",
+        page_subtitle="Pilotage du parc matériel: disponibilité, maintenance et coûts.",
+    )
+
+
+@login_required
+def parc_equipements(request):
+    error = None
+    rows = []
+    total = actifs = 0
+    nb_categories = nb_societes = 0
+    try:
+        uid, models = get_odoo_connection()
+        fields_meta = models.execute_kw(
+            settings.ODOO_DB, uid, settings.ODOO_PASS,
+            'maintenance.equipment', 'fields_get', [], {'attributes': ['type']},
+        ) or {}
+        available = set(fields_meta.keys())
+        read_fields = ['name']
+        for f in ('category_id', 'company_id', 'active', 'serial_no', 'technician_user_id'):
+            if f in available:
+                read_fields.append(f)
+        records = models.execute_kw(
+            settings.ODOO_DB, uid, settings.ODOO_PASS,
+            'maintenance.equipment', 'search_read',
+            [[]],
+            {'fields': sorted(set(read_fields)), 'limit': 2000, 'order': 'name asc'},
+        )
+        categories = set()
+        societes = set()
+        for r in records:
+            cat = r.get('category_id')
+            category_name = cat[1] if isinstance(cat, list) and len(cat) > 1 else '—'
+            comp = r.get('company_id')
+            company_name = comp[1] if isinstance(comp, list) and len(comp) > 1 else '—'
+            tech = r.get('technician_user_id')
+            tech_name = tech[1] if isinstance(tech, list) and len(tech) > 1 else '—'
+            is_active = bool(r.get('active', True))
+            rows.append({
+                'values_display': [
+                    r.get('name') or '—',
+                    category_name,
+                    company_name,
+                    r.get('serial_no') or '—',
+                    tech_name,
+                    'Actif' if is_active else 'Inactif',
+                ],
+                'status_index': 5,
+            })
+            if category_name != '—':
+                categories.add(category_name)
+            if company_name != '—':
+                societes.add(company_name)
+            if is_active:
+                actifs += 1
+        total = len(rows)
+        nb_categories = len(categories)
+        nb_societes = len(societes)
+    except Exception as exc:
+        error = f'Erreur de connexion Odoo : {exc}'
+
+    return _render_parc_module(
+        request,
+        current_key='equipements',
+        page_title='Équipements',
+        page_subtitle='Inventaire des équipements du parc et statut opérationnel.',
+        rows=rows,
+        extra_context={
+            'error': error,
+            'kpi_total': total,
+            'kpi_actifs': actifs,
+            'kpi_categories': nb_categories,
+            'kpi_societes': nb_societes,
+            'table_columns': ['Équipement', 'Catégorie', 'Société', 'Série', 'Technicien', 'Statut'],
+        },
+    )
+
+
+@login_required
+def parc_disponibilite(request):
+    error = None
+    rows = []
+    kpi_disponibles = kpi_indisponibles = 0
+    kpi_taux = 0.0
+    try:
+        uid, models = get_odoo_connection()
+        eq_fields = models.execute_kw(
+            settings.ODOO_DB, uid, settings.ODOO_PASS,
+            'maintenance.equipment', 'fields_get', [], {'attributes': ['type']},
+        ) or {}
+        eq_available = set(eq_fields.keys())
+        eq_read = ['name']
+        for f in ('active', 'category_id', 'company_id'):
+            if f in eq_available:
+                eq_read.append(f)
+        equipments = models.execute_kw(
+            settings.ODOO_DB, uid, settings.ODOO_PASS,
+            'maintenance.equipment', 'search_read',
+            [[]],
+            {'fields': sorted(set(eq_read)), 'limit': 2000, 'order': 'name asc'},
+        )
+
+        # Equipements avec ordre de maintenance ouvert => indisponibles.
+        busy_ids = set()
+        try:
+            req_fields = models.execute_kw(
+                settings.ODOO_DB, uid, settings.ODOO_PASS,
+                'maintenance.request', 'fields_get', [], {'attributes': ['type']},
+            ) or {}
+            req_available = set(req_fields.keys())
+            if 'equipment_id' in req_available and 'stage_id' in req_available:
+                req_records = models.execute_kw(
+                    settings.ODOO_DB, uid, settings.ODOO_PASS,
+                    'maintenance.request', 'search_read',
+                    [[('stage_id.done', '=', False)]],
+                    {'fields': ['equipment_id'], 'limit': 5000},
+                )
+                for rr in req_records:
+                    eq = rr.get('equipment_id')
+                    if isinstance(eq, list) and eq:
+                        busy_ids.add(eq[0])
+        except Exception:
+            busy_ids = set()
+
+        for eq in equipments:
+            eq_id = eq.get('id')
+            is_active = bool(eq.get('active', True))
+            is_busy = eq_id in busy_ids
+            status = 'Indisponible' if (not is_active or is_busy) else 'Disponible'
+            if status == 'Disponible':
+                kpi_disponibles += 1
+            else:
+                kpi_indisponibles += 1
+            cat = eq.get('category_id')
+            comp = eq.get('company_id')
+            rows.append({
+                'values_display': [
+                    eq.get('name') or '—',
+                    cat[1] if isinstance(cat, list) and len(cat) > 1 else '—',
+                    comp[1] if isinstance(comp, list) and len(comp) > 1 else '—',
+                    status,
+                ],
+                'status_index': 3,
+            })
+        total = kpi_disponibles + kpi_indisponibles
+        if total:
+            kpi_taux = round((kpi_disponibles * 100.0) / total, 1)
+    except Exception as exc:
+        error = f'Erreur de connexion Odoo : {exc}'
+
+    return _render_parc_module(
+        request,
+        current_key='disponibilite',
+        page_title='Disponibilité',
+        page_subtitle='Disponibilité opérationnelle du parc en temps réel.',
+        rows=rows,
+        extra_context={
+            'error': error,
+            'kpi_disponibles': kpi_disponibles,
+            'kpi_indisponibles': kpi_indisponibles,
+            'kpi_taux': kpi_taux,
+            'table_columns': ['Équipement', 'Catégorie', 'Société', 'Disponibilité'],
+        },
+    )
+
+
+@login_required
+def parc_ordres_maintenance(request):
+    error = None
+    rows = []
+    kpi_total = kpi_ouverts = kpi_clos = 0
+    try:
+        uid, models = get_odoo_connection()
+        fields_meta = models.execute_kw(
+            settings.ODOO_DB, uid, settings.ODOO_PASS,
+            'maintenance.request', 'fields_get', [], {'attributes': ['type']},
+        ) or {}
+        available = set(fields_meta.keys())
+        date_field = 'request_date' if 'request_date' in available else ('create_date' if 'create_date' in available else None)
+        fields = ['name']
+        for f in ('equipment_id', 'maintenance_type', 'owner_user_id', 'stage_id', 'description'):
+            if f in available:
+                fields.append(f)
+        if date_field:
+            fields.append(date_field)
+        records = models.execute_kw(
+            settings.ODOO_DB, uid, settings.ODOO_PASS,
+            'maintenance.request', 'search_read',
+            [[]],
+            {'fields': sorted(set(fields)), 'limit': 2000, 'order': f'{date_field} desc' if date_field else 'id desc'},
+        )
+        for r in records:
+            dt = (r.get(date_field) or '')[:10] if date_field else ''
+            eq = r.get('equipment_id')
+            own = r.get('owner_user_id')
+            stage = r.get('stage_id')
+            stage_name = stage[1] if isinstance(stage, list) and len(stage) > 1 else '—'
+            is_closed = 'done' in stage_name.lower() or 'close' in stage_name.lower() or 'clôt' in stage_name.lower()
+            if is_closed:
+                kpi_clos += 1
+            else:
+                kpi_ouverts += 1
+            rows.append({
+                'values_display': [
+                    r.get('name') or '—',
+                    f"{dt[8:10]}/{dt[5:7]}/{dt[0:4]}" if len(dt) == 10 else '—',
+                    eq[1] if isinstance(eq, list) and len(eq) > 1 else '—',
+                    r.get('maintenance_type') or '—',
+                    own[1] if isinstance(own, list) and len(own) > 1 else '—',
+                    stage_name,
+                    (r.get('description') or '—')[:100],
+                ],
+                'status_index': 5,
+            })
+        kpi_total = len(rows)
+    except Exception as exc:
+        error = f'Erreur de connexion Odoo : {exc}'
+
+    return _render_parc_module(
+        request,
+        current_key='ordres_maintenance',
+        page_title='Ordres de maintenance',
+        page_subtitle='Suivi des ordres de maintenance préventive et corrective.',
+        rows=rows,
+        extra_context={
+            'error': error,
+            'kpi_total': kpi_total,
+            'kpi_ouverts': kpi_ouverts,
+            'kpi_clos': kpi_clos,
+            'table_columns': ['N° Ordre', 'Date', 'Équipement', 'Type', 'Responsable', 'Statut', 'Description'],
+        },
+    )
+
+
+@login_required
+def parc_interventions(request):
+    return _render_parc_module(
+        request,
+        current_key='interventions',
+        page_title='Interventions',
+        page_subtitle='Planification des interventions techniques et suivi des priorités.',
+    )
+
+
+@login_required
+def parc_couts(request):
+    return _render_parc_module(
+        request,
+        current_key='couts',
+        page_title='Coûts maintenance',
+        page_subtitle='Pilotage des coûts d’entretien et d’immobilisation du parc.',
+    )
 
 
 @login_required
@@ -3044,7 +5606,7 @@ def gasoil_sorties_csv(request):
 @login_required
 def gasoil_rapport(request):
     """Page HTML du rapport sorties gasoil avec données d'exemple."""
-    # Données d'exemple (mêmes que dans generate_report_pdf.py)
+    # Données d'exemple pour prévisualiser le rapport HTML.
     bons_data = [
         {
             'date': '2026-04-16',
