@@ -1,174 +1,185 @@
 # Reporting SOMATRIN
 
-> **Sujet de stage** : Conception et Développement d'une Application Web de Reporting Multi-Services connectée à l'ERP Odoo via API XML-RPC
+> **Sujet de stage** : Conception et développement d'une application web de reporting multi-services connectée à l'ERP Odoo via API XML-RPC
 
-Application web de reporting interne développée pour **SOMATRIN — Exploitation de Carrières**, permettant la visualisation et l'analyse des données métier extraites en temps réel depuis l'ERP Odoo, sans passer par son interface native.
+**Dépôt GitHub :** [https://github.com/fadoulimane1-debug/Somatrin-dashboard](https://github.com/fadoulimane1-debug/Somatrin-dashboard)
+
+Application web de reporting interne développée pour **SOMATRIN — Exploitation de Carrières**, permettant la visualisation et l'analyse des données métier extraites depuis l'ERP Odoo, sans passer par son interface native.
+
+> **Accès au dépôt :** projet hébergé en dépôt **privé** sur GitHub. L'encadrant doit être ajouté en collaborateur (*Settings → Collaborators*) pour consulter le code.
 
 ---
 
 ## Contexte
 
-SOMATRIN est une entreprise spécialisée dans l'exploitation de carrières au Maroc. Face à la multiplicité des services opérationnels (transport, maintenance, production, RH, achats, etc.) et à la dispersion des données dans l'ERP Odoo, la direction a exprimé le besoin d'une plateforme centralisée de reporting, accessible, lisible et adaptée aux besoins métier de chaque service.
+SOMATRIN est une entreprise spécialisée dans l'exploitation de carrières au Maroc. Face à la multiplicité des services opérationnels (transport, maintenance, production, achats, finance, QHSE, etc.) et à la dispersion des données dans l'ERP Odoo, la direction a exprimé le besoin d'une plateforme centralisée de reporting, accessible, lisible et adaptée aux besoins métier de chaque service.
 
-Ce projet répond à ce besoin en développant une application web Django connectée à Odoo via son API XML-RPC standard, sans nécessiter de développement côté Odoo.
+Ce projet répond à ce besoin en développant une application web **Django** connectée à Odoo via son API **XML-RPC** standard, sans nécessiter de développement côté Odoo.
 
 ---
 
 ## Objectifs
 
 - Centraliser les données de tous les services dans une interface unique
-- Offrir des tableaux de bord avec KPI, filtres dynamiques et exports
+- Offrir des tableaux de bord avec KPI, filtres dynamiques et exports (Excel, PDF, CSV)
 - Détecter automatiquement les anomalies (ex. : écarts de consommation gasoil)
 - Fournir une architecture extensible pour intégrer de nouveaux modules facilement
-- Permettre une consultation sans accès direct à Odoo
+- Permettre une consultation sans accès direct à l'interface Odoo
 
 ---
 
-## Outils et technologies utilisés
+## Outils et technologies
 
 ### Backend
+
 | Outil | Version | Rôle |
 |---|---|---|
-| **Python** | 3.14 | Langage principal du projet |
-| **Django** | 4.2 | Framework web — gestion des routes, vues, templates |
-| **xmlrpc.client** | stdlib | Connexion et interrogation de l'ERP Odoo via API XML-RPC |
-| **SQLite** | — | Base de données locale (sessions, utilisateurs Django) |
+| **Python** | 3.12+ | Langage principal |
+| **Django** | 4.2 | Framework web — routes, vues, templates, authentification |
+| **xmlrpc.client** | stdlib | Connexion et interrogation Odoo via XML-RPC |
+| **SQLite** | — | Base locale Django (sessions, utilisateurs) |
+| **openpyxl / reportlab / weasyprint** | — | Exports Excel et PDF |
 
 ### Frontend
+
 | Outil | Version | Rôle |
 |---|---|---|
-| **HTML5 / CSS3** | — | Structure et style des pages |
-| **Bootstrap** | 5.3 | Framework CSS — mise en page responsive, composants UI |
-| **Bootstrap Icons** | 1.11 | Icônes vectorielles |
-| **JavaScript** | ES6 | Interactions dynamiques côté client |
+| **HTML5 / CSS3** | — | Structure et styles par module |
+| **Bootstrap** | 5.3 | Mise en page responsive, composants UI |
+| **Bootstrap Icons** | 1.11 | Icônes |
+| **JavaScript** | ES6 | Interactions dynamiques, graphiques |
 
-### ERP & Données
+### ERP & données
+
 | Outil | Version | Rôle |
 |---|---|---|
-| **Odoo** | 16 | ERP source de toutes les données métier |
-| **API XML-RPC** | — | Protocole d'échange entre Django et Odoo |
+| **Odoo** | 16 | ERP source des données métier |
+| **API XML-RPC** | — | Échange Django ↔ Odoo |
 
-### Environnement de développement
+### Environnement
+
 | Outil | Rôle |
 |---|---|
-| **Visual Studio Code** | Éditeur de code principal |
-| **Git / GitHub** | Versionnement et hébergement du code source |
-| **PowerShell** | Terminal de commandes (Windows) |
-| **pip** | Gestionnaire de paquets Python |
+| **Visual Studio Code / Cursor** | Édition du code |
+| **Git / GitHub** | Versionnement et hébergement |
+| **PowerShell** | Terminal (Windows) |
+| **pip** | Dépendances Python |
 
 ---
 
 ## Modules de l'application
 
-### ✅ Module 1 — Gasoil (terminé)
+Légende : ✅ opérationnel · 🔧 en cours d'enrichissement · 📋 planifié
 
-- Entrées
-- Sorties
-- Bilan
+### ✅ Module 1 — Gasoil
 
----
+- Entrées, sorties, bilan
+- Filtres dynamiques, KPI, détection d'anomalies
+- Exports CSV / PDF
 
-### ✅ Module 2 — Transport & Logistique (terminé)
+### ✅ Module 2 — Transport & logistique
 
-- Bons transport
-- Gasoil
-- Coûts par nature
-- Facturation client
-- Rentabilité
+- Bons de transport, gasoil, coûts par nature
+- Facturation client, rentabilité
 
----
+### ✅ Module 3 — Production
 
-### 🔧 Module 3 — Production (en cours)
+- Tableau de bord, gasoil, pointages foration
+- Machines (heures / tonnages), coûts par nature, ratios, IPC
+- Facturation ventes, rentabilité, rapports, sites
+- Exports dédiés
 
-- Gasoil
-- Coûts par nature
-- Facturation ventes
-- Rentabilité
-- Sites
+### ✅ Module 4 — Parc & maintenance
 
----
+- Demandes, équipements, disponibilité
+- Ordres de travail, interventions, fournisseurs, coûts
+- Exports PDF / Excel / CSV
 
-### 🔧 Module 4 — Parc & Maintenance
+### 🔧 Module 5 — Achats & approvisionnement
 
-- Ordres de travail
-- Disponibilité équipements
-- Historique
+- Vue d'ensemble, demandes d'achat, demandes de prix
+- Bons de commande, suivi livraisons, fournisseurs
+- Synthèse PDF
 
----
+### ✅ Module 6 — Comptabilité
 
-### 🔧 Module 5 — Achats & Approvisionnement
+- Factures fournisseurs / client, décaissements, encaissements
+- Trésorerie, analyse projet, TVA
 
-- Bons de commande
-- Fournisseurs
-- Analyse des dépenses
+### ✅ Module 7 — Finance
 
----
+- Tableau de bord, factures clients / fournisseurs
+- Avoirs, paiements, rapports, configuration
+- Détail facture, exports Excel / PDF
 
-### 🔧 Module 6 — Comptabilité
+### ✅ Module 8 — QHSE
 
-- Indicateurs financiers
-- Analytique
-- Coûts de revient
+- Tableau de bord, incidents & accidents, plan d'actions
+- Achats QHSE, consommations, produits HSE
+- Indicateurs, audits qualité, entrées / sorties / bilan
 
----
+### 📋 Modules planifiés
 
-### 🔧 Module 7 — QHSE
+- **Ressources humaines** — effectifs, absences, pointage, formations
+- **Système d'information** — projets SI, parc informatique, tickets
 
-- Indicateurs HSE
-- Gestion alertes
-- Suivi qualité
+### Assistants & API
 
----
-
-### 🔧 Module 8 — Ressources Humaines
-
-- Effectifs
-- Absences
-- Pointage
-- Formations
+- Chatbot métier (`/chatbot/`, `/api/soma-ai/chat/`)
+- Endpoints KPI Production et QHSE
 
 ---
 
-### 🔧 Module 9 — Système d'Information
-
-- Projets SI
-- Parc informatique
-- Tickets incidents
-
----
-
-## Architecture
+## Architecture du projet
 
 ```
-somatrin_project/
+Somatrin-dashboard/
 │
-├── somatrin/                  # Configuration Django
-│   ├── settings_local.py      # Paramètres locaux (Odoo, BDD, etc.)
-│   └── urls.py                # Routes principales
+├── somatrin/                      # Configuration Django
+│   ├── urls.py                    # Routes racine (auth, reporting)
+│   ├── wsgi.py
+│   └── settings_local.py          # Fichier LOCAL uniquement (non versionné)
 │
-├── reporting/                 # App principale
-│   ├── views.py               # Logique métier + appels Odoo XML-RPC
-│   └── urls.py                # Routes du module reporting
+├── core/                          # Auth, rôles, context processors
 │
-├── templates/                 # Templates HTML
-│   ├── base.html              # Layout global (navbar, breadcrumb)
-│   ├── accueil.html           # Page d'accueil avec KPI et modules
-│   └── gasoil/
-│       └── sorties.html       # Sorties gasoil avec filtres
+├── reporting/                     # Application principale
+│   ├── views.py                   # Vues gasoil, transport, achats, finance…
+│   ├── urls.py                    # Routage principal
+│   ├── production_urls.py         # Sous-module Production
+│   ├── production_views.py
+│   ├── qhse_urls.py               # Sous-module QHSE
+│   ├── qhse_views.py
+│   ├── models.py
+│   ├── migrations/
+│   ├── services/                  # Couche métier Odoo
+│   │   ├── odoo_service.py
+│   │   ├── finance_service.py
+│   │   ├── parc_service.py
+│   │   ├── production_service.py
+│   │   ├── qhse_service.py
+│   │   └── soma_ai_v2.py
+│   └── utils/export_utils.py
+│
+├── templates/                     # Gabarits HTML par module
+│   ├── base.html
+│   ├── accueil.html
+│   ├── gasoil/ · transport/ · production/
+│   ├── parc/ · achats/ · comptabilite/
+│   └── finance/ · qhse/
 │
 ├── static/
-│   └── images/
-│       └── logo_somatrin.png
+│   ├── css/ · js/
+│   └── images/logo_somatrin.png
 │
 ├── manage.py
 └── requirements.txt
 ```
 
+**Principe :** les données métier résident dans **Odoo** ; Django est une couche de **présentation et reporting**.
+
 ---
 
 ## Connexion Odoo via XML-RPC
-
-L'application interroge Odoo via son API standard (`xmlrpc/2`). Aucun développement côté Odoo n'est requis — seule une connexion réseau et un compte utilisateur suffisent.
 
 ```python
 import xmlrpc.client
@@ -180,33 +191,59 @@ models = xmlrpc.client.ServerProxy('http://odoo-url/xmlrpc/2/object')
 data = models.execute_kw(db, uid, password, 'stock.move', 'search_read', [domain], {})
 ```
 
+Connexion centralisée dans `reporting/services/odoo_service.py`.
+
 ---
 
 ## Installation
 
+### Prérequis
+
+- Python 3.12+
+- Instance **Odoo 16** accessible
+- Git
+
+### Étapes
+
 ```bash
-# 1. Cloner le projet
-git clone https://github.com/ton-user/somatrin-reporting.git
-cd somatrin-reporting
+git clone https://github.com/fadoulimane1-debug/Somatrin-dashboard.git
+cd Somatrin-dashboard
 
-# 2. Installer les dépendances
+python -m venv venv
+venv\Scripts\activate
+
 pip install -r requirements.txt
+```
 
-# 3. Configurer la connexion Odoo dans somatrin/settings_local.py
-ODOO_URL  = 'http://127.0.0.1:8001'
-ODOO_DB   = 'somatrin'
+Créer `somatrin/settings_local.py` (non fourni sur GitHub) :
+
+```python
+ODOO_URL = 'http://127.0.0.1:8001'
+ODOO_DB = 'somatrin'
 ODOO_USER = 'admin'
-ODOO_PASS = 'admin'
+ODOO_PASS = 'votre_mot_de_passe'
+```
 
-# 4. Initialiser et lancer
+```bash
 python manage.py migrate --settings=somatrin.settings_local
 python manage.py runserver 8091 --settings=somatrin.settings_local
 ```
 
-Accès : [http://127.0.0.1:8091](http://127.0.0.1:8091)
+**Accès :** [http://127.0.0.1:8091](http://127.0.0.1:8091)
+
+---
+
+## Fichiers exclus du dépôt
+
+| Fichier / dossier | Raison |
+|---|---|
+| `somatrin/settings_local.py` | Identifiants Odoo |
+| `db.sqlite3` | Base locale |
+| `__pycache__/`, `*.pyc` | Cache Python |
+| `memory/` | Notes locales |
 
 ---
 
 ## Auteur
 
-Projet réalisé dans le cadre d'un stage de fin d'études — SOMATRIN, Exploitation de Carrières, Maroc.
+Projet réalisé dans le cadre d'un **stage de fin d'études** — **SOMATRIN**, Exploitation de Carrières, Maroc.
