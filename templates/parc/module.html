@@ -1,0 +1,191 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Parc &amp; Maintenance{% endblock %}
+{% block breadcrumb %}
+<a href="{% url 'accueil' %}">Accueil</a><i class="bi bi-chevron-right"></i><span style="color:#1a2c4e;font-weight:600;">Parc &amp; Maintenance</span>
+{% endblock %}
+{% block extra_css %}
+<style>
+body{background:#f5f5f5}
+.prod-hero{background:linear-gradient(135deg,#1a2c4e,#E87722);border-radius:14px;padding:30px 34px;color:#fff;margin-bottom:22px;display:flex;align-items:center;justify-content:space-between;gap:18px;box-shadow:0 8px 26px rgba(26,44,78,.24)}
+.prod-hero h1{margin:0 0 6px;font-size:32px;font-weight:800;line-height:1.15}
+.prod-hero p{margin:0;color:rgba(255,255,255,.9);font-size:15px}
+.prod-hero-right{text-align:right;min-width:220px;display:flex;flex-direction:column;align-items:flex-end}
+.prod-date{font-size:14px;color:rgba(255,255,255,.92);margin-bottom:10px}
+.prod-hero-icon{font-size:40px;line-height:1;opacity:.95;width:62px;height:62px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:rgba(255,255,255,.16)}
+.prod-card{background:#fff;border-radius:12px;padding:20px;min-height:228px;box-shadow:0 6px 18px rgba(0,0,0,.08);border-left:8px solid #ddd;display:flex;flex-direction:column;justify-content:space-between;text-decoration:none;color:inherit;transform:translateY(8px);opacity:0;animation:fadeInUp .45s ease forwards;transition:transform .25s ease,box-shadow .25s ease}
+.prod-card:hover{transform:translateY(-8px);box-shadow:0 16px 28px rgba(0,0,0,.16);color:inherit}
+.prod-card .icon{font-size:48px;line-height:1;margin-bottom:14px;display:block}
+.prod-card h3{font-size:28px;font-weight:700;margin:0 0 8px;color:#1a2c4e}
+.prod-card p{color:#6b7280;font-size:14px;margin:0 0 14px}
+.prod-card .go{margin-top:auto;font-weight:700;color:#1f2937;font-size:14px;border:1px solid #d1d5db;border-radius:8px;padding:8px 12px;align-self:flex-start;background:#fff;transition:all .2s ease}
+.prod-card:hover .go{border-color:#9ca3af;background:#f9fafb}
+.c1{border-left-color:#1a2c4e}.c1 .icon{color:#1a2c4e}
+.c2{border-left-color:#E87722}.c2 .icon{color:#E87722}
+.c3{border-left-color:#1a2c4e}.c3 .icon{color:#1a2c4e}
+.c4{border-left-color:#E87722}.c4 .icon{color:#E87722}
+.c5{border-left-color:#1a2c4e}.c5 .icon{color:#1a2c4e}
+.c6{border-left-color:#E87722}.c6 .icon{color:#E87722}
+.a1{animation-delay:.03s}.a2{animation-delay:.08s}.a3{animation-delay:.13s}
+.a4{animation-delay:.18s}.a5{animation-delay:.23s}.a6{animation-delay:.28s}
+.kpi{background:#fff;border:1px solid #E5E7EB;border-radius:12px;padding:16px 18px;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.kpi .l{font-size:12px;color:#6B7280}.kpi .v{font-size:28px;color:#1a2c4e;font-weight:800}
+.alert-banner{display:flex;align-items:center;gap:12px;padding:12px 18px;border-radius:10px;font-size:.9rem;font-weight:600;margin-bottom:10px}
+.alert-banner .ab-icon{font-size:18px;flex-shrink:0}
+.alert-red{background:#fef2f2;border:1px solid #fca5a5;color:#991b1b}
+.alert-orange{background:#fff7ed;border:1px solid #fdba74;color:#92400e}
+.alert-green{background:#f0fdf4;border:1px solid #86efac;color:#14532d}
+.chart-card{background:#fff;border:1px solid #E5E7EB;border-radius:14px;padding:20px;box-shadow:0 4px 14px rgba(0,0,0,.06)}
+.chart-card-title{font-size:.82rem;font-weight:700;color:#1a2c4e;text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px;padding-bottom:10px;border-bottom:2px solid #E87722;display:flex;align-items:center;gap:8px}
+.chart-wrap{position:relative;height:210px}
+@keyframes fadeInUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+</style>
+{% endblock %}
+{% block content %}
+
+<section class="prod-hero">
+  <div>
+    <h1>Parc &amp; Maintenance</h1>
+    <p>Gestion des équipements et suivi des interventions</p>
+  </div>
+  <div class="prod-hero-right">
+    <div class="prod-date"><i class="bi bi-calendar3 me-1"></i>{% now "d/m/Y" %}</div>
+    <div class="prod-hero-icon"><i class="bi bi-wrench-adjustable-circle"></i></div>
+  </div>
+</section>
+
+{% if error %}<div class="alert alert-danger mb-3">{{ error }}</div>{% endif %}
+
+<!-- ALERTES OPÉRATIONNELLES -->
+<div class="mb-3">
+  {% if equipment_breakdown > 0 %}
+  <div class="alert-banner alert-red">
+    <span class="ab-icon"><i class="bi bi-exclamation-triangle-fill"></i></span>
+    <span>⚠️ <strong>{{ equipment_breakdown }} équipement{% if equipment_breakdown > 1 %}s{% endif %} en panne</strong> — Action corrective requise</span>
+    <a href="{% url 'parc_disponibilite' %}" class="ms-auto btn btn-sm" style="background:#991b1b;color:#fff;white-space:nowrap;">Voir →</a>
+  </div>
+  {% endif %}
+  {% if kpi_ordres_ouverts > 0 %}
+  <div class="alert-banner alert-orange">
+    <span class="ab-icon"><i class="bi bi-hourglass-split"></i></span>
+    <span>⏱️ <strong>{{ kpi_ordres_ouverts }} ordre{% if kpi_ordres_ouverts > 1 %}s{% endif %} de maintenance en cours</strong> — Suivi requis</span>
+    <a href="{% url 'parc_ordres_maintenance' %}" class="ms-auto btn btn-sm" style="background:#92400e;color:#fff;white-space:nowrap;">Voir →</a>
+  </div>
+  {% endif %}
+  {% if availability_rate >= 90 %}
+  <div class="alert-banner alert-green">
+    <span class="ab-icon"><i class="bi bi-check-circle-fill"></i></span>
+    <span>✅ <strong>Disponibilité optimale : {{ availability_rate }}%</strong> — {{ kpi_en_service }} équipements opérationnels sur {{ kpi_total_equipements }}</span>
+  </div>
+  {% endif %}
+</div>
+
+<!-- SOUS-MODULES -->
+<div class="row g-3">
+  {% for it in menu_items %}
+  {% if it.key != 'overview' %}
+  <div class="col-lg-4 col-md-6">
+    <a href="{% url it.url %}" class="prod-card c{% cycle '1' '2' '3' '4' '5' '6' %} a{% cycle '1' '2' '3' '4' '5' '6' %}">
+      <div>
+        <span class="icon"><i class="bi {{ it.icon }}"></i></span>
+        <h3>{{ it.label }}</h3>
+        <p>{{ it.desc }}</p>
+      </div>
+      <span class="go">Accéder →</span>
+    </a>
+  </div>
+  {% endif %}
+  {% endfor %}
+</div>
+
+<!-- KPI LIGNE 1 -->
+<div class="row g-3 mt-2">
+  <div class="col-lg-3 col-md-6">
+    <div class="kpi"><div class="l">Total équipements</div><div class="v" data-count="{{ kpi_total_equipements }}">{{ kpi_total_equipements }}</div></div>
+  </div>
+  <div class="col-lg-3 col-md-6">
+    <div class="kpi"><div class="l">En service</div><div class="v" style="color:#16a34a;" data-count="{{ kpi_en_service }}">{{ kpi_en_service }}</div></div>
+  </div>
+  <div class="col-lg-3 col-md-6">
+    <div class="kpi"><div class="l">En maintenance / panne</div><div class="v" style="color:#dc2626;" data-count="{{ kpi_en_maintenance }}">{{ kpi_en_maintenance }}</div></div>
+  </div>
+  <div class="col-lg-3 col-md-6">
+    <div class="kpi"><div class="l">Ordres en cours</div><div class="v" style="color:#E87722;" data-count="{{ kpi_ordres_ouverts }}">{{ kpi_ordres_ouverts }}</div></div>
+  </div>
+</div>
+
+<!-- KPI LIGNE 2 -->
+<div class="row g-3 mt-1">
+  <div class="col-lg-3 col-md-6">
+    <div class="kpi" style="border-top:3px solid #E87722;">
+      <div class="l">Coût total maintenance</div>
+      <div class="v" style="color:#E87722;font-size:22px;">{{ total_maintenance_cost|floatformat:"0" }} DH</div>
+      <div style="font-size:11px;color:#94a3b8;margin-top:4px;">Basé sur durées × 150 DH/h</div>
+    </div>
+  </div>
+  <div class="col-lg-3 col-md-6">
+    <div class="kpi" style="border-top:3px solid #dc2626;">
+      <div class="l">Équipements en panne</div>
+      <div class="v" style="color:#dc2626;" data-count="{{ equipment_breakdown }}">{{ equipment_breakdown }}</div>
+      <div style="font-size:11px;color:#94a3b8;margin-top:4px;">Nécessitant intervention</div>
+    </div>
+  </div>
+  <div class="col-lg-3 col-md-6">
+    <div class="kpi" style="border-top:3px solid #16a34a;">
+      <div class="l">Taux disponibilité</div>
+      <div class="v" style="color:#16a34a;">{{ availability_rate }}%</div>
+      <div style="font-size:11px;color:#94a3b8;margin-top:4px;">Équipements opérationnels</div>
+    </div>
+  </div>
+  <div class="col-lg-3 col-md-6">
+    <div class="kpi" style="border-top:3px solid #7c3aed;">
+      <div class="l">Taux préventif</div>
+      <div class="v" style="color:#7c3aed;">{{ preventive_rate }}%</div>
+      <div style="font-size:11px;color:#94a3b8;margin-top:4px;">Interventions préventives</div>
+    </div>
+  </div>
+</div>
+
+<!-- GRAPHIQUES -->
+<div class="row g-3 mt-2">
+  <div class="col-lg-3 col-md-6">
+    <div class="chart-card h-100">
+      <div class="chart-card-title"><i class="bi bi-pie-chart-fill" style="color:#E87722;"></i> Catégories équipements</div>
+      <div class="chart-wrap"><canvas id="chartCategories"></canvas></div>
+    </div>
+  </div>
+  <div class="col-lg-5 col-md-6">
+    <div class="chart-card h-100">
+      <div class="chart-card-title"><i class="bi bi-bar-chart-line-fill" style="color:#1a2c4e;"></i> Coûts maintenance / mois (DH)</div>
+      <div class="chart-wrap"><canvas id="chartMonths"></canvas></div>
+    </div>
+  </div>
+  <div class="col-lg-2 col-md-6">
+    <div class="chart-card h-100">
+      <div class="chart-card-title"><i class="bi bi-circle-half" style="color:#0ea5e9;"></i> Statut ordres</div>
+      <div class="chart-wrap"><canvas id="chartOrders"></canvas></div>
+    </div>
+  </div>
+  <div class="col-lg-2 col-md-6">
+    <div class="chart-card h-100">
+      <div class="chart-card-title"><i class="bi bi-trophy-fill" style="color:#d97706;"></i> Top 5 coûteux</div>
+      <div class="chart-wrap"><canvas id="chartTopEq"></canvas></div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="{% static 'js/parc.js' %}"></script>
+<script>
+document.querySelectorAll('[data-count]').forEach(function(el){
+  var t=parseInt(el.dataset.count||'0',10),c=0,s=Math.max(1,Math.floor(t/50));
+  var tm=setInterval(function(){c+=s;if(c>=t){el.textContent=t.toLocaleString('fr-FR');clearInterval(tm);}else{el.textContent=c.toLocaleString('fr-FR');}},15);
+});
+parcPie('chartCategories',  {{ chart_categories_json|safe }});
+parcLine('chartMonths',     {{ chart_months_json|safe }});
+parcPie('chartOrders',      {{ chart_orders_json|safe }});
+parcBar('chartTopEq',       {{ chart_top_eq_json|safe }}, null, null, true);
+</script>
+{% endblock %}

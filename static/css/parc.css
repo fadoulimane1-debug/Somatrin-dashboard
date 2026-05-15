@@ -1,0 +1,348 @@
+/* ===== DÉTAILS DEMANDE ===== */
+.card-details {
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    border-left: 4px solid #E87722;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.card-details:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.tags-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.badge-primary {
+    background: #E87722;
+    color: white;
+}
+
+/* ===== TABLEAU MODERNE ===== */
+.table-container {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+    margin-top: 20px;
+}
+
+.table-header-container {
+    background: linear-gradient(135deg, #1a2c4e 0%, #2d4a6f 100%);
+    padding: 20px 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.table-header-title {
+    color: white;
+    font-size: 1.15rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+.table-stats {
+    display: flex;
+    gap: 28px;
+    color: white;
+}
+
+.stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.stat-label {
+    font-size: 0.75rem;
+    opacity: 0.82;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+}
+
+.stat-value {
+    font-size: 1.3rem;
+    font-weight: 700;
+}
+
+.table-modern {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.92rem;
+}
+
+.table-modern thead th {
+    background: #f4f6f9;
+    padding: 14px 18px;
+    text-align: left;
+    font-weight: 600;
+    color: #1a2c4e;
+    border-bottom: 2px solid #e2e6ea;
+    text-transform: uppercase;
+    font-size: 0.78rem;
+    letter-spacing: 0.6px;
+    white-space: nowrap;
+}
+
+.table-modern tbody tr {
+    border-bottom: 1px solid #f0f0f0;
+    transition: background 0.18s ease, transform 0.12s ease, box-shadow 0.18s ease;
+}
+
+.table-modern tbody tr:hover {
+    background-color: #f5f7ff;
+    transform: translateX(3px);
+    box-shadow: -3px 0 0 #E87722 inset;
+}
+
+.table-modern tbody td {
+    padding: 13px 18px;
+    color: #333;
+    vertical-align: middle;
+}
+
+.table-modern .col-numero {
+    font-weight: 600;
+    color: #1a2c4e;
+}
+
+.table-modern .col-date {
+    color: #666;
+    font-size: 0.88rem;
+    white-space: nowrap;
+}
+
+.table-modern .col-duree {
+    font-weight: 700;
+    color: #E87722;
+    text-align: right;
+}
+
+.table-modern .col-cout {
+    font-weight: 700;
+    color: #1a2c4e;
+    font-size: 0.97rem;
+    text-align: right;
+}
+
+.table-modern .col-statut {
+    text-align: center;
+}
+
+/* Tfoot total */
+.table-modern tfoot tr {
+    background: linear-gradient(135deg, #1a2c4e 0%, #2d4a6f 100%);
+}
+
+.table-modern tfoot td {
+    padding: 14px 18px;
+    color: white;
+    font-weight: 700;
+    font-size: 0.9rem;
+}
+
+/* Badges statuts */
+.badge-statut {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 13px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.badge-en-progress { background: #fff3cd; color: #856404; }
+.badge-termine     { background: #d1f0da; color: #155724; }
+.badge-nouveau     { background: #d0e8ff; color: #084298; }
+.badge-request     { background: #fde2e4; color: #721c24; }
+
+/* Pager + count */
+.table-pager {
+    padding: 14px 20px;
+    border-top: 1px solid #f0f0f0;
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.table-count {
+    padding: 9px 20px;
+    color: #888;
+    font-size: 0.85rem;
+    background: #f8f9fa;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+/* ===== FILTRES AVANCÉS ===== */
+.filters-section {
+    margin: 20px 0;
+}
+
+.card-filters {
+    background: white;
+    border-radius: 12px;
+    padding: 22px 24px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    border-left: 4px solid #E87722;
+}
+
+.filters-title {
+    color: #1a2c4e;
+    font-weight: 600;
+    margin-bottom: 18px;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.card-filters .form-label {
+    font-weight: 500;
+    color: #1a2c4e;
+    font-size: 0.85rem;
+    margin-bottom: 6px;
+    display: block;
+}
+
+.card-filters .form-control,
+.card-filters .form-select {
+    border: 1px solid #d8dde5;
+    border-radius: 8px;
+    font-size: 0.88rem;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.card-filters .form-control:focus,
+.card-filters .form-select:focus {
+    border-color: #E87722;
+    box-shadow: 0 0 0 3px rgba(232, 119, 34, 0.12);
+    outline: none;
+}
+
+.card-filters .input-group-text {
+    background: #f4f6f9;
+    border: 1px solid #d8dde5;
+    border-right: none;
+    color: #888;
+    border-radius: 8px 0 0 8px;
+}
+
+.card-filters .input-group .form-control {
+    border-radius: 0 8px 8px 0;
+}
+
+.active-filters {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    align-items: center;
+    min-height: 26px;
+}
+
+.filter-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #edf4ff;
+    color: #1558a8;
+    border: 1px solid #c2d9f5;
+    border-radius: 12px;
+    font-size: 0.78rem;
+    padding: 3px 10px;
+    font-weight: 500;
+}
+
+.kpi-card {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 16px 18px;
+    box-shadow: 0 4px 10px rgba(15, 23, 42, 0.05);
+}
+
+.kpi-label {
+    font-size: 0.82rem;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 700;
+}
+
+.kpi-value {
+    font-size: 1.9rem;
+    line-height: 1.1;
+    font-weight: 800;
+    color: #1a2c4e;
+}
+
+.kpi-subtext {
+    font-size: 0.78rem;
+    color: #94a3b8;
+}
+
+/* Equipment row hover */
+.equipment-row {
+    transition: all 0.3s ease;
+}
+
+.equipment-row:hover {
+    background-color: #f8f9ff;
+    box-shadow: -2px 0 0 #E87722 inset;
+}
+
+/* Badge état amélioré */
+.badge-statut {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.badge-statut i {
+    font-size: 0.9rem;
+}
+
+/* Responsive columns pour 6 elements sur une ligne */
+@media (min-width: 1200px) {
+    .col-lg-1-8 {
+        flex: 0 0 calc(16.66666% - 2px);
+        max-width: calc(16.66666% - 2px);
+    }
+}
+
+@media (max-width: 1199px) {
+    .col-lg-1-8 {
+        flex: 0 0 calc(50% - 4px);
+        max-width: calc(50% - 4px);
+    }
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 1024px) {
+    .table-modern { font-size: 0.83rem; }
+    .table-modern td, .table-modern th { padding: 10px 13px; }
+    .table-header-container { padding: 16px 20px; }
+    .table-stats { gap: 18px; }
+    .stat-value { font-size: 1.1rem; }
+}
+
+@media (max-width: 768px) {
+    .table-stats { display: none; }
+    .table-header-container { padding: 14px 16px; }
+}

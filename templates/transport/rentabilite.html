@@ -1,49 +1,726 @@
 {% extends 'base.html' %}
-{% load vehicle_extras %}
-
-{% block title %}Transport - Rentabilité{% endblock %}
+{% block title %}Rentabilité Transport — Tableau de Bord{% endblock %}
 
 {% block breadcrumb %}
   <a href="{% url 'accueil' %}">Accueil</a>
   <i class="bi bi-chevron-right"></i>
-  <span style="color:#1a2c4e; font-weight:600;">Transport - Rentabilité</span>
+  <a href="{% url 'transport_index' %}">Transport &amp; Logistique</a>
+  <i class="bi bi-chevron-right"></i>
+  <span style="color:#1a2c4e;font-weight:600;">Rentabilité</span>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ══════════════════════════════════════════════════
+   ANIMATIONS DE BASE
+══════════════════════════════════════════════════ */
+@keyframes fadeInUp  { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+@keyframes fadeInLeft{ from{opacity:0;transform:translateX(-20px)} to{opacity:1;transform:translateX(0)} }
+@keyframes countUp   { from{opacity:0;transform:scale(.85)} to{opacity:1;transform:scale(1)} }
+@keyframes pulseGlow { 0%,100%{box-shadow:0 0 0 0 rgba(232,119,34,.35)} 50%{box-shadow:0 0 0 8px rgba(232,119,34,0)} }
+@keyframes barGrow   { from{width:0} to{width:var(--bar-w)} }
+@keyframes gaugeFill { from{stroke-dashoffset:283} to{stroke-dashoffset:var(--gauge-offset)} }
+@keyframes shimmer   { 0%{background-position:-400px 0} 100%{background-position:400px 0} }
+
+.anim-1{animation:fadeInUp .5s ease both .05s}
+.anim-2{animation:fadeInUp .5s ease both .12s}
+.anim-3{animation:fadeInUp .5s ease both .19s}
+.anim-4{animation:fadeInUp .5s ease both .26s}
+
+/* ══════════════════════════════════════════════════
+   HERO SPECTACULAIRE
+══════════════════════════════════════════════════ */
+.rent-hero {
+  background: linear-gradient(135deg, #090f1c 0%, #0f1e38 45%, #1a2c4e 100%);
+  border-radius: 16px;
+  padding: 32px 36px;
+  margin-bottom: 20px;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  border: 1px solid rgba(255,255,255,.06);
+}
+.rent-hero::before {
+  content:'';
+  position:absolute;
+  width:600px;height:600px;
+  right:-200px;top:-250px;
+  background:radial-gradient(circle,rgba(232,119,34,.12) 0%,transparent 65%);
+  pointer-events:none;
+}
+.rent-hero::after {
+  content:'';
+  position:absolute;
+  width:300px;height:300px;
+  left:40%;bottom:-150px;
+  background:radial-gradient(circle,rgba(255,255,255,.03) 0%,transparent 70%);
+  pointer-events:none;
+}
+.hero-eyebrow {
+  font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;
+  color:rgba(255,255,255,.38);display:flex;align-items:center;gap:8px;margin-bottom:8px;
+}
+.hero-pulse {
+  width:8px;height:8px;border-radius:50%;background:#E87722;
+  box-shadow:0 0 0 3px rgba(232,119,34,.25);
+  animation:pulseGlow 2s infinite;
+}
+.hero-title {
+  font-size:30px;font-weight:900;color:#fff;line-height:1.1;margin-bottom:6px;
+  letter-spacing:-.5px;
+}
+.hero-title em { color:#E87722;font-style:normal; }
+.hero-subtitle { font-size:13px;color:rgba(255,255,255,.45);max-width:520px;line-height:1.5; }
+.hero-meta {
+  display:flex;gap:16px;margin-top:14px;flex-wrap:wrap;
+}
+.hero-meta-pill {
+  background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.10);
+  border-radius:99px;padding:4px 12px;font-size:11px;color:rgba(255,255,255,.6);
+  display:inline-flex;align-items:center;gap:5px;
+}
+.hero-right { position:relative;z-index:1;text-align:right;flex-shrink:0; }
+.hero-ghost {
+  font-size:80px;font-weight:900;color:rgba(255,255,255,.04);
+  line-height:1;letter-spacing:8px;user-select:none;
+}
+.perf-badge {
+  display:inline-flex;align-items:center;gap:7px;
+  border-radius:10px;padding:8px 18px;font-size:13px;font-weight:700;
+  border:1px solid rgba(255,255,255,.15);margin-top:8px;
+  background:rgba(255,255,255,.08);color:#fff;
+}
+.perf-dot { width:10px;height:10px;border-radius:50;flex-shrink:0; }
+
+/* ══════════════════════════════════════════════════
+   MÉTRIQUES SOMMAIRES (3 grands indicateurs)
+══════════════════════════════════════════════════ */
+.exec-grid {
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:14px;
+  margin-bottom:14px;
+}
+.exec-card {
+  border-radius:14px;
+  padding:24px 22px;
+  border:1px solid rgba(255,255,255,.08);
+  position:relative;
+  overflow:hidden;
+}
+.exec-card-rev  { background:linear-gradient(135deg,#0c2340,#1a3a6b); }
+.exec-card-cout { background:linear-gradient(135deg,#2d1005,#7c2d12); }
+.exec-card-res  { background:linear-gradient(135deg,#052e16,#166534); }
+.exec-card-res.negative { background:linear-gradient(135deg,#2d0000,#991b1b); }
+.exec-ico {
+  width:44px;height:44px;border-radius:12px;
+  background:rgba(255,255,255,.12);
+  display:flex;align-items:center;justify-content:center;
+  font-size:20px;color:#fff;margin-bottom:14px;
+}
+.exec-label { font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,.45);margin-bottom:4px; }
+.exec-value {
+  font-size:28px;font-weight:900;color:#fff;
+  line-height:1;letter-spacing:-.5px;
+  animation:countUp .6s ease both;
+}
+.exec-value.small-val { font-size:22px; }
+.exec-unit  { font-size:12px;color:rgba(255,255,255,.45);margin-top:5px; }
+.exec-card::after {
+  content:'';position:absolute;right:-30px;bottom:-30px;
+  width:120px;height:120px;border-radius:50%;
+  background:rgba(255,255,255,.04);pointer-events:none;
+}
+
+/* ══════════════════════════════════════════════════
+   GAUGE + WATERFALL ROW
+══════════════════════════════════════════════════ */
+.viz-row {
+  display:grid;
+  grid-template-columns:340px 1fr;
+  gap:14px;
+  margin-bottom:14px;
+}
+.viz-card {
+  background:#fff;border:1px solid #e5e7eb;border-radius:14px;
+  padding:20px 22px;box-shadow:0 2px 8px rgba(0,0,0,.05);
+}
+.viz-title {
+  font-size:13px;font-weight:700;color:#1a2c4e;
+  margin-bottom:16px;display:flex;align-items:center;gap:8px;
+}
+.viz-title i { color:#E87722; }
+
+/* Gauge SVG */
+.gauge-wrap { text-align:center;padding:8px 0 0; }
+.gauge-svg { overflow:visible; }
+.gauge-bg   { fill:none;stroke:#f1f5f9;stroke-width:18;stroke-linecap:round; }
+.gauge-fill { fill:none;stroke-width:18;stroke-linecap:round;
+  stroke-dasharray:283;animation:gaugeFill 1.2s cubic-bezier(.4,0,.2,1) .3s both; }
+.gauge-center-val { font-size:32px;font-weight:900;dominant-baseline:middle;text-anchor:middle; }
+.gauge-center-unit{ font-size:13px;dominant-baseline:middle;text-anchor:middle;fill:#9ca3af; }
+.gauge-label { font-size:11px;fill:#6b7280;text-anchor:middle; }
+.gauge-labels-row { display:flex;justify-content:space-between;margin-top:4px;font-size:10px;color:#9ca3af; }
+
+/* Waterfall chart */
+.waterfall { display:flex;flex-direction:column;gap:10px;padding-top:4px; }
+.wf-row { display:flex;align-items:center;gap:10px; }
+.wf-label { font-size:11px;font-weight:600;color:#374151;width:110px;flex-shrink:0;text-align:right; }
+.wf-bar-wrap { flex:1;background:#f1f5f9;border-radius:99px;height:22px;overflow:hidden;position:relative; }
+.wf-bar {
+  height:100%;border-radius:99px;
+  width:var(--bar-w);
+  animation:barGrow .9s cubic-bezier(.4,0,.2,1) both;
+  display:flex;align-items:center;justify-content:flex-end;padding-right:8px;
+}
+.wf-val { font-size:10px;font-weight:700;color:rgba(0,0,0,.55);white-space:nowrap;min-width:80px;text-align:right; }
+.wf-bar-rev  { background:linear-gradient(90deg,#1d4ed8,#3b82f6); animation-delay:.1s; }
+.wf-bar-cv   { background:linear-gradient(90deg,#ea580c,#fb923c); animation-delay:.25s; }
+.wf-bar-cf   { background:linear-gradient(90deg,#b91c1c,#ef4444); animation-delay:.4s; }
+.wf-bar-res.pos { background:linear-gradient(90deg,#15803d,#22c55e); animation-delay:.55s; }
+.wf-bar-res.neg { background:linear-gradient(90deg,#991b1b,#dc2626); animation-delay:.55s; }
+
+/* ══════════════════════════════════════════════════
+   KPI CARDS GRID (ligne inférieure)
+══════════════════════════════════════════════════ */
+.kpi-grid { display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:14px; }
+.kpi-card {
+  background:#fff;border:1px solid #e5e7eb;border-radius:12px;
+  padding:16px 18px;border-left:3px solid #1a2c4e;
+  box-shadow:0 2px 6px rgba(0,0,0,.05);
+}
+.kpi-card-orange { border-left-color:#E87722; }
+.kpi-card-green  { border-left-color:#16a34a; }
+.kpi-card-danger { border-left-color:#dc2626; }
+.kpi-card-blue   { border-left-color:#2563eb; }
+.kpi-card-slate  { border-left-color:#64748b; }
+.kpi-ico {
+  width:36px;height:36px;border-radius:9px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;margin-bottom:10px;
+}
+.ico-navy   { background:rgba(26,44,78,.08);color:#1a2c4e; }
+.ico-orange { background:rgba(232,119,34,.10);color:#E87722; }
+.ico-green  { background:rgba(22,163,74,.10);color:#16a34a; }
+.ico-red    { background:rgba(220,38,38,.10);color:#dc2626; }
+.ico-blue   { background:rgba(37,99,235,.08);color:#2563eb; }
+.ico-slate  { background:rgba(100,116,139,.10);color:#475569; }
+.kpi-label  { font-size:11px;color:#6b7280;margin-bottom:3px;font-weight:500; }
+.kpi-value  { font-size:22px;font-weight:800;color:#1a2c4e;line-height:1;letter-spacing:-.3px; }
+.kpi-value.neg { color:#dc2626; }
+.kpi-value.pos { color:#15803d; }
+.kpi-sub    { font-size:10px;color:#9ca3af;margin-top:4px; }
+
+/* ══════════════════════════════════════════════════
+   ANALYSE STRUCTURE (donut + progress bars)
+══════════════════════════════════════════════════ */
+.struct-row {
+  display:grid;
+  grid-template-columns:1fr 2fr;
+  gap:14px;
+  margin-bottom:14px;
+}
+.donut-wrap { position:relative;width:180px;height:180px;margin:0 auto 12px; }
+.donut-center {
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  text-align:center;
+}
+.donut-center-val { font-size:22px;font-weight:900;color:#1a2c4e; }
+.donut-center-lab { font-size:10px;color:#9ca3af;line-height:1.2; }
+.legend-row { display:flex;align-items:center;gap:8px;font-size:12px;color:#374151;margin-bottom:6px; }
+.legend-dot { width:10px;height:10px;border-radius:50%;flex-shrink:0; }
+
+/* Barres de progression structure */
+.progress-section { padding:4px 0; }
+.prog-label-row { display:flex;justify-content:space-between;margin-bottom:4px; }
+.prog-name  { font-size:12px;font-weight:600;color:#374151; }
+.prog-val   { font-size:12px;color:#6b7280; }
+.prog-track { background:#f1f5f9;border-radius:99px;height:10px;margin-bottom:12px;overflow:hidden; }
+.prog-bar   { height:100%;border-radius:99px;animation:barGrow 1s ease both; }
+
+/* Seuil de rentabilité visuel */
+.seuil-card {
+  background:linear-gradient(135deg,#f0fdf4,#dcfce7);
+  border:1px solid #bbf7d0;border-radius:14px;padding:18px 22px;
+  margin-bottom:14px;display:flex;align-items:center;gap:20px;
+  flex-wrap:wrap;
+}
+.seuil-card.negative { background:linear-gradient(135deg,#fff7ed,#fed7aa); border-color:#fdba74; }
+.seuil-ico { font-size:36px;flex-shrink:0; }
+.seuil-content h4 { font-size:15px;font-weight:700;color:#1a2c4e;margin:0 0 4px; }
+.seuil-content p  { font-size:12px;color:#6b7280;margin:0; }
+.seuil-value { font-size:26px;font-weight:900;color:#15803d;margin-left:auto; }
+.seuil-value.negative { color:#b45309; }
+
+/* ══════════════════════════════════════════════════
+   FILTRES / ACTIONS
+══════════════════════════════════════════════════ */
+.filter-card {
+  background:#fff;border:1px solid #e5e7eb;border-radius:14px;
+  padding:18px 22px;margin-bottom:18px;box-shadow:0 2px 6px rgba(0,0,0,.04);
+}
+.filter-label { display:block;font-size:10px;font-weight:700;color:#6b7280;
+  text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px; }
+.filter-input, .filter-select {
+  height:36px;border:1px solid #e5e7eb;border-radius:8px;
+  font-size:13px;padding:0 10px;width:100%;background:#fff;color:#111827;outline:none;
+}
+.filter-input:focus, .filter-select:focus { border-color:#1a2c4e;box-shadow:0 0 0 3px rgba(26,44,78,.07); }
+.btn-filtrer {
+  height:36px;background:#1a2c4e;color:#fff;border:none;border-radius:8px;
+  padding:0 18px;font-weight:700;font-size:13px;cursor:pointer;
+  display:inline-flex;align-items:center;gap:6px;transition:background .2s;
+}
+.btn-filtrer:hover { background:#E87722; }
+.btn-reset {
+  height:36px;background:transparent;color:#374151;border:1px solid #e5e7eb;
+  border-radius:8px;padding:0 14px;font-size:13px;text-decoration:none;cursor:pointer;
+  display:inline-flex;align-items:center;gap:5px;
+}
+.btn-export-csv {
+  height:36px;background:#dbeafe;color:#1d4ed8;border:1px solid #bfdbfe;
+  border-radius:8px;padding:0 14px;font-size:13px;text-decoration:none;
+  display:inline-flex;align-items:center;gap:5px;
+}
+.btn-export-pdf {
+  height:36px;background:#fef2f2;color:#991b1b;border:1px solid #fecaca;
+  border-radius:8px;padding:0 14px;font-size:13px;text-decoration:none;
+  display:inline-flex;align-items:center;gap:5px;
+}
+.btn-export-pdf:hover { background:#fee2e2;color:#7f1d1d; }
+.btn-export-exec {
+  height:36px;background:#ede9fe;color:#5b21b6;border:1px solid #c4b5fd;
+  border-radius:8px;padding:0 14px;font-size:13px;text-decoration:none;
+  display:inline-flex;align-items:center;gap:5px;
+}
+.btn-export-exec:hover { background:#ddd6fe;color:#4c1d95; }
+
+/* ══════════════════════════════════════════════════
+   TABLES
+══════════════════════════════════════════════════ */
+.table-card {
+  background:#fff;border:1px solid #e5e7eb;border-radius:14px;
+  padding:16px;margin-bottom:14px;box-shadow:0 2px 6px rgba(0,0,0,.04);
+}
+.table-wrap { border-radius:10px;overflow:hidden;border:1px solid #e5e7eb; }
+.table-smt thead th {
+  background:#1a2c4e !important;color:#fff !important;
+  font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;
+  padding:10px 12px;border:none;
+}
+.table-smt tbody tr:nth-child(odd)  { background:#f8fafc; }
+.table-smt tbody tr:nth-child(even) { background:#fff; }
+.table-smt tbody tr:hover { background:#f0f4ff !important;transition:background .15s; }
+.table-smt td { padding:9px 12px;font-size:12px;border:1px solid #f1f5f9;color:#374151; }
+.table-smt td code { font-size:11px;background:#f1f5f9;border-radius:4px;padding:1px 5px;color:#1a2c4e; }
+.table-smt tfoot td {
+  background:#1a2c4e !important;color:#fff !important;
+  font-weight:700;font-size:12px;border-color:rgba(255,255,255,.12);
+}
+.table-smt td.cell-amt { font-family:monospace;font-size:12px;font-weight:600;color:#1a2c4e;text-align:right; }
+.table-smt td.cell-amt-neg { color:#dc2626;font-family:monospace;font-size:12px;font-weight:600;text-align:right; }
+.sec-title { font-weight:700;font-size:14px;color:#1a2c4e;margin-bottom:12px;display:flex;align-items:center;gap:8px; }
+.sec-title i { color:#E87722; }
+.sec-badge { background:#f0f9ff;color:#0284c7;border:1px solid #bae6fd;border-radius:6px;
+  font-size:10px;font-weight:700;padding:2px 8px; }
+
+.search-table {
+  width:100%;padding:9px 13px;border:1px solid #e5e7eb;border-radius:8px;
+  margin-bottom:12px;font-size:13px;outline:none;box-sizing:border-box;
+  transition:border-color .2s;
+}
+.search-table:focus { border-color:#1a2c4e;box-shadow:0 0 0 3px rgba(26,44,78,.07); }
+
+.empty-state { text-align:center;padding:40px 20px; }
+.empty-state i { font-size:40px;color:#d1d5db;display:block;margin-bottom:10px; }
+.empty-state p { color:#6b7280;font-size:13px;margin:0; }
+
+.report-meta {
+  font-size:11px;color:#475569;padding:9px 14px;background:#fff;
+  border:1px solid #e5e7eb;border-radius:10px;
+  display:flex;flex-wrap:wrap;gap:10px 20px;align-items:center;
+  margin-bottom:14px;
+}
+.report-meta span { display:inline-flex;align-items:center;gap:5px; }
+.report-meta i.mi { color:#E87722;font-size:13px; }
+
+.rent-methodology {
+  font-size:11px;color:#64748b;line-height:1.55;
+  margin-top:4px;padding:12px 14px;background:#f8fafc;
+  border-radius:10px;border:1px solid #e5e7eb;
+}
+.rent-methodology summary { cursor:pointer;font-weight:600;color:#334155; }
+
+.chart-grid {
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:14px;
+  margin-bottom:14px;
+}
+.chart-canvas-box { height:240px; position:relative; }
+.chart-footnote { font-size:11px; color:#64748b; margin-top:8px; }
+
+/* ══════════════════════════════════════════════════
+   RESPONSIVE
+══════════════════════════════════════════════════ */
+@media(max-width:1100px) {
+  .exec-grid { grid-template-columns:1fr 1fr 1fr; }
+  .viz-row   { grid-template-columns:1fr; }
+  .struct-row{ grid-template-columns:1fr; }
+  .chart-grid{ grid-template-columns:1fr; }
+}
+@media(max-width:768px) {
+  .kpi-grid  { grid-template-columns:1fr 1fr; }
+  .exec-grid { grid-template-columns:1fr; }
+  .hero-right{ display:none; }
+  .rent-hero { flex-direction:column; }
+  .seuil-value { margin-left:0; }
+}
+@media(max-width:480px) {
+  .kpi-grid { grid-template-columns:1fr 1fr; }
+  .rent-hero{ padding:20px; }
+  .hero-title{ font-size:22px; }
+}
+
+/* ══════════════════════════════════════════════════
+   PRINT
+══════════════════════════════════════════════════ */
+@media print {
+  .topbar,.sidebar,.sidebar-footer,#chatbot-btn,#chatbot-window,
+  .filter-card,.search-table,.btn-filtrer,.btn-reset,.btn-export-csv,
+  .btn-export-pdf,.btn-export-exec,.breadcrumb-bar,.no-print { display:none !important; }
+  body { background:#fff !important; }
+  main.main { margin-left:0 !important;padding:8px !important; }
+  .rent-hero {
+    background:#fff !important;
+    border:1px solid #d1d5db !important;
+    margin-bottom:8px !important;
+    padding:10px 12px !important;
+  }
+  .hero-right { display:none !important; }
+  .rent-hero * { color:#111827 !important; }
+  .hero-meta-pill { background:#fff !important; border:1px solid #d1d5db !important; }
+  .exec-grid,.kpi-grid { gap:8px !important; margin-bottom:8px !important; }
+  .exec-card,.table-card,.kpi-card {
+    break-inside:avoid;
+    box-shadow:none !important;
+    border:1px solid #d1d5db !important;
+  }
+  .table-smt thead th { background:#f3f4f6 !important; color:#111827 !important; }
+}
+</style>
 {% endblock %}
 
 {% block content %}
-<span class="page-title">Rentabilité</span>
-{% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
 
-<div class="filters-card">
+<!-- ══════════════════════════════════════════
+     HERO SPECTACULAIRE
+══════════════════════════════════════════ -->
+<div class="rent-hero anim-1">
+  <div class="hero-content" style="position:relative;z-index:1;">
+    <div class="hero-eyebrow">
+      <span class="hero-pulse"></span>
+      Transport &amp; Logistique — Grand livre Odoo
+    </div>
+    <div class="hero-title">Rentabilité <em>transport</em></div>
+    <div class="hero-subtitle">
+      Analyse complète revenus / charges · Ventilation fixes / variables · Seuil de rentabilité
+    </div>
+    <div class="hero-meta">
+      <span class="hero-meta-pill"><i class="bi bi-calendar3"></i>
+        {% if date_debut %}{{ date_debut }}{% else %}début{% endif %} →
+        {% if date_fin %}{{ date_fin }}{% else %}aujourd'hui{% endif %}
+      </span>
+      <span class="hero-meta-pill"><i class="bi bi-building"></i>{{ company_display }}</span>
+      <span class="hero-meta-pill"><i class="bi bi-funnel"></i>{{ perimetre_display }}</span>
+      <span class="hero-meta-pill"><i class="bi bi-currency-exchange"></i>{{ currency_suffix }} HT</span>
+    </div>
+    <div class="perf-badge mt-3" style="background:{{ perf_bg }};color:{{ perf_color }};border-color:{{ perf_color }}20;">
+      <span class="perf-dot" style="background:{{ perf_color }};border-radius:50%;width:10px;height:10px;display:inline-block;"></span>
+      {{ perf_label }}
+      &nbsp;·&nbsp;Taux : <strong>{{ marge_pct|floatformat:"1g" }}%</strong>
+    </div>
+  </div>
+  <div class="hero-right" style="position:relative;z-index:1;">
+    <div class="hero-ghost">RNT</div>
+    <div style="text-align:right;margin-top:8px;">
+      <span style="background:#E87722;color:#fff;border-radius:99px;padding:5px 16px;font-size:11px;font-weight:700;display:inline-flex;align-items:center;gap:6px;">
+        <i class="bi bi-speedometer2"></i>Live Odoo
+      </span>
+    </div>
+  </div>
+</div>
+
+{% if error %}
+<div class="alert alert-danger anim-1"><i class="bi bi-exclamation-triangle me-2"></i>{{ error }}</div>
+{% endif %}
+
+<!-- Meta strip -->
+<div class="report-meta anim-1 no-print">
+  <span><i class="bi bi-clock-history mi"></i>Calcul {{ report_generated_at|date:"d/m/Y H:i" }}</span>
+  <span><i class="bi bi-list-columns mi"></i>{{ nb_comptes_charges }} compte(s) charges</span>
+  <span><i class="bi bi-list-columns-reverse mi"></i>{{ nb_comptes_produits }} compte(s) produits</span>
+  <span><i class="bi bi-patch-check mi"></i>Périmètre : {{ perimetre_display }}</span>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SYNTHÈSE EXÉCUTIVE (3 grandes cartes)
+══════════════════════════════════════════ -->
+<div class="exec-grid anim-2">
+  <div class="exec-card exec-card-rev">
+    <div class="exec-ico"><i class="bi bi-graph-up-arrow"></i></div>
+    <div class="exec-label">Produits / Ventes (classe 7)</div>
+    <div class="exec-value{% if total_revenus|stringformat:'g'|length > 12 %} small-val{% endif %}">
+      {{ total_revenus|floatformat:"2g" }}
+    </div>
+    <div class="exec-unit">{{ currency_suffix }} HT — grand livre Odoo</div>
+  </div>
+  <div class="exec-card exec-card-cout">
+    <div class="exec-ico"><i class="bi bi-wallet2"></i></div>
+    <div class="exec-label">Charges totales (classe 6)</div>
+    <div class="exec-value">{{ total_couts|floatformat:"2g" }}</div>
+    <div class="exec-unit">{{ currency_suffix }} HT — fixes + variables</div>
+  </div>
+  <div class="exec-card exec-card-res{% if resultat < 0 %} negative{% endif %}">
+    <div class="exec-ico">
+      <i class="bi bi-{% if resultat >= 0 %}trophy{% else %}exclamation-octagon{% endif %}"></i>
+    </div>
+    <div class="exec-label">Résultat net (7 − 6)</div>
+    <div class="exec-value">{{ resultat|floatformat:"2g" }}</div>
+    <div class="exec-unit">{{ currency_suffix }} HT · taux {{ marge_pct|floatformat:"1g" }}%</div>
+  </div>
+</div>
+
+<!-- Section simplifiée : on garde uniquement les KPI principaux -->
+<div class="kpi-grid anim-3" style="grid-template-columns:repeat(3,1fr);">
+  <div class="kpi-card kpi-card-orange">
+    <div class="kpi-ico ico-orange"><i class="bi bi-lightning-charge"></i></div>
+    <div class="kpi-label">Charges variables</div>
+    <div class="kpi-value">{{ charges_variables|floatformat:"2g" }}</div>
+    <div class="kpi-sub">{{ charges_variables_pct }}% des charges</div>
+  </div>
+  <div class="kpi-card kpi-card-slate">
+    <div class="kpi-ico ico-slate"><i class="bi bi-pin-angle"></i></div>
+    <div class="kpi-label">Charges fixes</div>
+    <div class="kpi-value">{{ charges_fixes|floatformat:"2g" }}</div>
+    <div class="kpi-sub">{{ charges_fixes_pct }}% des charges</div>
+  </div>
+  <div class="kpi-card kpi-card-blue">
+    <div class="kpi-ico ico-blue"><i class="bi bi-flag-fill"></i></div>
+    <div class="kpi-label">Seuil de rentabilité</div>
+    <div class="kpi-value" style="font-size:20px;">{% if seuil_ca_ht is not None %}{{ seuil_ca_ht|floatformat:"2g" }}{% else %}—{% endif %}</div>
+    <div class="kpi-sub">{{ currency_suffix }} HT</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     FILTRES
+══════════════════════════════════════════ -->
+<div class="filter-card anim-4 no-print">
   <form method="get" class="row g-3 align-items-end">
-    <div class="col-md-3"><label class="form-label">Date début</label><input type="date" name="date_debut" class="form-control" value="{{ date_debut }}"></div>
-    <div class="col-md-3"><label class="form-label">Date fin</label><input type="date" name="date_fin" class="form-control" value="{{ date_fin }}"></div>
-    <div class="col-md-6 d-flex gap-2">
-      <button class="btn btn-primary" type="submit">Calculer</button>
-      <a class="btn btn-outline-secondary" href="{% url 'transport_rentabilite' %}">Réinitialiser</a>
+    <div class="col-lg-2 col-md-4">
+      <label class="filter-label">Date début</label>
+      <input type="date" name="date_debut" value="{{ date_debut }}" class="filter-input">
+    </div>
+    <div class="col-lg-2 col-md-4">
+      <label class="filter-label">Date fin</label>
+      <input type="date" name="date_fin" value="{{ date_fin }}" class="filter-input">
+    </div>
+    <div class="col-lg-3 col-md-4">
+      <label class="filter-label">Société</label>
+      <select name="company_id" class="filter-select">
+        <option value="">— Toutes —</option>
+        {% for c in companies %}
+        <option value="{{ c.id }}" {% if company_id == c.id|stringformat:"d" %}selected{% endif %}>{{ c.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-lg-3 col-md-6">
+      <label class="filter-label">Périmètre</label>
+      <div class="d-flex gap-3 align-items-center" style="min-height:36px;">
+        <label class="mb-0 d-flex align-items-center gap-2" style="font-size:12px;cursor:pointer;">
+          <input type="radio" name="perimetre" value="complet" {% if perimetre == 'complet' %}checked{% endif %}>
+          Complet (6/7)
+        </label>
+        <label class="mb-0 d-flex align-items-center gap-2" style="font-size:12px;cursor:pointer;">
+          <input type="radio" name="perimetre" value="activite" {% if perimetre == 'activite' %}checked{% endif %}>
+          Activité transport
+        </label>
+      </div>
+    </div>
+    <div class="col-12 d-flex gap-2 flex-wrap align-items-center">
+      <button type="submit" class="btn-filtrer"><i class="bi bi-calculator-fill"></i>Recalculer</button>
+      <a href="{{ reset_url }}" class="btn-reset"><i class="bi bi-arrow-counterclockwise"></i>Réinitialiser</a>
+      <a class="btn-export-csv"
+         href="?date_debut={{ date_debut }}&amp;date_fin={{ date_fin }}&amp;company_id={{ company_id }}&amp;perimetre={{ perimetre }}&amp;export=csv">
+        <i class="bi bi-filetype-csv"></i>CSV
+      </a>
+      <a class="btn-export-pdf"
+         href="?date_debut={{ date_debut }}&amp;date_fin={{ date_fin }}&amp;company_id={{ company_id }}&amp;perimetre={{ perimetre }}&amp;export=pdf">
+        <i class="bi bi-file-earmark-pdf"></i>PDF
+      </a>
+      <a class="btn-export-exec"
+         href="?date_debut={{ date_debut }}&amp;date_fin={{ date_fin }}&amp;company_id={{ company_id }}&amp;perimetre={{ perimetre }}&amp;export=pdf_exec">
+        <i class="bi bi-stars"></i>PDF Executive
+      </a>
+      <button type="button" class="btn-reset" onclick="window.print();">
+        <i class="bi bi-printer"></i>Imprimer
+      </button>
     </div>
   </form>
 </div>
 
-<div class="row g-3 mb-3">
-  <div class="col-md-3"><div class="card"><div class="text-muted small">Facturation HT</div><div class="h5 mb-0">{{ total_revenus|num_plain:2 }}</div></div></div>
-  <div class="col-md-3"><div class="card"><div class="text-muted small">Coûts</div><div class="h5 mb-0">{{ total_couts|num_plain:2 }}</div></div></div>
-  <div class="col-md-3"><div class="card"><div class="text-muted small">Résultat</div><div class="h5 mb-0 {% if resultat < 0 %}text-danger{% else %}text-success{% endif %}">{{ resultat|num_plain:2 }}</div></div></div>
-  <div class="col-md-3"><div class="card"><div class="text-muted small">Marge (%)</div><div class="h5 mb-0 {% if marge_pct < 0 %}text-danger{% else %}text-success{% endif %}">{{ marge_pct|num_plain:2 }}%</div></div></div>
-</div>
+<!-- ══════════════════════════════════════════
+     RECHERCHE
+══════════════════════════════════════════ -->
+<input type="text" id="searchTable" class="search-table anim-4 no-print"
+       placeholder="🔍  Rechercher dans les tableaux (compte, libellé)…">
 
-<div class="card">
-  <div class="mb-2"><strong>Coûts par nature</strong></div>
-  <div class="table-responsive">
-    <table class="table table-sm table-striped align-middle">
-      <thead class="table-dark"><tr><th>Nature</th><th class="text-end">Montant</th></tr></thead>
+<!-- ══════════════════════════════════════════
+     TABLE CHARGES (classe 6)
+══════════════════════════════════════════ -->
+<div class="table-card anim-4">
+  <div class="sec-title">
+    <i class="bi bi-list-columns-reverse"></i>
+    Grand livre — Charges (classe 6)
+    {% if nb_comptes_charges %}<span class="sec-badge">{{ nb_comptes_charges }} comptes</span>{% endif %}
+    {% if pcg.comptes_6_hors_top %}
+    <span class="sec-badge" style="background:#fff7ed;color:#b45309;border-color:#fed7aa;">
+      + {{ pcg.comptes_6_hors_top }} agrégé(s)
+    </span>
+    {% endif %}
+  </div>
+  <div class="table-responsive table-wrap">
+    <table class="table table-smt align-middle mb-0" id="table-gl6">
+      <thead>
+        <tr>
+          <th>Compte</th>
+          <th>Libellé</th>
+          <th class="text-end">Montant HT ({{ currency_suffix }})</th>
+        </tr>
+      </thead>
       <tbody>
-      {% for row in couts_agg %}
-        <tr><td>{{ row.nature }}</td><td class="text-end">{{ row.montant|num_plain:2 }}</td></tr>
+      {% for row in comptes_6 %}
+        <tr class="rent-row">
+          <td><code>{{ row.code }}</code></td>
+          <td style="color:#475569;font-size:12px;max-width:360px;">{{ row.libelle }}</td>
+          <td class="cell-amt">{{ row.montant|floatformat:"2g" }}</td>
+        </tr>
       {% empty %}
-        <tr><td colspan="2" class="text-center text-muted">Aucune donnée</td></tr>
+        <tr><td colspan="3" class="p-0"><div class="empty-state"><i class="bi bi-inbox"></i><p>Aucune ligne classe 6 pour ces critères</p></div></td></tr>
       {% endfor %}
       </tbody>
+      {% if comptes_6 %}
+      <tfoot>
+        <tr>
+          <td colspan="2" style="font-weight:700;">TOTAL CHARGES (CLASSE 6)</td>
+          <td class="text-end" style="font-family:monospace;">{{ total_couts|floatformat:"2g" }}</td>
+        </tr>
+      </tfoot>
+      {% endif %}
     </table>
   </div>
 </div>
+
+<!-- ══════════════════════════════════════════
+     TABLE PRODUITS (classe 7)
+══════════════════════════════════════════ -->
+<div class="table-card anim-4">
+  <div class="sec-title">
+    <i class="bi bi-graph-up-arrow"></i>
+    Grand livre — Produits / Ventes (classe 7)
+    {% if nb_comptes_produits %}<span class="sec-badge" style="background:#f0fdf4;color:#15803d;border-color:#bbf7d0;">{{ nb_comptes_produits }} comptes</span>{% endif %}
+    {% if pcg.comptes_7_hors_top %}
+    <span class="sec-badge" style="background:#fff7ed;color:#b45309;border-color:#fed7aa;">
+      + {{ pcg.comptes_7_hors_top }} agrégé(s)
+    </span>
+    {% endif %}
+  </div>
+  <div class="table-responsive table-wrap">
+    <table class="table table-smt align-middle mb-0" id="table-gl7">
+      <thead>
+        <tr>
+          <th>Compte</th>
+          <th>Libellé</th>
+          <th class="text-end">Montant HT ({{ currency_suffix }})</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for row in comptes_7 %}
+        <tr class="rent-row">
+          <td><code>{{ row.code }}</code></td>
+          <td style="color:#475569;font-size:12px;max-width:360px;">{{ row.libelle }}</td>
+          <td class="cell-amt">{{ row.montant|floatformat:"2g" }}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="3" class="p-0"><div class="empty-state"><i class="bi bi-inbox"></i><p>Aucune ligne classe 7 pour ces critères</p></div></td></tr>
+      {% endfor %}
+      </tbody>
+      {% if comptes_7 %}
+      <tfoot>
+        <tr>
+          <td colspan="2" style="font-weight:700;">TOTAL PRODUITS (CLASSE 7)</td>
+          <td class="text-end" style="font-family:monospace;">{{ total_revenus|floatformat:"2g" }}</td>
+        </tr>
+      </tfoot>
+      {% endif %}
+    </table>
+  </div>
+</div>
+
+<!-- Méthodo -->
+<details class="rent-methodology no-print anim-4">
+  <summary>Méthode de calcul &amp; mention réglementaire</summary>
+  <p class="mt-2 mb-0">
+    Synthèse indicative à partir du <strong>grand livre Odoo</strong> (écritures comptabilisées).
+    Seuls les comptes commençant par <strong>6 ou 7</strong> sont retenus.
+    Les charges fixes/variables suivent les préfixes PCG configurés (paramètres <code>RENTABILITE_CHARGE_*</code>).
+    Les montants sont en <strong>{{ currency_suffix }} HT</strong>.
+    Ce rapport <strong>ne remplace pas</strong> les états comptables officiels.
+  </p>
+</details>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  'use strict';
+
+  /* Recherche dans les tableaux */
+  function initSearch() {
+    var input = document.getElementById('searchTable');
+    if (!input) return;
+    input.addEventListener('input', function () {
+      var q = this.value.toLowerCase();
+      document.querySelectorAll('.rent-row').forEach(function (row) {
+        row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+      });
+    });
+  }
+
+  /* Init */
+  function init() {
+    initSearch();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+{{ soma_page_data|json_script:"soma-page-data-json" }}
+<script>
+(function () {
+  var el = document.getElementById('soma-page-data-json');
+  if (!el) return;
+  try { window.__SOMA_PAGE_DATA__ = JSON.parse(el.textContent); }
+  catch (e) { window.__SOMA_PAGE_DATA__ = null; }
+})();
+</script>
 {% endblock %}

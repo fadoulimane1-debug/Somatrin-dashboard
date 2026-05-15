@@ -1,0 +1,417 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Finance — Détail facture{% endblock %}
+{% block breadcrumb %}
+<a href="{% url 'accueil' %}">Accueil</a><i class="bi bi-chevron-right"></i>
+<a href="{% url 'finance_dashboard' %}">Finance</a><i class="bi bi-chevron-right"></i>
+<a href="{% url 'finance_factures_clients' %}">Factures clients</a><i class="bi bi-chevron-right"></i>
+<span style="color:#1a2c4e;font-weight:600;">{{ invoice.name|default:"Facture" }}</span>
+{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/finance.css' %}">{% endblock %}
+{% block content %}
+
+<section class="fin-hero">
+  <div>
+    <small style="opacity:.55;letter-spacing:1.4px;font-size:.75rem;text-transform:uppercase;">Finance · Facture</small>
+    <h1 class="mt-1">{{ invoice.name|default:"Facture" }}</h1>
+    <p>{{ invoice.partner|default:"N/A" }} · Date {{ invoice.date|default:"—" }} · Échéance {{ invoice.date_due|default:"—" }}</p>
+  </div>
+  <div class="fin-hero-right"><div class="fin-hero-icon"><i class="bi bi-receipt-cutoff"></i></div></div>
+</section>
+
+{% if error %}<div class="alert alert-danger mb-3">{{ error }}</div>{% endif %}
+
+{% if invoice %}
+<!-- Boutons d'action -->
+<div class="fin-tab-actions mb-2">
+  <button class="btn btn-sm" style="background:#EBF0F7;color:#1a2c4e;border:1px solid #3d5a7f;" onclick="openSendModal()">
+    <i class="bi bi-envelope"></i> Envoyer
+  </button>
+  {% if invoice.payment_state != 'paid' %}
+  <button class="btn btn-sm" style="background:#FFF4EA;color:#C85E0F;border:1px solid #F5A860;" onclick="openRelanceModal()">
+    <i class="bi bi-envelope-exclamation"></i> Relance
+  </button>
+  <button class="btn btn-sm" style="background:#1a2c4e;color:#fff;" onclick="openPaiementModal()">
+    <i class="bi bi-cash-coin"></i> Enregistrer paiement
+  </button>
+  {% endif %}
+  <button class="btn btn-sm btn-outline-secondary" onclick="window.print()">
+    <i class="bi bi-printer"></i> Imprimer PDF
+  </button>
+  <a href="{% url 'finance_factures_clients_pdf' %}?q={{ invoice.name }}" class="btn btn-sm" style="background:#FFF4EA;color:#C85E0F;border:1px solid #F5A860;">
+    <i class="bi bi-file-earmark-pdf"></i> Export PDF
+  </a>
+  {% if invoice.payment_state == 'paid' %}
+  <button class="btn btn-sm" style="background:#EBF0F7;color:#1a2c4e;border:1px solid #3d5a7f;" onclick="openAvoirModal()">
+    <i class="bi bi-arrow-counterclockwise"></i> Créer avoir
+  </button>
+  {% endif %}
+</div>
+
+<!-- KPI ligne -->
+<div class="row g-3 mb-3 fin-kpi-uniform">
+  <div class="col-lg-3">
+    <div class="fin-kpi" style="border-top-color:#1a2c4e;">
+      <div class="fl">Montant HT</div>
+      <div class="fv">{{ invoice.amount_ht|floatformat:"2" }}</div>
+      <div class="fs">MAD</div>
+    </div>
+  </div>
+  <div class="col-lg-3">
+    <div class="fin-kpi">
+      <div class="fl">TVA</div>
+      <div class="fv">{{ invoice.amount_tax|floatformat:"2" }}</div>
+      <div class="fs">MAD</div>
+    </div>
+  </div>
+  <div class="col-lg-3">
+    <div class="fin-kpi">
+      <div class="fl">Montant TTC</div>
+      <div class="fv">{{ invoice.amount_ttc|floatformat:"2" }}</div>
+      <div class="fs">MAD</div>
+    </div>
+  </div>
+  <div class="col-lg-3">
+    <div class="fin-kpi">
+      <div class="fl">Reste à payer</div>
+      <div class="fv" style="color:{% if invoice.amount_residual > 0 %}#E87722{% else %}#1a2c4e{% endif %};">
+        {{ invoice.amount_residual|floatformat:"2" }}
+      </div>
+      <div class="fs">MAD</div>
+      {% if invoice.amount_ttc > 0 %}
+        {% widthratio invoice.amount_paid invoice.amount_ttc 100 as pct_inv %}
+        <div class="fin-progress mt-2">
+          <div class="fin-progress-fill {% if invoice.payment_state == 'paid' %}fp-full{% elif invoice.amount_paid > 0 %}fp-partial{% else %}fp-empty{% endif %}" style="width:{{ pct_inv }}%;"></div>
+        </div>
+        <div style="font-size:.72rem;color:#94a3b8;margin-top:3px;">{{ pct_inv }}% payé</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Onglets Bootstrap -->
+<ul class="nav nav-tabs-fin mb-0" id="invTabs" role="tablist">
+  <li class="nav-item">
+    <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tabInfo" type="button">
+      <i class="bi bi-file-text"></i> Informations
+    </button>
+  </li>
+  <li class="nav-item">
+    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabPay" type="button">
+      <i class="bi bi-cash-stack"></i> Paiements
+    </button>
+  </li>
+  <li class="nav-item">
+    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabActivity" type="button">
+      <i class="bi bi-activity"></i> Activités
+    </button>
+  </li>
+</ul>
+
+<div class="tab-content tab-panel-fin">
+
+  <!-- Onglet 1 : Informations -->
+  <div class="tab-pane fade show active" id="tabInfo">
+    <div class="row g-3 mb-3">
+      <div class="col-lg-4"><label class="form-label">Partenaire</label><input class="form-control" value="{{ invoice.partner }}" readonly></div>
+      <div class="col-lg-2"><label class="form-label">Date</label><input class="form-control" value="{{ invoice.date }}" readonly></div>
+      <div class="col-lg-2"><label class="form-label">Échéance</label><input class="form-control" value="{{ invoice.date_due }}" readonly></div>
+      <div class="col-lg-2"><label class="form-label">Journal</label><input class="form-control" value="{{ invoice.journal }}" readonly></div>
+      <div class="col-lg-2">
+        <label class="form-label">État</label>
+        <div style="padding-top:6px;">
+          {% if invoice.state == 'posted' %}<span class="badge-fin bf-posted">Validée</span>
+          {% elif invoice.state == 'draft' %}<span class="badge-fin bf-draft">Brouillon</span>
+          {% else %}<span class="badge-fin bf-cancel">{{ invoice.state }}</span>{% endif %}
+        </div>
+      </div>
+      <div class="col-lg-12"><label class="form-label">Mémo / Référence</label><input class="form-control" value="{{ invoice.ref }}" readonly></div>
+      {% if invoice.narration %}<div class="col-lg-12"><label class="form-label">Notes</label><textarea class="form-control" rows="2" readonly>{{ invoice.narration }}</textarea></div>{% endif %}
+    </div>
+
+    <div class="fin-chart-title mt-2">Lignes de facture</div>
+    <div class="fin-tbl-wrap">
+      <table class="fin-tbl">
+        <thead>
+          <tr>
+            <th>Description</th>
+            <th style="text-align:right">Quantité</th>
+            <th style="text-align:right">Prix unitaire</th>
+            <th style="text-align:right">Montant HT</th>
+            <th style="text-align:right">TVA %</th>
+            <th style="text-align:right">Montant TTC</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for l in lines %}
+          <tr>
+            <td>{% if l.product %}<strong>{{ l.product }}</strong><br><small style="color:#94a3b8;">{{ l.description }}</small>{% else %}{{ l.description }}{% endif %}</td>
+            <td style="text-align:right">{{ l.qty|floatformat:"2" }}</td>
+            <td style="text-align:right">{{ l.prix_unit|floatformat:"2" }}</td>
+            <td style="text-align:right">{{ l.montant_ht|floatformat:"2" }}</td>
+            <td style="text-align:right;color:#94a3b8;">{{ l.tax_pct|floatformat:"1" }}%</td>
+            <td style="text-align:right;font-weight:700;">{{ l.montant_ttc|floatformat:"2" }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="6" class="text-center text-muted py-4">Aucune ligne.</td></tr>
+          {% endfor %}
+        </tbody>
+        {% if lines %}
+        <tfoot style="background:#f8fafc;">
+          <tr>
+            <td colspan="3" style="font-weight:700;padding:8px 12px;">TOTAL</td>
+            <td style="text-align:right;font-weight:900;padding:8px 12px;">{{ invoice.amount_ht|floatformat:"2" }} MAD</td>
+            <td></td>
+            <td style="text-align:right;font-weight:900;padding:8px 12px;">{{ invoice.amount_ttc|floatformat:"2" }} MAD</td>
+          </tr>
+        </tfoot>
+        {% endif %}
+      </table>
+    </div>
+  </div>
+
+  <!-- Onglet 2 : Paiements -->
+  <div class="tab-pane fade" id="tabPay">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <div style="font-size:.84rem;color:#64748b;">
+        Paiements associés à cette facture
+      </div>
+      {% if invoice.payment_state != 'paid' %}
+      <button class="btn btn-sm" style="background:#1a2c4e;color:#fff;" onclick="openPaiementModal()">
+        <i class="bi bi-plus-circle"></i> Enregistrer paiement
+      </button>
+      {% endif %}
+    </div>
+
+    <div class="fin-tbl-wrap">
+      <table class="fin-tbl">
+        <thead>
+          <tr>
+            <th>N° Paiement</th>
+            <th>Date</th>
+            <th style="text-align:right">Montant</th>
+            <th>Mode</th>
+            <th style="text-align:center">État</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if invoice.amount_paid > 0 %}
+          <tr>
+            <td style="font-weight:700;font-size:.82rem;color:#1a2c4e;">PAY-{{ invoice.id }}</td>
+            <td style="font-size:.82rem;color:#64748b;">{{ invoice.date }}</td>
+            <td style="text-align:right;font-weight:700;color:#1a2c4e;font-size:.83rem;">{{ invoice.amount_paid|floatformat:"2" }} MAD</td>
+            <td><span style="background:#f1f5f9;color:#334155;border-radius:5px;padding:2px 8px;font-size:.75rem;">Virement</span></td>
+            <td style="text-align:center;"><span class="badge-fin bf-paid">Reçu</span></td>
+          </tr>
+          {% else %}
+          <tr><td colspan="5" class="text-center text-muted py-4">Aucun paiement enregistré.</td></tr>
+          {% endif %}
+        </tbody>
+        <tfoot style="background:#f8fafc;">
+          <tr>
+            <td colspan="2" style="font-weight:700;padding:8px 12px;">TOTAL PAYÉ</td>
+            <td style="text-align:right;font-weight:900;color:#1a2c4e;padding:8px 12px;">{{ invoice.amount_paid|floatformat:"2" }} MAD</td>
+            <td colspan="2" style="padding:8px 12px;font-size:.82rem;color:{% if invoice.amount_residual > 0 %}#E87722{% else %}#1a2c4e{% endif %};">
+              Reste : {{ invoice.amount_residual|floatformat:"2" }} MAD
+            </td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+
+  <!-- Onglet 3 : Activités -->
+  <div class="tab-pane fade" id="tabActivity">
+    <ul class="fin-activity-timeline">
+      <li>
+        <div class="fin-act-ico" style="background:#EBF0F7;"><i class="bi bi-file-earmark-plus" style="color:#1a2c4e;"></i></div>
+        <div>
+          <div class="fin-act-title">Facture créée</div>
+          <div class="fin-act-date">{{ invoice.date }} · {{ invoice.name }}</div>
+        </div>
+      </li>
+      {% if invoice.state == 'posted' %}
+      <li>
+        <div class="fin-act-ico" style="background:#EBF0F7;"><i class="bi bi-check-circle-fill" style="color:#1a2c4e;"></i></div>
+        <div>
+          <div class="fin-act-title">Facture validée</div>
+          <div class="fin-act-date">{{ invoice.date }}</div>
+        </div>
+      </li>
+      {% endif %}
+      {% if invoice.amount_paid > 0 %}
+      <li>
+        <div class="fin-act-ico" style="background:#FFF4EA;"><i class="bi bi-cash-coin" style="color:#E87722;"></i></div>
+        <div>
+          <div class="fin-act-title">Paiement reçu : {{ invoice.amount_paid|floatformat:"2" }} MAD</div>
+          <div class="fin-act-date">Partiel ou total</div>
+        </div>
+      </li>
+      {% endif %}
+      {% if invoice.payment_state == 'paid' %}
+      <li>
+        <div class="fin-act-ico" style="background:#EBF0F7;"><i class="bi bi-patch-check-fill" style="color:#1a2c4e;"></i></div>
+        <div>
+          <div class="fin-act-title">Facture soldée</div>
+          <div class="fin-act-date">Paiement intégral reçu</div>
+        </div>
+      </li>
+      {% endif %}
+    </ul>
+
+    <div style="margin-top:16px;padding-top:14px;border-top:1px solid #f1f5f9;">
+      <label class="fin-modal-label">Ajouter une note</label>
+      <div style="display:flex;gap:8px;margin-top:6px;">
+        <input type="text" id="noteInput" class="form-control" placeholder="Saisir une note ou commentaire...">
+        <button class="btn btn-sm" style="background:#EBF0F7;color:#1a2c4e;border:1px solid #3d5a7f;" onclick="addNote()">
+          <i class="bi bi-plus-circle"></i> Ajouter
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Modal Envoyer email -->
+<div class="modal fade" id="modalSend" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header" style="background:#1a2c4e;color:#fff;">
+        <h5 class="modal-title fin-modal-title"><i class="bi bi-envelope-fill"></i> Envoyer la facture</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3"><label class="fin-modal-label">Destinataire</label>
+          <input type="email" id="sendEmail" class="form-control" placeholder="client@exemple.com" value="{{ invoice.partner|lower|cut:' ' }}@exemple.com"></div>
+        <div class="mb-3"><label class="fin-modal-label">Objet</label>
+          <input type="text" id="sendSubject" class="form-control" value="Facture {{ invoice.name }} — SOMATRIN"></div>
+        <div class="mb-3"><label class="fin-modal-label">Message</label>
+          <textarea class="form-control" rows="4">Veuillez trouver ci-joint la facture {{ invoice.name }} d'un montant de {{ invoice.amount_ttc|floatformat:2 }} MAD.</textarea></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
+        <button class="btn btn-primary" onclick="doSend()"><i class="bi bi-send"></i> Envoyer</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Relance -->
+<div class="modal fade" id="modalRelance" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header" style="background:#E87722;color:#fff;">
+        <h5 class="modal-title fin-modal-title"><i class="bi bi-envelope-exclamation"></i> Envoyer relance</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3"><label class="fin-modal-label">Destinataire</label><input type="email" class="form-control" placeholder="client@exemple.com"></div>
+        <div class="mb-3"><label class="fin-modal-label">Montant restant</label>
+          <input type="text" class="form-control" value="{{ invoice.amount_residual|floatformat:2 }} MAD" readonly></div>
+        <div class="mb-3"><label class="fin-modal-label">Message de relance</label>
+          <textarea class="form-control" rows="5">Madame, Monsieur,
+
+Nous vous rappelons que la facture {{ invoice.name }} d'un montant de {{ invoice.amount_residual|floatformat:2 }} MAD reste impayée.
+Merci de régulariser cette situation dans les meilleurs délais.
+
+Cordialement, Service Comptabilité SOMATRIN</textarea></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
+        <button class="btn" style="background:#E87722;color:#fff;" onclick="doRelance()"><i class="bi bi-send"></i> Envoyer relance</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Paiement -->
+<div class="modal fade" id="modalPaiement" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header" style="background:#1a2c4e;color:#fff;">
+        <h5 class="modal-title fin-modal-title"><i class="bi bi-cash-coin"></i> Enregistrer un paiement</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3"><label class="fin-modal-label">Montant (MAD)</label>
+          <input type="number" id="payMontant" class="form-control" value="{{ invoice.amount_residual|floatformat:2 }}" step="0.01" max="{{ invoice.amount_residual|floatformat:2 }}"></div>
+        <div class="mb-3"><label class="fin-modal-label">Date</label>
+          <input type="date" id="payDate" class="form-control" value="{% now 'Y-m-d' %}"></div>
+        <div class="mb-3"><label class="fin-modal-label">Mode</label>
+          <select class="form-select">
+            <option>Virement bancaire</option><option>Chèque</option><option>Espèces</option>
+          </select>
+        </div>
+        <div class="mb-3"><label class="fin-modal-label">Référence</label>
+          <input type="text" class="form-control" placeholder="N° virement, chèque..."></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
+        <button class="btn" style="background:#1a2c4e;color:#fff;" onclick="doPaiement()"><i class="bi bi-check-circle"></i> Enregistrer</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Avoir -->
+<div class="modal fade" id="modalAvoir" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header" style="background:#1a2c4e;color:#fff;">
+        <h5 class="modal-title fin-modal-title"><i class="bi bi-arrow-counterclockwise"></i> Créer un avoir</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3"><label class="fin-modal-label">Facture d'origine</label>
+          <input class="form-control" value="{{ invoice.name }}" readonly></div>
+        <div class="mb-3"><label class="fin-modal-label">Raison de l'avoir</label>
+          <select class="form-select">
+            <option>Erreur de facturation</option><option>Retour marchandise</option><option>Remise accordée</option><option>Autre</option>
+          </select>
+        </div>
+        <div class="mb-3"><label class="fin-modal-label">Montant avoir (MAD)</label>
+          <input type="number" class="form-control" value="{{ invoice.amount_ttc|floatformat:2 }}" step="0.01"></div>
+        <div class="mb-3"><label class="fin-modal-label">Notes</label>
+          <textarea class="form-control" rows="3" placeholder="Précisions..."></textarea></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
+        <button class="btn" style="background:#1a2c4e;color:#fff;" onclick="doAvoir()"><i class="bi bi-check-circle"></i> Créer avoir</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+{% block extra_js %}
+<script>
+function openSendModal()    { new bootstrap.Modal(document.getElementById('modalSend')).show(); }
+function openRelanceModal() { new bootstrap.Modal(document.getElementById('modalRelance')).show(); }
+function openPaiementModal(){ new bootstrap.Modal(document.getElementById('modalPaiement')).show(); }
+function openAvoirModal()   { new bootstrap.Modal(document.getElementById('modalAvoir')).show(); }
+
+function toast(msg, color) {
+  var t = document.createElement('div');
+  t.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:9999;padding:12px 20px;border-radius:10px;font-weight:700;font-size:.88rem;color:#fff;background:' + (color||'#1a2c4e') + ';box-shadow:0 4px 16px rgba(0,0,0,.2);';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(function(){ t.style.opacity='0'; t.style.transition='.4s'; setTimeout(function(){ t.remove(); },400); }, 3000);
+}
+
+function doSend()    { bootstrap.Modal.getInstance(document.getElementById('modalSend')).hide();    toast('Email envoyé au client.'); }
+function doRelance() { bootstrap.Modal.getInstance(document.getElementById('modalRelance')).hide(); toast('Relance envoyée.', '#E87722'); }
+function doPaiement(){ bootstrap.Modal.getInstance(document.getElementById('modalPaiement')).hide();toast('Paiement enregistré.'); }
+function doAvoir()   { bootstrap.Modal.getInstance(document.getElementById('modalAvoir')).hide();   toast('Avoir créé.'); }
+
+function addNote() {
+  var v = document.getElementById('noteInput').value.trim();
+  if (!v) return;
+  var ul = document.querySelector('.fin-activity-timeline');
+  var li = document.createElement('li');
+  li.innerHTML = '<div class="fin-act-ico" style="background:#f1f5f9;"><i class="bi bi-chat-text" style="color:#64748b;"></i></div><div><div class="fin-act-title">' + v + '</div><div class="fin-act-date">Maintenant</div></div>';
+  ul.appendChild(li);
+  document.getElementById('noteInput').value = '';
+  toast('Note ajoutée.');
+}
+</script>
+{% endblock %}

@@ -1,0 +1,120 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Détail Demande - {{ demande.name }}{% endblock %}
+{% block breadcrumb %}
+<a href="{% url 'accueil' %}">Accueil</a><i class="bi bi-chevron-right"></i>
+<a href="{% url 'parc_module' %}">Parc &amp; Maintenance</a><i class="bi bi-chevron-right"></i>
+<a href="{% url 'parc_demandes' %}">Demandes</a><i class="bi bi-chevron-right"></i>
+<span style="color:#1a2c4e;font-weight:600;">{{ demande.name }}</span>
+{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/parc.css' %}">
+<style>
+.hero-banner{background:linear-gradient(135deg,#0f1e38,#1a2c4e);border-radius:16px;padding:24px 28px;color:#fff}
+.badge-module{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.28);border-radius:999px;padding:6px 12px;font-size:12px;font-weight:700;letter-spacing:.4px}
+.hero-banner h1{margin:10px 0 6px;font-size:26px;font-weight:800}
+.hero-subtitle{margin:0;color:rgba(255,255,255,.8);font-size:14px}
+.kpi-card{background:#fff;border:1px solid #E5E7EB;border-radius:12px;padding:14px}
+.kpi-label{font-size:11px;color:#6b7280;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+.kpi-value{font-size:18px;font-weight:800;color:#1a2c4e}
+.stars{color:#f59e0b;letter-spacing:2px}
+.col-5th{flex:0 0 20%;max-width:20%}
+.detail-group{margin-bottom:14px}
+.detail-group label{display:block;font-size:12px;color:#6b7280;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px}
+.detail-value{color:#1f2937;font-weight:600}
+.divider{height:1px;background:#e5e7eb;margin:12px 0}
+@media (max-width: 1200px){.col-5th{flex:0 0 33.3333%;max-width:33.3333%}}
+@media (max-width: 768px){.col-5th{flex:0 0 50%;max-width:50%}}
+@media (max-width: 576px){.col-5th{flex:0 0 100%;max-width:100%}}
+</style>
+{% endblock %}
+{% block content %}
+<div class="container-fluid px-4 py-4">
+  {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+  {% if demande %}
+  <div class="hero-banner mb-4">
+    <div class="badge-module"><i class="bi bi-tools"></i> DEMANDE #{{ demande.odoo_id }}</div>
+    <h1>{{ demande.name }}</h1>
+    <p class="hero-subtitle">{{ demande.categorie }} {% if demande.sous_categorie != '—' %}&gt; {{ demande.sous_categorie }}{% endif %}</p>
+  </div>
+
+  <div class="row mb-4 g-3">
+    <div class="col-5th"><div class="kpi-card"><div class="kpi-label">Etat</div><div class="kpi-value">{{ demande.etat }}</div></div></div>
+    <div class="col-5th"><div class="kpi-card"><div class="kpi-label">Type</div><div class="kpi-value">{{ demande.maintenance_type }}</div></div></div>
+    <div class="col-5th"><div class="kpi-card"><div class="kpi-label">Priorite</div><div class="kpi-value stars">{{ demande.stars }}</div></div></div>
+    <div class="col-5th"><div class="kpi-card"><div class="kpi-label">Temps estime</div><div class="kpi-value">{{ demande.temps_estime }}</div></div></div>
+    <div class="col-5th"><div class="kpi-card"><div class="kpi-label">Ecart</div><div class="kpi-value">{{ demande.ecart }}</div></div></div>
+  </div>
+
+  <div class="row g-4 mb-4">
+    <div class="col-lg-6">
+      <div class="card-details">
+        <h5 class="card-title">Equipement &amp; Demande</h5>
+        <div class="detail-group"><label>Equipement</label><div class="detail-value">{{ demande.equipement }}</div></div>
+        <div class="detail-group"><label>Categorie</label><div class="detail-value">{{ demande.categorie }}</div></div>
+        <div class="detail-group"><label>Type d'intervention</label><div class="detail-value">{{ demande.type_intervention }}</div></div>
+        <div class="detail-group"><label>Plan de maintenance</label><div class="detail-value">{{ demande.plan_maintenance }}</div></div>
+        <div class="detail-group"><label>Modele d'intervention</label><div class="detail-value">{{ demande.modele_intervention }}</div></div>
+        <div class="detail-group"><label>Type</label><div class="detail-value">{{ demande.unit_type }}</div></div>
+        <div class="detail-group"><label>UDM (Unite de Mesure)</label><div class="detail-value">{{ demande.udm }}</div></div>
+        <div class="detail-group"><label>Dernier releve</label><div class="detail-value">{{ demande.dernier_releve }}</div></div>
+      </div>
+    </div>
+    <div class="col-lg-6">
+      <div class="card-details">
+        <h5 class="card-title">Chronologie &amp; Temps</h5>
+        <div class="detail-group"><label>Date demande</label><div class="detail-value">{{ demande.date }}</div></div>
+        <div class="detail-group"><label>Date panne</label><div class="detail-value">{{ demande.date_panne }}</div></div>
+        <div class="detail-group"><label>Date reparation</label><div class="detail-value">{{ demande.date_reparation }}</div></div>
+        <div class="detail-group"><label>Date prevue</label><div class="detail-value">{{ demande.date_prevue }}</div></div>
+        <div class="detail-group"><label>Date cloture</label><div class="detail-value">{{ demande.date_cloture }}</div></div>
+        <div class="divider"></div>
+        <div class="detail-group"><label>Temps estime</label><div class="detail-value">{{ demande.temps_estime }}</div></div>
+        <div class="detail-group"><label>Temps reparation</label><div class="detail-value">{{ demande.temps_reparation }}</div></div>
+        <div class="detail-group"><label>Ecart temps</label><div class="detail-value">{{ demande.ecart }}</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4 mb-4">
+    <div class="col-lg-6">
+      <div class="card-details">
+        <h5 class="card-title">Equipe &amp; Responsables</h5>
+        <div class="detail-group"><label>Equipe</label><div class="detail-value">{{ demande.equipe }}</div></div>
+        <div class="detail-group"><label>Atelier</label><div class="detail-value">{{ demande.atelier }}</div></div>
+        <div class="detail-group"><label>Responsable</label><div class="detail-value">{{ demande.responsable }}</div></div>
+        <div class="detail-group"><label>Chauffeur</label><div class="detail-value">{{ demande.chauffeur }}</div></div>
+      </div>
+    </div>
+    <div class="col-lg-6">
+      <div class="card-details">
+        <h5 class="card-title">Techniciens assignes</h5>
+        <div class="detail-group">
+          {% if demande.technicians %}
+          <div class="tags-container">
+            {% for tech in demande.technicians %}
+            <span class="badge badge-primary">{{ tech }}</span>
+            {% endfor %}
+          </div>
+          {% else %}
+          <div class="detail-value">Aucun technicien assigne</div>
+          {% endif %}
+        </div>
+        <div class="detail-group"><label>Societe</label><div class="detail-value">{{ demande.company }}</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row mb-4">
+    <div class="col-lg-12 d-flex gap-2 flex-wrap">
+      <a href="{% url 'parc_demandes' %}" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Retour</a>
+      {% if not demande.is_done %}
+      <button class="btn btn-success" type="button" disabled><i class="bi bi-check"></i> Marquer comme termine</button>
+      {% endif %}
+    </div>
+  </div>
+  {% else %}
+  <div class="alert alert-warning">Demande introuvable.</div>
+  {% endif %}
+</div>
+{% endblock %}

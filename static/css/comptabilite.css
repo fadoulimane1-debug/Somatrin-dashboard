@@ -1,0 +1,127 @@
+/* Comptabilite - shared professional UI */
+
+.hero {
+    background: linear-gradient(135deg, #0f1e38 0%, #1a2c4e 55%, #224070 100%) !important;
+    border-radius: 18px;
+    padding: 24px 28px;
+    color: #fff;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 12px 28px rgba(26, 44, 78, 0.22) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.kpi {
+    background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%) !important;
+    border: 1px solid #dbe4f0 !important;
+    border-radius: 12px;
+    padding: 14px 16px;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08) !important;
+    height: 100%;
+    position: relative;
+    overflow: hidden;
+}
+
+.kpi::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 3px;
+    background: linear-gradient(90deg, #1a2c4e, #e87722);
+}
+
+.kpi .v {
+    font-size: 28px;
+    line-height: 1.15;
+    font-weight: 900;
+    color: #1a2c4e;
+}
+
+.kpi-row-uniform > [class*="col-"] {
+    display: flex;
+}
+
+.kpi-row-uniform .kpi {
+    width: 100%;
+    min-height: 108px;
+    height: 108px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.cardx {
+    background: #fff !important;
+    border: 1px solid #dfe6ef !important;
+    border-radius: 14px;
+    padding: 14px;
+    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08) !important;
+}
+
+.table-wrap,
+.wrap {
+    max-height: 62vh;
+    overflow: auto;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+}
+
+.tb {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.tb thead th {
+    position: sticky;
+    top: 0;
+    background: linear-gradient(135deg, #162a4a, #223d66) !important;
+    color: #fff;
+    font-size: 12px;
+    padding: 11px 10px !important;
+    white-space: nowrap;
+    z-index: 3;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.tb tbody td {
+    padding: 10px !important;
+    border-top: 1px solid #edf2f7;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.tb tbody tr:nth-child(even) {
+    background: #f8fafc;
+}
+
+.tb tbody tr:hover {
+    background: #edf4ff !important;
+    box-shadow: inset 3px 0 0 #e87722;
+}
+
+.cardx .form-control,
+.cardx .form-select {
+    border: 1px solid #d6deea !important;
+    border-radius: 9px !important;
+}
+
+.cardx .form-control:focus,
+.cardx .form-select:focus {
+    border-color: #e87722 !important;
+    box-shadow: 0 0 0 3px rgba(232, 119, 34, 0.13) !important;
+}
+
+@media (max-width: 768px) {
+    .hero {
+        padding: 18px 18px;
+    }
+    .kpi .v {
+        font-size: 22px;
+    }
+}

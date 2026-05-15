@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load l10n %}
 
 {% block title %}Achats — Bons de commande{% endblock %}
 
@@ -262,7 +263,7 @@ select.filter-input {
   <div class="kpi-card kpi-card-amber">
     <div class="kpi-ico ico-amber"><i class="bi bi-exclamation-triangle"></i></div>
     <div class="kpi-label">Bons en retard</div>
-    <div class="kpi-value" id="kpi-retard" data-count="0" style="color:#dc2626;">0</div>
+    <div class="kpi-value" id="kpi-retard" data-count="{% localize off %}{{ nb_retard|default:0 }}{% endlocalize %}" style="color:#dc2626;">{% localize off %}{{ nb_retard|default:0 }}{% endlocalize %}</div>
     <div class="kpi-sub">date prévue dépassée</div>
   </div>
   <div class="kpi-card kpi-card-green">
@@ -439,7 +440,7 @@ select.filter-input {
       </thead>
       <tbody>
       {% for row in rows %}
-        <tr data-row data-order="{{ row.date }}" data-planned="{{ row.date_planned }}" data-state="{{ row.etat_raw }}" data-ht="{{ row.montant_ht }}" data-tax="{{ row.montant_tax }}" data-ttc="{{ row.montant_ttc }}">
+        <tr data-row{% if row.en_retard_bc %} class="row-retard"{% endif %} data-order="{{ row.date }}" data-planned="{{ row.date_planned }}" data-state="{{ row.etat_raw }}" data-ht="{{ row.montant_ht }}" data-tax="{{ row.montant_tax }}" data-ttc="{{ row.montant_ttc }}">
           <td class="col-num">{{ row.name }}</td>
           <td class="col-date">{{ row.date }}</td>
           <td class="col-date">{{ row.date_planned }}</td>
@@ -557,7 +558,6 @@ if (searchInput) {
     if (diff < 0) {
       badge.className = 'badge-delai d-late';
       badge.textContent = 'Retard (' + Math.abs(diff) + ' j)';
-      tr.classList.add('row-retard');
     } else if (diff <= 7) {
       badge.className = 'badge-delai d-ok';
       badge.textContent = diff + ' j';
@@ -575,18 +575,20 @@ if (searchInput) {
 (function () {
   var rows = document.querySelectorAll('#data-table tbody tr[data-row]');
   if (!rows.length) return;
-  var totalHT = 0, totalTax = 0, totalTTC = 0, nbRetard = 0, nbConfirmes = 0;
+  var totalHT = 0, totalTax = 0, totalTTC = 0, nbConfirmes = 0;
+  var elRetard = document.getElementById('kpi-retard');
+  var nbRetard = elRetard && elRetard.getAttribute('data-count') != null
+    ? (parseInt(String(elRetard.getAttribute('data-count')).replace(/\s/g, ''), 10) || 0)
+    : 0;
   rows.forEach(function (tr) {
     totalHT += parseFloat(tr.dataset.ht || 0);
     totalTax += parseFloat(tr.dataset.tax || 0);
     totalTTC += parseFloat(tr.dataset.ttc || 0);
-    if (tr.classList.contains('row-retard')) nbRetard += 1;
     var st = (tr.dataset.state || '').toLowerCase();
     if (st === 'purchase' || st === 'done') nbConfirmes += 1;
   });
   function fr(n) { return (n || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
   var elTotalTTC = document.getElementById('kpi-total-ttc');
-  var elRetard = document.getElementById('kpi-retard');
   var elConfirmes = document.getElementById('kpi-confirmes');
   if (elTotalTTC) elTotalTTC.textContent = fr(totalTTC);
   if (elRetard) elRetard.textContent = nbRetard.toLocaleString('fr-FR');
@@ -710,6 +712,18 @@ if (searchInput) {
   }
 
   showPage(1);
+})();
+</script>
+{{ soma_dashboard_ctx|json_script:"soma-dash-data" }}
+<script>
+(function () {
+  var el = document.getElementById('soma-dash-data');
+  if (!el) return;
+  try {
+    window.__SOMA_DASHBOARD_CTX__ = JSON.parse(el.textContent);
+  } catch (e) {
+    window.__SOMA_DASHBOARD_CTX__ = null;
+  }
 })();
 </script>
 {% endblock %}

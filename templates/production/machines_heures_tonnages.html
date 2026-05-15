@@ -1,0 +1,237 @@
+﻿{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Production - Machines / Heures / Tonnages{% endblock %}
+
+{% block breadcrumb %}
+<a href="{% url 'accueil' %}">Accueil</a>
+<i class="bi bi-chevron-right"></i>
+<a href="{% url 'production_index' %}">Production</a>
+<i class="bi bi-chevron-right"></i>
+<span style="color:#1a2c4e; font-weight:600;">Machines / Heures / Tonnages</span>
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/production.css' %}?v=20260520">
+{% endblock %}
+
+{% block content %}
+{% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+{% if empty_filter_notice %}
+<div class="alert alert-warning d-flex align-items-start gap-2 mb-3" role="status">
+  <i class="bi bi-exclamation-triangle flex-shrink-0 mt-1"></i>
+  <div>{{ empty_filter_notice }}</div>
+</div>
+{% endif %}
+
+<!-- ══ Hero ══ -->
+<div style="background:linear-gradient(135deg,#1a2c4e,#e87722);border-radius:14px;padding:22px 28px;color:#fff;margin-bottom:22px;display:flex;align-items:center;justify-content:space-between;gap:16px;">
+  <div>
+    <small style="opacity:.5;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;">Module Production</small>
+    <h1 style="margin:6px 0 4px;font-size:26px;font-weight:800;">Machines / Heures / Tonnages</h1>
+    <p style="margin:0;font-size:13px;opacity:.85;">Suivi consolidé de l'activité des machines et de la production</p>
+  </div>
+  <div style="font-size:40px;opacity:.85;"><i class="bi bi-truck-front"></i></div>
+</div>
+
+<!-- ══ KPI Cards ══ -->
+<div class="prod-kpi-grid" style="margin-bottom:16px;grid-template-columns:repeat(4,minmax(0,1fr));">
+  <div class="prod-kpi-card"><div class="prod-kpi-label"><i class="bi bi-truck-front" style="color:#e87722;"></i> Machines actives</div><div class="prod-kpi-value">{{ kpis.machines_actives }}</div></div>
+  <div class="prod-kpi-card"><div class="prod-kpi-label"><i class="bi bi-clock-history" style="color:#e87722;"></i> Heures machines</div><div class="prod-kpi-value">{{ kpis.heures_machines }}</div></div>
+  <div class="prod-kpi-card"><div class="prod-kpi-label"><i class="bi bi-box-seam" style="color:#e87722;"></i> Tonnages produits</div><div class="prod-kpi-value">{{ kpis.tonnages_produits }}</div></div>
+  <div class="prod-kpi-card"><div class="prod-kpi-label"><i class="bi bi-speedometer2" style="color:#e87722;"></i> Rendement (T/H)</div><div class="prod-kpi-value">{{ kpis.rendement_t_h }}</div></div>
+</div>
+
+<div class="kpi-summary">
+  <strong>{{ kpis.machines_actives }}</strong> machines actives · <strong>{{ kpis.heures_machines }}</strong> h machines · <strong>{{ kpis.tonnages_produits }}</strong> t produites · rendement <strong>{{ kpis.rendement_t_h }}</strong> T/H
+</div>
+
+<!-- ══ Filtres ══ -->
+<div class="filters-card filters-section">
+  <form method="get" class="row g-3 align-items-end">
+    <div class="col-lg-2 col-md-4">
+      <label class="form-label">Date début</label>
+      <input type="date" name="date_debut" class="form-control" value="{{ date_debut }}">
+    </div>
+    <div class="col-lg-2 col-md-4">
+      <label class="form-label">Date fin</label>
+      <input type="date" name="date_fin" class="form-control" value="{{ date_fin }}">
+    </div>
+    <div class="col-lg-2 col-md-4">
+      <label class="form-label">Site (Odoo)</label>
+      <select name="site" class="form-select">
+        <option value="">— Tous —</option>
+        {% for opt in machines_filter_options.sites %}
+          <option value="{{ opt }}" {% if site == opt %}selected{% endif %} title="{{ opt }}">{{ opt|truncatechars:42 }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-lg-2 col-md-4">
+      <label class="form-label">Employé / chauffeur</label>
+      <select name="chauffeur" class="form-select">
+        <option value="">— Tous —</option>
+        {% for opt in machines_filter_options.chauffeurs %}
+          <option value="{{ opt }}" {% if chauffeur == opt %}selected{% endif %} title="{{ opt }}">{{ opt|truncatechars:42 }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-lg-2 col-md-4">
+      <label class="form-label">Société</label>
+      <select name="societe" class="form-select">
+        <option value="">— Toutes —</option>
+        {% for opt in machines_filter_options.societes %}
+          <option value="{{ opt }}" {% if societe == opt %}selected{% endif %} title="{{ opt }}">{{ opt|truncatechars:42 }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-lg-2 col-md-4 d-flex align-items-end">
+      <button class="btn btn-primary btn-filtrer w-100" type="submit"><i class="bi bi-funnel-fill me-1"></i>Filtrer</button>
+    </div>
+
+    <div class="col-lg-3 col-md-6">
+      <label class="form-label">Ouvrage</label>
+      <select name="ouvrage" class="form-select">
+        <option value="">— Tous —</option>
+        {% for opt in machines_filter_options.ouvrages %}
+          <option value="{{ opt }}" {% if ouvrage == opt %}selected{% endif %} title="{{ opt }}">{{ opt|truncatechars:72 }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-lg-3 col-md-6">
+      <label class="form-label">Machine / affectation</label>
+      <select name="engin" class="form-select">
+        <option value="">— Tous —</option>
+        {% for opt in machines_filter_options.engins %}
+          <option value="{{ opt }}" {% if engin == opt %}selected{% endif %} title="{{ opt }}">{{ opt|truncatechars:52 }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-lg-2 col-md-4">
+      <label class="form-label">N° bon / opération</label>
+      <select name="operation" class="form-select">
+        <option value="">— Tous —</option>
+        {% for opt in machines_filter_options.operations %}
+          <option value="{{ opt }}" {% if operation_q == opt %}selected{% endif %} title="{{ opt }}">{{ opt|truncatechars:36 }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-lg-2 col-md-4">
+      <label class="form-label">Anomalie</label>
+      <select name="anomalie" class="form-select">
+        <option value="" {% if not anomalie %}selected{% endif %}>Tous</option>
+        <option value="ok" {% if anomalie == 'ok' %}selected{% endif %}>Sans anomalie</option>
+        <option value="anomalie" {% if anomalie == 'anomalie' %}selected{% endif %}>Avec anomalie</option>
+      </select>
+    </div>
+    <div class="col-lg-2 col-md-4">
+      <label class="form-label">Catégorie engin (Odoo)</label>
+      <select name="categorie_engin" class="form-select">
+        <option value="">— Toutes —</option>
+        {% for opt in machines_filter_options.categories_engin %}
+          <option value="{{ opt }}" {% if categorie_engin == opt %}selected{% endif %} title="{{ opt }}">{{ opt|truncatechars:48 }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="col-lg-2 col-md-4">
+      <label class="form-label">Site (ligne agrégée)</label>
+      <select name="site_ligne" class="form-select">
+        <option value="">— Tous —</option>
+        {% for opt in machines_filter_options.sites_ligne %}
+          <option value="{{ opt }}" {% if site_ligne == opt %}selected{% endif %} title="{{ opt }}">{{ opt|truncatechars:42 }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-lg-2 col-md-4">
+      <label class="form-label">Min. heures</label>
+      <input type="text" name="min_heures" class="form-control" value="{{ min_heures }}" placeholder="ex. 100">
+    </div>
+    <div class="col-lg-2 col-md-4">
+      <label class="form-label">Min. tonnage</label>
+      <input type="text" name="min_tonnage" class="form-control" value="{{ min_tonnage }}" placeholder="ex. 500">
+    </div>
+    <div class="col-lg-2 col-md-4">
+      <label class="form-label">Min. opérations</label>
+      <input type="text" name="min_operations" class="form-control" value="{{ min_operations }}" placeholder="ex. 5">
+    </div>
+    <div class="col-lg-2 col-md-4">
+      <label class="form-label">Min. rendement (T/H)</label>
+      <input type="text" name="min_rendement" class="form-control" value="{{ min_rendement }}" placeholder="ex. 15">
+    </div>
+    <div class="col-lg-2 col-md-4 d-flex align-items-end">
+      <a class="btn btn-outline-secondary w-100" href="{% url 'production_machines_heures_tonnages' %}"><i class="bi bi-arrow-counterclockwise me-1"></i>Reset</a>
+    </div>
+  </form>
+  <div class="somatrin-export-row">
+    <a href="{% url 'export_machines_excel' %}" class="btn btn-sm btn-smt-excel"><i class="bi bi-file-earmark-excel"></i> Excel</a>
+    <a href="{% url 'export_machines_csv' %}" class="btn btn-sm btn-smt-csv"><i class="bi bi-filetype-csv"></i> CSV</a>
+    <a href="{% url 'export_machines_pdf' %}" class="btn btn-sm btn-smt-pdf"><i class="bi bi-file-earmark-pdf"></i> PDF</a>
+  </div>
+</div>
+
+<!-- ══ Table ══ -->
+<div class="prod-table-wrap somatrin-table-wrap" style="border: 1.5px solid #d0d5dd !important;">
+
+  <!-- Toolbar -->
+  <div class="prod-table-toolbar">
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+      <div class="prod-table-title"><i class="bi bi-truck-front" style="color:#E87722;"></i> Machines &amp; Production</div>
+      <span class="prod-table-count" id="machCount">{{ rows|length }} ligne(s)</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <div class="prod-rpp">
+        <label for="rppMach">Lignes :</label>
+        <select id="rppMach">
+          <option value="25">25</option><option value="50">50</option><option value="100">100</option><option value="9999">Tous</option>
+        </select>
+      </div>
+      <div class="prod-search-wrap">
+        <i class="bi bi-search prod-search-icon"></i>
+        <input type="text" id="searchMachines" class="prod-search-input" placeholder="Rechercher...">
+        <button class="prod-search-clear" title="Effacer">×</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-responsive">
+    <table class="prod-table somatrin-table" id="tblMachines">
+      <thead>
+        <tr>
+          <th class="pt-sort" data-col="0"><i class="bi bi-truck-front th-icon"></i>Machine</th>
+          <th class="pt-sort" data-col="1"><i class="bi bi-geo-alt th-icon"></i>Site</th>
+          <th class="text-end pt-sort" data-col="2"><i class="bi bi-clock-history th-icon"></i>Heures</th>
+          <th class="text-end pt-sort" data-col="3"><i class="bi bi-box-seam th-icon"></i>Tonnage</th>
+          <th class="text-end pt-sort" data-col="4"><i class="bi bi-list-task th-icon"></i>Opérations</th>
+          <th class="text-end pt-sort" data-col="5"><i class="bi bi-speedometer2 th-icon"></i>Rendement (T/H)</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for row in rows %}
+        <tr data-row>
+          <td class="prod-cell-id" data-label="Machine">{{ row.machine }}</td>
+          <td data-label="Site">{{ row.site }}</td>
+          <td class="text-end prod-cell-amount" data-label="Heures">{{ row.heures }}</td>
+          <td class="text-end prod-cell-amount" data-label="Tonnage">{{ row.tonnage }}</td>
+          <td class="text-end" data-label="Opérations">{{ row.operations }}</td>
+          <td class="text-end prod-cell-percent {% if row.rendement >= 30 %}good{% elif row.rendement >= 18 %}warn{% else %}bad{% endif %}" data-label="Rendement">{{ row.rendement }}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="6" class="text-center text-muted py-4"><i class="bi bi-inbox me-2"></i>Aucune donnée pour ces filtres</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="prod-pager-bar">
+    <div class="prod-pager-info" id="machCount"></div>
+    <div class="prod-pager" id="machPager"></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/production.js' %}"></script>
+<script>
+initProdTable({ tableId:'tblMachines', searchId:'searchMachines', countId:'machCount', pagerId:'machPager', rppId:'rppMach', pageSize:25 });
+</script>
+{% endblock %}

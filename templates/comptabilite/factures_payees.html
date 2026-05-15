@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Comptabilité — Factures payées{% endblock %}
+{% block breadcrumb %}<a href="{% url 'accueil' %}">Accueil</a><i class="bi bi-chevron-right"></i><span style="color:#1a2c4e;font-weight:600;">Factures payées</span>{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/comptabilite.css' %}">
+<style>
+.hero{background:linear-gradient(135deg,#0f1e38,#1a2c4e);border-radius:18px;padding:24px 28px;color:#fff;display:flex;justify-content:space-between}
+.kpi{background:#fff;border:1px solid #E5E7EB;border-radius:12px;padding:14px}
+.kpi .v{font-size:28px;font-weight:900;color:#1a2c4e}
+.cardx{background:#fff;border:1px solid #E5E7EB;border-radius:14px;padding:14px}
+.table-wrap{max-height:62vh;overflow:auto;border:1px solid #e2e8f0;border-radius:10px}
+.tb{width:100%;min-width:1300px;border-collapse:separate;border-spacing:0}
+.tb thead th{position:sticky;top:0;background:#1a2c4e;color:#fff;font-size:12px;padding:10px;white-space:nowrap}
+.tb tbody td{padding:10px;border-top:1px solid #edf2f7;font-size:13px;white-space:nowrap}
+.tb tbody tr:nth-child(even){background:#f8fafc}
+</style>
+{% endblock %}
+{% block content %}
+<div class="hero mb-3"><div><small style="opacity:.7">COMPTABILITE</small><h2 class="mb-0">Factures payées</h2></div><div style="font-size:42px;font-weight:900;color:rgba(255,255,255,.08)">PYD</div></div>
+{% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+<div class="row g-3 mb-3 kpi-row-uniform">
+  <div class="col-lg-6 col-6"><div class="kpi"><div>Total factures</div><div class="v">{{ kpi_total }}</div></div></div>
+  <div class="col-lg-6 col-6"><div class="kpi"><div>Montant TTC</div><div class="v">{{ kpi_montant }}</div></div></div>
+</div>
+<div class="cardx">
+  <div class="table-wrap">
+    <table class="tb">
+      <thead><tr><th>Date facture</th><th>Nom du fournisseur</th><th>Référence</th><th>Désignation</th><th>Montant TTC</th><th>Date d'échéance</th><th>Délai de paiement</th><th>Convention OUI/NON</th></tr></thead>
+      <tbody>
+      {% for r in rows %}
+        <tr>
+          <td>{{ r.date_facture }}</td><td>{{ r.fournisseur }}</td><td>{{ r.reference }}</td><td title="{{ r.designation }}">{{ r.designation|truncatechars:38 }}</td><td>{{ r.montant_ttc }}</td><td>{{ r.date_echeance }}</td><td>{{ r.delai }}</td><td>{{ r.convention }}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="8" class="text-center text-muted py-4">Aucune facture payée.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

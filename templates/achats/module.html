@@ -257,5 +257,40 @@
   {% endfor %}
 </div>
 
+<div class="pdf-synthese-panel" style="margin-top:28px; padding:18px 20px; background:linear-gradient(135deg,#f8fafc 0%,#eef2ff 100%); border-radius:12px; border:1px solid #e5e7eb;">
+  <div style="display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:14px;">
+    <div style="text-align:left;">
+      <div style="font-size:14px; font-weight:700; color:#1a2c4e;">
+        <i class="bi bi-file-earmark-bar-graph"></i> Rapport de synthèse Achats (PDF)
+      </div>
+      <div style="font-size:12px; color:#64748b; margin-top:4px; max-width:520px;">
+        KPI, synthèse exécutive, répartition par statut et par société, Top&nbsp;5 fournisseurs, analyse automatique.
+        Période par défaut : <strong>année en cours</strong>. Filtres via paramètres d’URL (<code>periode</code>, <code>date_debut</code>/<code>date_fin</code>, <code>societe</code>).
+      </div>
+    </div>
+    <div style="display:flex; flex-wrap:wrap; gap:8px; justify-content:flex-end;">
+      <a href="{% url 'achats_synthese_pdf' %}?periode=annee"
+         target="_blank" rel="noopener"
+         class="btn btn-sm text-white" style="background:#E87722; font-weight:600; border:none;">
+        <i class="bi bi-file-earmark-pdf"></i> PDF année
+      </a>
+      <a href="{% url 'achats_synthese_pdf' %}?periode=trimestre"
+         target="_blank" rel="noopener"
+         class="btn btn-sm btn-outline-secondary">
+        Trimestre
+      </a>
+      <a href="{% url 'achats_synthese_pdf' %}?periode=mois"
+         target="_blank" rel="noopener"
+         class="btn btn-sm btn-outline-secondary">
+        Mois
+      </a>
+      <a href="{% url 'achats_synthese_pdf' %}?periode=tout"
+         target="_blank" rel="noopener"
+         class="btn btn-sm btn-outline-secondary">
+        Historique
+      </a>
+    </div>
+  </div>
+</div>
 
 {% endblock %}

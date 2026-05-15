@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Comptabilité — TVA{% endblock %}
+{% block breadcrumb %}<a href="{% url 'accueil' %}">Accueil</a><i class="bi bi-chevron-right"></i><span style="color:#1a2c4e;font-weight:600;">TVA</span>{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/comptabilite.css' %}">
+<style>
+.hero{background:linear-gradient(135deg,#0f1e38,#1a2c4e);border-radius:18px;padding:24px 28px;color:#fff;display:flex;justify-content:space-between}
+.kpi{background:#fff;border:1px solid #E5E7EB;border-radius:12px;padding:14px}
+.kpi .v{font-size:28px;font-weight:900;color:#1a2c4e}
+.cardx{background:#fff;border:1px solid #E5E7EB;border-radius:14px;padding:14px}
+.table-wrap{max-height:62vh;overflow:auto;border:1px solid #e2e8f0;border-radius:10px}
+.tb{width:100%;min-width:1000px;border-collapse:separate;border-spacing:0}
+.tb thead th{position:sticky;top:0;background:#1a2c4e;color:#fff;font-size:12px;padding:10px;white-space:nowrap}
+.tb tbody td{padding:10px;border-top:1px solid #edf2f7;font-size:13px;white-space:nowrap}
+.tb tbody tr:nth-child(even){background:#f8fafc}
+</style>
+{% endblock %}
+{% block content %}
+<div class="hero mb-3"><div><small style="opacity:.7">COMPTABILITE</small><h2 class="mb-0">TVA {{ month }}</h2></div><div style="font-size:42px;font-weight:900;color:rgba(255,255,255,.08)">TVA</div></div>
+{% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+<div class="cardx mb-3">
+  <form class="row g-2 align-items-end">
+    <div class="col-lg-3"><label class="form-label small text-muted">Mois</label><input type="month" name="mois" class="form-control form-control-sm" value="{{ month }}"></div>
+    <div class="col-lg-2"><button class="btn btn-sm btn-dark">Filtrer</button></div>
+  </form>
+</div>
+<div class="row g-3 mb-3 kpi-row-uniform">
+  <div class="col-lg-3 col-6"><div class="kpi"><div>Total HT</div><div class="v">{{ kpi_ht }}</div></div></div>
+  <div class="col-lg-3 col-6"><div class="kpi"><div>TVA récupérable</div><div class="v">{{ kpi_tva }}</div></div></div>
+  <div class="col-lg-3 col-6"><div class="kpi"><div>Total TTC</div><div class="v">{{ kpi_ttc }}</div></div></div>
+  <div class="col-lg-3 col-6"><div class="kpi"><div>Taux moyen TVA</div><div class="v">{{ kpi_taux }}</div></div></div>
+</div>
+<div class="cardx">
+  <div class="table-wrap">
+    <table class="tb">
+      <thead><tr><th>Date</th><th>Fournisseur</th><th>Référence</th><th>Montant HT</th><th>Montant TVA</th><th>Montant TTC</th></tr></thead>
+      <tbody>
+      {% for r in rows %}
+        <tr><td>{{ r.date_facture }}</td><td>{{ r.fournisseur }}</td><td>{{ r.reference }}</td><td>{{ r.amount_ht }}</td><td>{{ r.amount_tax }}</td><td>{{ r.amount_ttc }}</td></tr>
+      {% empty %}
+        <tr><td colspan="6" class="text-center text-muted py-4">Aucune donnée TVA pour ce mois.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

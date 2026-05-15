@@ -1,0 +1,286 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Dashboard QHSE — SOMATRIN{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/qhse.css' %}">
+{% endblock %}
+
+{% block breadcrumb %}
+<a href="{% url 'accueil' %}">Accueil</a>
+<i class="bi bi-chevron-right"></i>
+<span style="color:#1a2c4e; font-weight:600;">Dashboard QHSE</span>
+{% endblock %}
+
+{% block content %}
+
+<!-- Hero Header -->
+<div class="qhse-hero mb-3">
+  <div>
+    <div class="qhse-hero-title"><i class="bi bi-shield-fill-check me-2"></i>Dashboard QHSE</div>
+    <div class="qhse-hero-sub">Qualité · Hygiène · Sécurité · Environnement — Vue d'ensemble {{ annee }}</div>
+  </div>
+  <div class="d-flex gap-2 align-items-center">
+    <span class="qhse-hero-badge"><i class="bi bi-calendar3 me-1"></i>{{ annee }}</span>
+    <a href="/qhse/incidents-accidents/" class="qhse-hero-badge text-decoration-none">
+      <i class="bi bi-cone-striped me-1"></i>Incidents
+    </a>
+  </div>
+</div>
+
+{% if error %}
+<div class="alert-odoo mb-3">
+  <i class="bi bi-exclamation-triangle-fill"></i>
+  <span>{{ error }} — Données de démonstration affichées.</span>
+</div>
+{% endif %}
+
+<!-- ══ KPI CARDS (6) ══ -->
+<div class="qhse-kpi-grid-6 mb-3">
+
+  <div class="qhse-kpi-card" style="border-top-color:#DC2626;">
+    <div class="qhse-kpi-icon" style="background:#fef2f2;color:#DC2626;">
+      <i class="bi bi-exclamation-octagon-fill"></i>
+    </div>
+    <div>
+      <div class="qhse-kpi-value">{{ kpi_accidents }}</div>
+      <div class="qhse-kpi-label">Accidents (année)</div>
+    </div>
+  </div>
+
+  <div class="qhse-kpi-card" style="border-top-color:#E87722;">
+    <div class="qhse-kpi-icon" style="background:#fff4e8;color:#E87722;">
+      <i class="bi bi-calendar-x-fill"></i>
+    </div>
+    <div>
+      <div class="qhse-kpi-value">{{ kpi_jours_arret }}</div>
+      <div class="qhse-kpi-label">Jours d'arrêt</div>
+    </div>
+  </div>
+
+  <div class="qhse-kpi-card" style="border-top-color:#3B82F6;">
+    <div class="qhse-kpi-icon" style="background:#eff6ff;color:#3B82F6;">
+      <i class="bi bi-speedometer2"></i>
+    </div>
+    <div>
+      <div class="qhse-kpi-value">{{ kpi_taux_freq|floatformat:1 }}</div>
+      <div class="qhse-kpi-label">Taux Fréquence (TF)</div>
+    </div>
+  </div>
+
+  <div class="qhse-kpi-card" style="border-top-color:#8B5CF6;">
+    <div class="qhse-kpi-icon" style="background:#f5f3ff;color:#8B5CF6;">
+      <i class="bi bi-activity"></i>
+    </div>
+    <div>
+      <div class="qhse-kpi-value">{{ kpi_taux_grav|floatformat:2 }}</div>
+      <div class="qhse-kpi-label">Taux Gravité (TG)</div>
+    </div>
+  </div>
+
+  <div class="qhse-kpi-card" style="border-top-color:#10B981;">
+    <div class="qhse-kpi-icon" style="background:#f0fdf4;color:#10B981;">
+      <i class="bi bi-clipboard-check-fill"></i>
+    </div>
+    <div>
+      <div class="qhse-kpi-value">{{ kpi_audit_conformite }}%</div>
+      <div class="qhse-kpi-label">Conformité audit</div>
+    </div>
+  </div>
+
+  <div class="qhse-kpi-card" style="border-top-color:#0EA5E9;">
+    <div class="qhse-kpi-icon" style="background:#e0f2fe;color:#0EA5E9;">
+      <i class="bi bi-mortarboard-fill"></i>
+    </div>
+    <div>
+      <div class="qhse-kpi-value">{{ kpi_formations }}</div>
+      <div class="qhse-kpi-label">Formations complétées</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══ 6 GRAPHIQUES ══ -->
+<div class="qhse-section-title mb-2">
+  <i class="bi bi-bar-chart-line me-2" style="color:#E87722;"></i>Analyses graphiques
+</div>
+
+<div class="qhse-charts-grid-6 mb-3">
+
+  <div class="qhse-chart-card">
+    <div class="qhse-chart-title"><i class="bi bi-graph-up"></i> Accidents 12 mois</div>
+    <canvas id="dashLine" height="170"></canvas>
+  </div>
+
+  <div class="qhse-chart-card">
+    <div class="qhse-chart-title"><i class="bi bi-pie-chart-fill"></i> Types d'accidents</div>
+    <canvas id="dashPie" height="170"></canvas>
+  </div>
+
+  <div class="qhse-chart-card">
+    <div class="qhse-chart-title"><i class="bi bi-bar-chart-horizontal-fill"></i> Top 5 unités</div>
+    <canvas id="dashBarUnit" height="170"></canvas>
+  </div>
+
+  <div class="qhse-chart-card">
+    <div class="qhse-chart-title"><i class="bi bi-speedometer"></i> Conformité audit</div>
+    <div class="qhse-gauge-wrap">
+      <canvas id="dashGauge" height="130"></canvas>
+      <div class="qhse-gauge-val">{{ kpi_audit_conformite }}%</div>
+      <div class="qhse-gauge-label">Conformité globale</div>
+    </div>
+  </div>
+
+  <div class="qhse-chart-card">
+    <div class="qhse-chart-title"><i class="bi bi-calendar3"></i> Formations (tendance)</div>
+    <canvas id="dashFormLine" height="170"></canvas>
+  </div>
+
+  <div class="qhse-chart-card">
+    <div class="qhse-chart-title"><i class="bi bi-person-badge-fill"></i> Incidents par responsable</div>
+    <canvas id="dashBarResp" height="170"></canvas>
+  </div>
+
+</div>
+
+<!-- ══ Tableau récapitulatif par site ══ -->
+<div class="qhse-section-title mb-2">
+  <i class="bi bi-table me-2" style="color:#E87722;"></i>Récapitulatif par site
+</div>
+<div class="qhse-table-section mb-3">
+  <div class="qhse-table-wrapper">
+    <table class="qhse-table" id="sitesTable">
+      <thead>
+        <tr>
+          <th>Site</th>
+          <th>Incidents</th>
+          <th>Accidents avec arrêt</th>
+          <th>Jours perdus</th>
+          <th>TF</th>
+          <th>TG</th>
+          <th>Conformité</th>
+          <th>Tendance</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in sites %}
+        {% with cnt=s.1 %}
+        <tr>
+          <td><i class="bi bi-geo-alt" style="color:#E87722;"></i> {{ s.0 }}</td>
+          <td class="cell-id">{{ cnt }}</td>
+          <td>{{ cnt|floatformat:0 }}</td>
+          <td class="cell-amount">{{ cnt|add:cnt }}</td>
+          <td>{{ cnt|floatformat:1 }}</td>
+          <td>0.{{ cnt }}</td>
+          <td>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div style="width:80px;height:6px;background:#f1f3f5;border-radius:3px;">
+                <div style="width:75%;height:100%;background:#10B981;border-radius:3px;"></div>
+              </div>
+              <span style="font-size:12px;color:#10B981;font-weight:700;">75%</span>
+            </div>
+          </td>
+          <td>
+            {% if cnt > 10 %}
+              <span style="color:#DC2626;font-size:12px;"><i class="bi bi-arrow-up-right"></i> Hausse</span>
+            {% elif cnt > 5 %}
+              <span style="color:#F59E0B;font-size:12px;"><i class="bi bi-dash"></i> Stable</span>
+            {% else %}
+              <span style="color:#10B981;font-size:12px;"><i class="bi bi-arrow-down-right"></i> Baisse</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endwith %}
+        {% empty %}
+        <tr>
+          <td colspan="8">
+            <div class="qhse-empty">
+              <i class="bi bi-geo-alt"></i>
+              <p>Données sites non disponibles.</p>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ── Quick Links ── -->
+<div class="row g-3">
+  <div class="col-md-4">
+    <a href="/qhse/incidents-accidents/" class="text-decoration-none">
+      <div class="qhse-kpi-card" style="border-top-color:#DC2626;cursor:pointer;">
+        <div class="qhse-kpi-icon" style="background:#fef2f2;color:#DC2626;"><i class="bi bi-cone-striped"></i></div>
+        <div>
+          <div class="qhse-kpi-value" style="font-size:16px;">Incidents &amp; Accidents</div>
+          <div class="qhse-kpi-label">Synoptique corporel · 6 graphiques · Tableau détail</div>
+        </div>
+        <i class="bi bi-arrow-right-circle ms-auto" style="color:#dc2626;font-size:20px;"></i>
+      </div>
+    </a>
+  </div>
+  <div class="col-md-4">
+    <a href="/qhse/indicateurs-hse/" class="text-decoration-none">
+      <div class="qhse-kpi-card" style="border-top-color:#3B82F6;cursor:pointer;">
+        <div class="qhse-kpi-icon" style="background:#eff6ff;color:#3B82F6;"><i class="bi bi-graph-up-arrow"></i></div>
+        <div>
+          <div class="qhse-kpi-value" style="font-size:16px;">Indicateurs HSE</div>
+          <div class="qhse-kpi-label">TF, TG, extincteurs, conformité</div>
+        </div>
+        <i class="bi bi-arrow-right-circle ms-auto" style="color:#3B82F6;font-size:20px;"></i>
+      </div>
+    </a>
+  </div>
+  <div class="col-md-4">
+    <a href="/qhse/audits-qualite/" class="text-decoration-none">
+      <div class="qhse-kpi-card" style="border-top-color:#10B981;cursor:pointer;">
+        <div class="qhse-kpi-icon" style="background:#f0fdf4;color:#10B981;"><i class="bi bi-clipboard-data"></i></div>
+        <div>
+          <div class="qhse-kpi-value" style="font-size:16px;">Audits Qualité</div>
+          <div class="qhse-kpi-label">Résultats audits · Non-conformités</div>
+        </div>
+        <i class="bi bi-arrow-right-circle ms-auto" style="color:#10B981;font-size:20px;"></i>
+      </div>
+    </a>
+  </div>
+</div>
+
+<!-- Chart Data -->
+<script type="application/json" id="dash-monthly-labels">{{ monthly_labels_json|safe }}</script>
+<script type="application/json" id="dash-monthly-values">{{ monthly_values_json|safe }}</script>
+<script type="application/json" id="dash-site-labels">{{ site_labels_json|safe }}</script>
+<script type="application/json" id="dash-site-values">{{ site_values_json|safe }}</script>
+<script type="application/json" id="dash-type-labels">{{ type_labels_json|safe }}</script>
+<script type="application/json" id="dash-type-values">{{ type_values_json|safe }}</script>
+<script type="application/json" id="dash-emp-labels">{{ emp_labels_json|safe }}</script>
+<script type="application/json" id="dash-emp-values">{{ emp_values_json|safe }}</script>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script src="{% static 'js/qhse.js' %}"></script>
+<script>
+(function() {
+  const monthLabels  = qhseReadJson('dash-monthly-labels') || ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+  const monthValues  = qhseReadJson('dash-monthly-values') || [6,10,8,14,9,16,7,12,9,11,5,8];
+  const siteLabels   = qhseReadJson('dash-site-labels')  || ['Site 1','Site 2','Site 3','Admin','Atelier'];
+  const siteValues   = qhseReadJson('dash-site-values')  || [42,28,24,10,7];
+  const typeLabels   = qhseReadJson('dash-type-labels')  || ['Avec arrêt','Sans arrêt','Incident'];
+  const typeValues   = qhseReadJson('dash-type-values')  || [{{ kpi_accidents|default:42 }}, {{ kpi_accidents|default:42|add:"-12" }}, 16];
+  const empLabels    = qhseReadJson('dash-emp-labels')   || ['Resp. A','Resp. B','Resp. C','Resp. D','Resp. E'];
+  const empValues    = qhseReadJson('dash-emp-values')   || [18,14,11,9,7];
+  const formMonths   = ['Jan','Mar','Mai','Jul','Sep','Nov'];
+  const formValues   = [3,5,8,6,9,7];
+
+  qhseLineChart('dashLine', monthLabels, monthValues, 'Accidents', '#DC2626');
+  qhsePieChart('dashPie', typeLabels, typeValues, true);
+  qhseBarChart('dashBarUnit', siteLabels, siteValues, 'Incidents', '#1a2c4e', true);
+  qhseGaugeChart('dashGauge', {{ kpi_audit_conformite|default:78 }}, 100, 'Conformité', '#10B981');
+  qhseLineChart('dashFormLine', formMonths, formValues, 'Formations', '#0EA5E9');
+  qhseBarChart('dashBarResp', empLabels, empValues, 'Incidents', '#E87722', true);
+})();
+</script>
+{% endblock %}

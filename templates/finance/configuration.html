@@ -1,0 +1,151 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Finance — Configuration{% endblock %}
+{% block breadcrumb %}
+<a href="{% url 'accueil' %}">Accueil</a><i class="bi bi-chevron-right"></i>
+<a href="{% url 'finance_dashboard' %}">Finance</a><i class="bi bi-chevron-right"></i>
+<span style="color:#1a2c4e;font-weight:600;">Configuration</span>
+{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/finance.css' %}">{% endblock %}
+{% block content %}
+<section class="fin-hero">
+  <div>
+    <small style="opacity:.55;letter-spacing:1.4px;font-size:.75rem;text-transform:uppercase;">Finance · Parametrage</small>
+    <h1 class="mt-1">Configuration</h1>
+    <p>Parametres comptables, journaux, banques, conditions de paiement</p>
+  </div>
+  <div class="fin-hero-right"><div class="fin-hero-icon"><i class="bi bi-gear-fill"></i></div></div>
+</section>
+
+<div class="fin-config-section">
+  <div class="fin-config-title"><i class="bi bi-sliders"></i> Parametres generaux</div>
+  <div class="row g-3">
+    <div class="col-lg-3"><label class="form-label">Devise</label><input class="form-control" value="MAD" readonly></div>
+    <div class="col-lg-3"><label class="form-label">Precision decimales</label><input class="form-control" value="2" readonly></div>
+    <div class="col-lg-3"><label class="form-label">Format date</label><input class="form-control" value="jj/mm/aaaa" readonly></div>
+    <div class="col-lg-3"><label class="form-label">Format nombre</label><input class="form-control" value="1 234,56" readonly></div>
+  </div>
+</div>
+
+<div class="fin-config-section">
+  <div class="fin-config-title"><i class="bi bi-bank"></i> Comptes bancaires</div>
+  <div class="fin-tbl-wrap">
+    <table class="fin-tbl">
+      <thead><tr><th>Banque</th><th>N° compte</th><th style="text-align:right">Solde initial</th><th>Statut</th></tr></thead>
+      <tbody>
+        <tr><td>Banque principale</td><td>XXXX-XXXX-XXXX</td><td style="text-align:right">0,00</td><td><span class="badge-fin bf-posted">Actif</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="fin-config-section">
+  <div class="fin-config-title"><i class="bi bi-journal-richtext"></i> Journaux comptables</div>
+  <div class="row g-2">
+    <div class="col-md-2"><span class="badge-fin bf-posted">BANQUE</span></div>
+    <div class="col-md-2"><span class="badge-fin bf-posted">CAISSE</span></div>
+    <div class="col-md-2"><span class="badge-fin bf-posted">VENTES</span></div>
+    <div class="col-md-2"><span class="badge-fin bf-posted">ACHATS</span></div>
+    <div class="col-md-2"><span class="badge-fin bf-posted">AUTRES</span></div>
+  </div>
+</div>
+
+<div class="fin-config-section">
+  <div class="fin-config-title"><i class="bi bi-people"></i> Parametres clients / fournisseurs</div>
+  <div class="row g-3">
+    <div class="col-lg-3"><label class="form-label">Delai paiement clients (jours)</label><input class="form-control" value="30" readonly></div>
+    <div class="col-lg-3"><label class="form-label">Conditions clients</label><input class="form-control" value="Net 30" readonly></div>
+    <div class="col-lg-3"><label class="form-label">Delai paiement fournisseurs</label><input class="form-control" value="45" readonly></div>
+    <div class="col-lg-3"><label class="form-label">Conditions fournisseurs</label><input class="form-control" value="Net 45" readonly></div>
+  </div>
+</div>
+
+<div class="fin-config-section" style="border-left:5px solid #E87722;">
+  <div class="fin-config-title"><i class="bi bi-bell-fill" style="color:#E87722;"></i> Seuils d'alerte automatiques</div>
+
+  <div class="fin-seuil-row">
+    <div class="fin-seuil-ico" style="background:#FFF4EA;"><i class="bi bi-clock-history" style="color:#E87722;"></i></div>
+    <div class="fin-seuil-info">
+      <div class="fin-seuil-label">Alerte facture impayée après</div>
+      <div class="fin-seuil-desc">Déclenche la bannière d'alerte orange sur le dashboard</div>
+    </div>
+    <div class="fin-seuil-val">
+      <input type="number" class="form-control form-control-sm text-center" value="30" style="width:70px;font-weight:700;">
+      <span style="font-size:.76rem;color:#64748b;">jours</span>
+    </div>
+  </div>
+
+  <div class="fin-seuil-row">
+    <div class="fin-seuil-ico" style="background:#FFF4EA;"><i class="bi bi-exclamation-triangle-fill" style="color:#C85E0F;"></i></div>
+    <div class="fin-seuil-info">
+      <div class="fin-seuil-label">Alerte critique après</div>
+      <div class="fin-seuil-desc">Bannière rouge + indicateur CRITIQUE — risque recouvrement élevé</div>
+    </div>
+    <div class="fin-seuil-val">
+      <input type="number" class="form-control form-control-sm text-center" value="60" style="width:70px;font-weight:700;">
+      <span style="font-size:.76rem;color:#64748b;">jours</span>
+    </div>
+  </div>
+
+  <div class="fin-seuil-row">
+    <div class="fin-seuil-ico" style="background:#FFF4EA;"><i class="bi bi-bell" style="color:#E87722;"></i></div>
+    <div class="fin-seuil-info">
+      <div class="fin-seuil-label">Rappel avant échéance</div>
+      <div class="fin-seuil-desc">Email de rappel automatique envoyé N jours avant la date d'échéance</div>
+    </div>
+    <div class="fin-seuil-val">
+      <input type="number" class="form-control form-control-sm text-center" value="5" style="width:70px;font-weight:700;">
+      <span style="font-size:.76rem;color:#64748b;">jours</span>
+    </div>
+  </div>
+
+  <div class="fin-seuil-row">
+    <div class="fin-seuil-ico" style="background:#EBF0F7;"><i class="bi bi-heart-pulse-fill" style="color:#1a2c4e;"></i></div>
+    <div class="fin-seuil-info">
+      <div class="fin-seuil-label">Score santé financière — Seuil CRITIQUE</div>
+      <div class="fin-seuil-desc">Score en dessous de ce seuil → afficher alerte CRITIQUE sur le dashboard</div>
+    </div>
+    <div class="fin-seuil-val">
+      <input type="number" class="form-control form-control-sm text-center" value="40" style="width:70px;font-weight:700;">
+      <span style="font-size:.76rem;color:#64748b;">/ 100</span>
+    </div>
+  </div>
+
+  <div class="fin-seuil-row">
+    <div class="fin-seuil-ico" style="background:#EBF0F7;"><i class="bi bi-person-lines-fill" style="color:#1a2c4e;"></i></div>
+    <div class="fin-seuil-info">
+      <div class="fin-seuil-label">Limite crédit client automatique</div>
+      <div class="fin-seuil-desc">Alerte si l'encours client dépasse ce montant (0 = désactivé)</div>
+    </div>
+    <div class="fin-seuil-val">
+      <input type="number" class="form-control form-control-sm text-center" value="500000" style="width:100px;font-weight:700;">
+      <span style="font-size:.76rem;color:#64748b;">MAD</span>
+    </div>
+  </div>
+
+  <div class="mt-3 d-flex gap-2">
+    <button class="btn btn-sm" style="background:#1a2c4e;color:#fff;" onclick="saveSeuils()">
+      <i class="bi bi-save"></i> Enregistrer les seuils
+    </button>
+    <button class="btn btn-sm btn-outline-secondary" onclick="resetSeuils()">
+      <i class="bi bi-arrow-counterclockwise"></i> Valeurs par défaut
+    </button>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+function saveSeuils() {
+  var t = document.createElement('div');
+  t.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:9999;padding:12px 20px;border-radius:10px;font-weight:700;font-size:.88rem;color:#fff;background:#1a2c4e;box-shadow:0 4px 16px rgba(0,0,0,.2);';
+  t.textContent = '✓ Seuils d\'alerte enregistrés.';
+  document.body.appendChild(t);
+  setTimeout(function(){ t.style.opacity='0'; t.style.transition='.4s'; setTimeout(function(){ t.remove(); },400); }, 3000);
+}
+function resetSeuils() {
+  var inputs = document.querySelectorAll('.fin-seuil-val input');
+  var defaults = [30, 60, 5, 40, 500000];
+  inputs.forEach(function(inp, i){ if (defaults[i] !== undefined) inp.value = defaults[i]; });
+}
+</script>
+{% endblock %}

@@ -44,9 +44,29 @@
     box-shadow: 0 1px 4px rgba(0,0,0,0.07);
   }
   .filter-label { font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 5px; display: block; }
+  .filter-col {
+    min-width: 180px;
+  }
+  .filter-col-year {
+    min-width: 150px;
+  }
+  .filters-actions {
+    margin-left: 0;
+    display: flex;
+    gap: 8px;
+    align-items: end;
+    flex-wrap: wrap;
+    width: 100%;
+    justify-content: flex-end;
+  }
   .filters-card .form-control,
   .filters-card .form-select {
     font-size: 13px; border-color: #d1d5db; border-radius: 7px; padding: 7px 10px;
+    min-width: 100%;
+  }
+  .filters-card .form-select {
+    padding-right: 2.25rem;
+    background-position: right 0.75rem center;
   }
   .filters-card .form-control:focus,
   .filters-card .form-select:focus {
@@ -65,6 +85,17 @@
     text-decoration: none; display: inline-flex; align-items: center; gap: 6px;
   }
   .btn-reset:hover { background: #e5e7eb; }
+  .filter-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    border-radius: 99px;
+    padding: 3px 12px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .tag-green { background:#f0fdf4; color:#14532d; border:1px solid #bbf7d0; }
+  .tag-blue  { background:#eff6ff; color:#1e3a8a; border:1px solid #bfdbfe; }
 
   /* Charts */
   .charts-grid {
@@ -114,14 +145,134 @@
     height: 100%; border-radius: 99px;
     background: linear-gradient(90deg, #1a2c4e, #E87722);
   }
+
+  .bilan-shell {
+    background: linear-gradient(180deg, #f7f9fc 0%, #f3f5f9 100%);
+    border-radius: 18px;
+    padding: 18px;
+  }
+  .hero-bilan {
+    background: linear-gradient(130deg, #1a2c4e 0%, #233b69 48%, #E87722 100%);
+    border-radius: 16px;
+    color: #fff;
+    padding: 22px 24px;
+    margin-bottom: 18px;
+    box-shadow: 0 14px 34px rgba(26, 44, 78, 0.24);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+  }
+  .hero-bilan h1 {
+    margin: 0;
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: 0.2px;
+  }
+  .hero-sub {
+    margin-top: 6px;
+    color: rgba(255, 255, 255, 0.88);
+    font-size: 13px;
+  }
+  .hero-meta {
+    text-align: right;
+    min-width: 230px;
+  }
+  .hero-meta .date-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.26);
+    background: rgba(255, 255, 255, 0.11);
+    border-radius: 999px;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .hero-meta .hero-kicker {
+    margin-top: 10px;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.86);
+  }
+  .exec-strip {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+  .exec-chip {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 12px 14px;
+    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.05);
+  }
+  .exec-chip .label {
+    font-size: 11px;
+    color: #6b7280;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.45px;
+  }
+  .exec-chip .value {
+    margin-top: 3px;
+    font-size: 18px;
+    font-weight: 800;
+    color: #1a2c4e;
+  }
+  @media (max-width: 992px) {
+    .hero-bilan { flex-direction: column; align-items: flex-start; }
+    .hero-meta { text-align: left; min-width: auto; }
+    .exec-strip { grid-template-columns: 1fr; }
+    .filter-col,
+    .filter-col-year {
+      min-width: 100%;
+    }
+    .filters-actions {
+      margin-left: 0;
+      width: 100%;
+      justify-content: flex-start;
+    }
+    .btn-filtrer,
+    .btn-reset {
+      white-space: nowrap;
+    }
+  }
 </style>
 {% endblock %}
 
 {% block content %}
 
-<div class="d-flex align-items-center justify-content-between mb-4">
-  <span class="page-title mb-0" style="margin-bottom:0!important;">Bilan gasoil</span>
-</div>
+<div class="bilan-shell">
+  <section class="hero-bilan">
+    <div>
+      <h1>Bilan Gasoil — Executive Dashboard</h1>
+      <div class="hero-sub">Pilotage entreprise: consommation, stock, coûts et performance opérationnelle</div>
+    </div>
+    <div class="hero-meta">
+      <div class="date-pill"><i class="bi bi-calendar3"></i> {% now "d/m/Y" %}</div>
+      <div class="hero-kicker">SOMATRIN • Analyse consolidée multi-sites</div>
+    </div>
+  </section>
+
+  <div class="exec-strip">
+    <div class="exec-chip">
+      <div class="label">Santé du Stock</div>
+      <div class="value" style="color:{% if stock_estime < 0 %}#dc2626{% else %}#16a34a{% endif %};">
+        {% if stock_estime < 0 %}Déficit{% else %}Stable{% endif %}
+      </div>
+    </div>
+    <div class="exec-chip">
+      <div class="label">Niveau d'Alerte</div>
+      <div class="value" style="color:{% if nb_anomalies > 0 %}#dc2626{% else %}#1a2c4e{% endif %};">
+        {% if nb_anomalies > 0 %}{{ nb_anomalies|num_plain:0 }} anomalie(s){% else %}Aucune anomalie{% endif %}
+      </div>
+    </div>
+    <div class="exec-chip">
+      <div class="label">Engins Actifs</div>
+      <div class="value">{{ nb_equipements_actifs|num_plain:0 }} unités</div>
+    </div>
+  </div>
 
 {% if error %}
 <div class="alert-odoo">
@@ -135,9 +286,9 @@
   <form method="GET">
     <div class="row g-3 align-items-end">
 
-      <div class="col-auto">
+      <div class="col-auto filter-col-year">
         <label class="filter-label"><i class="bi bi-calendar3 me-1"></i>Année</label>
-        <select name="annee" class="form-select" style="min-width:120px;">
+        <select name="annee" class="form-select">
           <option value="">Toutes les années</option>
           {% for y in annees_list %}
             <option value="{{ y }}" {% if annee == y %}selected{% endif %}>{{ y }}</option>
@@ -145,7 +296,17 @@
         </select>
       </div>
 
-      <div class="col-auto">
+      <div class="col-auto filter-col-year">
+        <label class="filter-label"><i class="bi bi-calendar-month me-1"></i>Mois</label>
+        <select name="mois" class="form-select">
+          <option value="">Tous les mois</option>
+          {% for mval, mlabel in mois_list %}
+            <option value="{{ mval }}" {% if mois == mval %}selected{% endif %}>{{ mlabel }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-auto filter-col">
         <label class="filter-label"><i class="bi bi-geo-alt me-1"></i>Site</label>
         <select name="site" class="form-select">
           <option value="">Tous les sites</option>
@@ -155,7 +316,25 @@
         </select>
       </div>
 
-      <div class="col-auto ms-auto d-flex gap-2 align-items-end">
+      <div class="col-auto filter-col">
+        <label class="filter-label"><i class="bi bi-lightning-charge me-1"></i>Activité</label>
+        <select name="activite_filtre" class="form-select">
+          <option value="">Toutes les activités</option>
+          <option value="transport" {% if activite_filtre == 'transport' %}selected{% endif %}>Transport & Logistique</option>
+          <option value="production" {% if activite_filtre == 'production' %}selected{% endif %}>Production</option>
+          <option value="voiture_service" {% if activite_filtre == 'voiture_service' %}selected{% endif %}>Voiture de service</option>
+        </select>
+      </div>
+
+      <div class="col-auto filter-col-year">
+        <label class="filter-label"><i class="bi bi-exclamation-triangle me-1"></i>Anomalies</label>
+        <select name="anomalie_seulement" class="form-select">
+          <option value="">Toutes</option>
+          <option value="1" {% if anomalie_seulement == '1' %}selected{% endif %}>Seulement anomalies</option>
+        </select>
+      </div>
+
+      <div class="col-12 filters-actions">
         <button type="submit" class="btn-filtrer">
           <i class="bi bi-search"></i>Calculer
         </button>
@@ -167,6 +346,38 @@
     </div>
   </form>
 </div>
+
+{% if annee or mois or site or activite_filtre or anomalie_seulement %}
+<div class="d-flex align-items-center gap-2 flex-wrap mb-3">
+  <span style="font-size:12px; color:#6b7280;">Filtres actifs :</span>
+  {% if annee %}<span class="filter-tag tag-blue"><i class="bi bi-calendar2"></i>Année : {{ annee }}</span>{% endif %}
+  {% if mois %}
+    {% for mval, mlabel in mois_list %}{% if mval == mois %}<span class="filter-tag tag-blue"><i class="bi bi-calendar-week"></i>{{ mlabel }}</span>{% endif %}{% endfor %}
+  {% endif %}
+  {% if site %}<span class="filter-tag tag-blue"><i class="bi bi-geo-alt"></i>{{ site }}</span>{% endif %}
+  {% if activite_filtre %}
+    <span class="filter-tag tag-blue"><i class="bi bi-lightning-charge"></i>
+      {% if activite_filtre == 'transport' %}Transport &amp; Logistique
+      {% elif activite_filtre == 'production' %}Production
+      {% elif activite_filtre == 'voiture_service' %}Voiture de service
+      {% endif %}
+    </span>
+  {% endif %}
+  {% if anomalie_seulement == '1' %}<span class="filter-tag tag-blue"><i class="bi bi-exclamation-triangle"></i>Anomalies uniquement</span>{% endif %}
+</div>
+{% endif %}
+
+<div class="mb-2" style="font-size:12px;color:#6b7280;">
+  Données filtrées : <strong style="color:#1a2c4e;">{{ filtred_rows_count|default:0 }}</strong> ligne(s)
+  {% if annee %} — année {{ annee }}{% endif %}
+  {% if mois %} / mois sélectionné{% endif %}
+</div>
+
+{% if no_data_for_filters %}
+<div class="alert alert-warning py-2 px-3 mb-3" style="font-size:12px;">
+  Aucun résultat pour ces filtres. Astuce : choisis d'abord une année, puis un mois proposé dans la liste (mois disponibles selon les données).
+</div>
+{% endif %}
 
 <!-- ══ KPI ══════════════════════════════ -->
 <div class="kpi-grid">
@@ -395,6 +606,7 @@
   </div>
 
 </div>
+</div>
 
 {% endblock %}
 
@@ -409,6 +621,39 @@ function fmtNoGroup(n) {
   return Number(n).toLocaleString('fr-FR', { maximumFractionDigits: 2 });
 }
 
+Chart.defaults.font.family = 'Inter, Segoe UI, Arial, sans-serif';
+Chart.defaults.plugins.legend.labels.usePointStyle = true;
+Chart.defaults.animation.duration = 900;
+
+function makeGradient(ctx, c1, c2) {
+  const g = ctx.createLinearGradient(0, 0, 0, 260);
+  g.addColorStop(0, c1);
+  g.addColorStop(1, c2);
+  return g;
+}
+
+const doughnutCenterText = {
+  id: 'doughnutCenterText',
+  afterDraw(chart, _args, options) {
+    if (!options || !options.enabled) return;
+    const meta = chart.getDatasetMeta(0);
+    if (!meta || !meta.data || !meta.data.length) return;
+    const { ctx } = chart;
+    const x = meta.data[0].x;
+    const y = meta.data[0].y;
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#6b7280';
+    ctx.font = '600 11px Inter, Segoe UI, Arial, sans-serif';
+    ctx.fillText(options.label || '', x, y - 2);
+    ctx.fillStyle = '#1a2c4e';
+    ctx.font = '800 15px Inter, Segoe UI, Arial, sans-serif';
+    ctx.fillText(options.value || '', x, y + 16);
+    ctx.restore();
+  }
+};
+Chart.register(doughnutCenterText);
+
 // ── Graphique barres mensuel ──────────────────
 const ctxBar = document.getElementById('chartMensuel').getContext('2d');
 new Chart(ctxBar, {
@@ -419,16 +664,28 @@ new Chart(ctxBar, {
       {
         label: 'Sorties (L)',
         data: {{ chart_sorties_data|safe }},
-        backgroundColor: ORANGE,
+        backgroundColor: makeGradient(ctxBar, '#f59e0b', ORANGE),
         borderRadius: 5,
         borderSkipped: false,
       },
       {
         label: 'Entrées (L)',
         data: {{ chart_entrees_data|safe }},
-        backgroundColor: GREEN,
+        backgroundColor: makeGradient(ctxBar, '#22c55e', '#15803d'),
         borderRadius: 5,
         borderSkipped: false,
+      },
+      {
+        type: 'line',
+        label: 'Delta Entrées - Sorties',
+        data: {{ chart_entrees_data|safe }}.map((v, i) => (v || 0) - ({{ chart_sorties_data|safe }}[i] || 0)),
+        borderColor: NAVY,
+        backgroundColor: 'rgba(26,44,78,0.14)',
+        borderWidth: 2,
+        tension: 0.32,
+        pointRadius: 3,
+        pointHoverRadius: 5,
+        yAxisID: 'y',
       },
     ]
   },
@@ -480,6 +737,11 @@ new Chart(ctxPie, {
     maintainAspectRatio: true,
     cutout: '62%',
     plugins: {
+      doughnutCenterText: {
+        enabled: true,
+        label: 'Total',
+        value: fmtNoGroup(siteValues.reduce((a, b) => a + (b || 0), 0)) + ' L'
+      },
       legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 12, padding: 12 } },
       tooltip: {
         callbacks: {
@@ -509,6 +771,7 @@ function fmtNoGroup2(n) {
 // ── Donut catégories ─────────────────────────
 const elCat = document.getElementById('chartCategories');
 if (elCat && catLabels.length) {
+  const catCtx = elCat.getContext('2d');
   new Chart(elCat.getContext('2d'), {
     type: 'doughnut',
     data: {
@@ -526,6 +789,11 @@ if (elCat && catLabels.length) {
       maintainAspectRatio: true,
       cutout: '60%',
       plugins: {
+        doughnutCenterText: {
+          enabled: true,
+          label: 'Catégories',
+          value: fmtNoGroup2(catValues.reduce((a, b) => a + (b || 0), 0)) + ' L'
+        },
         legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 12, padding: 10 } },
         tooltip: {
           ...tipStyle,
@@ -541,6 +809,8 @@ if (elCat && catLabels.length) {
 // ── Courbe hebdomadaire ───────────────────────
 const elPer = document.getElementById('chartPeriode');
 if (elPer && perLabels.length) {
+  const perCtx = elPer.getContext('2d');
+  const perGradient = makeGradient(perCtx, 'rgba(232,119,34,0.26)', 'rgba(232,119,34,0.03)');
   new Chart(elPer.getContext('2d'), {
     type: 'line',
     data: {
@@ -549,10 +819,12 @@ if (elPer && perLabels.length) {
         label: 'Consommation hebdo (L)',
         data: perValues,
         borderColor: '#E87722',
-        backgroundColor: 'rgba(232,119,34,0.10)',
-        borderWidth: 2,
-        pointRadius: 4,
+        backgroundColor: perGradient,
+        borderWidth: 2.5,
+        pointRadius: 3,
         pointBackgroundColor: '#E87722',
+        pointBorderColor: '#fff',
+        pointBorderWidth: 1.5,
         fill: true,
         tension: 0.35,
       }]
@@ -583,6 +855,7 @@ if (elPer && perLabels.length) {
 // ── Barres horizontales top bons ─────────────
 const elBon = document.getElementById('chartBons');
 if (elBon && bonLabels.length) {
+  const bonCtx = elBon.getContext('2d');
   new Chart(elBon.getContext('2d'), {
     type: 'bar',
     data: {
@@ -590,7 +863,7 @@ if (elBon && bonLabels.length) {
       datasets: [{
         label: 'Litres',
         data: bonValues,
-        backgroundColor: pal10.slice(0, bonLabels.length),
+        backgroundColor: bonValues.map((_v, i) => i % 2 === 0 ? makeGradient(bonCtx, '#233b69', '#1a2c4e') : makeGradient(bonCtx, '#f59e0b', '#E87722')),
         borderRadius: 4,
         borderSkipped: false,
       }]

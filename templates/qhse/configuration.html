@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Configuration QHSE — SOMATRIN{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'qhse/qhse.css' %}">
+{% endblock %}
+{% block breadcrumb %}
+<a href="{% url 'accueil' %}">Accueil</a>
+<i class="bi bi-chevron-right"></i>
+<span style="color:#1a2c4e; font-weight:600;">Configuration QHSE</span>
+{% endblock %}
+{% block content %}
+<div class="qhse-hero mb-3">
+  <div>
+    <div class="qhse-hero-title"><i class="bi bi-gear-fill me-2"></i>Configuration QHSE</div>
+    <div class="qhse-hero-sub">Préférences d’affichage (session navigateur — aucun mot de passe).</div>
+  </div>
+</div>
+{% if message %}
+<div class="alert alert-success border-0 shadow-sm">{{ message }}</div>
+{% endif %}
+<div class="card shadow-sm border-0">
+  <div class="card-body">
+    <p class="text-muted small">Connexion Odoo testée : <strong>{% if odoo_ok %}OK{% else %}Échec{% endif %}</strong></p>
+    <form method="post">
+      {% csrf_token %}
+      <div class="mb-3 form-check">
+        <input class="form-check-input" type="checkbox" name="compact" id="compact" {% if compact %}checked{% endif %}>
+        <label class="form-check-label" for="compact">Dashboard compact (masquer sections secondaires côté client)</label>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Site par défaut (filtre)</label>
+        <input type="text" name="default_site" class="form-control" value="{{ default_site }}" placeholder="Ex. YOUSSOUFIA">
+      </div>
+      <button type="submit" class="btn btn-primary" style="background:#1a2c4e;border:none;">Enregistrer</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

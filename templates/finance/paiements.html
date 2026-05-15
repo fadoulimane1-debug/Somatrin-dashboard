@@ -1,0 +1,209 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Finance — Paiements{% endblock %}
+{% block breadcrumb %}
+<a href="{% url 'accueil' %}">Accueil</a><i class="bi bi-chevron-right"></i>
+<a href="{% url 'finance_dashboard' %}">Finance</a><i class="bi bi-chevron-right"></i>
+<span style="color:#1a2c4e;font-weight:600;">Paiements</span>
+{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/finance.css' %}">{% endblock %}
+{% block content %}
+
+<section class="fin-hero">
+  <div>
+    <small style="opacity:.55;letter-spacing:1.4px;font-size:.75rem;text-transform:uppercase;">Finance · Paiements</small>
+    <h1 class="mt-1">Paiements</h1>
+    <p>{{ rows|length }} paiement{% if rows|length != 1 %}s{% endif %} · Total : {{ kpi_total|floatformat:"0" }} MAD</p>
+  </div>
+  <div class="fin-hero-right">
+    <div class="fin-hero-icon"><i class="bi bi-credit-card"></i></div>
+  </div>
+</section>
+
+{% if error %}<div class="alert alert-danger mb-3">{{ error }}</div>{% endif %}
+{% if not error and kpi_recu == 0 and kpi_effectue > 0 %}
+<div class="fin-alert fin-alert-orange mb-2">
+  <i class="bi bi-info-circle"></i>
+  <span>Aucun encaissement client dans le périmètre affiché{% if kpi_has_filters %} (filtres actifs){% endif %}.</span>
+  <a href="{% url 'finance_paiements' %}" class="ms-auto btn btn-sm btn-outline-secondary">Réinitialiser</a>
+</div>
+{% endif %}
+
+<!-- KPI -->
+<div class="fin-kpi-row-3 mb-3">
+  <div>
+    <div class="fin-kpi" style="border-top-color:#1a2c4e;">
+      <div class="fl">Volume total</div>
+      <div class="fv">{{ kpi_total|floatformat:"0" }} <small style="font-size:14px;font-weight:600;">MAD</small></div>
+    </div>
+  </div>
+  <div>
+    <div class="fin-kpi">
+      <div class="fl">Paiements reçus</div>
+      <div class="fv">{{ kpi_recu|floatformat:"0" }} <small style="font-size:14px;font-weight:600;">MAD</small></div>
+      <div class="fs">Encaissements clients · {{ kpi_recu_count }} opération(s)</div>
+    </div>
+  </div>
+  <div>
+    <div class="fin-kpi">
+      <div class="fl">Paiements effectués</div>
+      <div class="fv">{{ kpi_effectue|floatformat:"0" }} <small style="font-size:14px;font-weight:600;">MAD</small></div>
+      <div class="fs">Décaissements fournisseurs · {{ kpi_effectue_count }} opération(s)</div>
+    </div>
+  </div>
+</div>
+
+<!-- Filtres -->
+<form method="get" class="fin-fbar mb-2">
+  <div style="flex:2;min-width:160px;">
+    <span class="fin-flabel">Recherche</span>
+    <input type="text" name="q" class="form-control" placeholder="N° paiement, partenaire..." value="{{ q }}">
+  </div>
+  <div style="min-width:120px;">
+    <span class="fin-flabel">Date de</span>
+    <input type="date" name="date_from" class="form-control" value="{{ date_from }}">
+  </div>
+  <div style="min-width:120px;">
+    <span class="fin-flabel">Date à</span>
+    <input type="date" name="date_to" class="form-control" value="{{ date_to }}">
+  </div>
+  <div style="min-width:150px;">
+    <span class="fin-flabel">Type</span>
+    <select name="payment_type" class="form-select">
+      <option value="">Tous</option>
+      <option value="inbound"  {% if payment_type == 'inbound'  %}selected{% endif %}>Reçu (clients)</option>
+      <option value="outbound" {% if payment_type == 'outbound' %}selected{% endif %}>Envoyé (fournisseurs)</option>
+    </select>
+  </div>
+  <div style="min-width:140px;">
+    <span class="fin-flabel">Mode paiement</span>
+    <input type="text" name="payment_method" class="form-control" placeholder="Chèque, Virement..." value="{{ payment_method }}">
+  </div>
+  <div style="min-width:150px;">
+    <span class="fin-flabel">Rapprochement</span>
+    <select name="rapprochement" class="form-select">
+      <option value="">Tous</option>
+      <option value="oui"   {% if rapprochement == 'oui' %}selected{% endif %}>✅ Rapproché</option>
+      <option value="attente" {% if rapprochement == 'attente' %}selected{% endif %}>⏳ En attente</option>
+      <option value="disc" {% if rapprochement == 'disc' %}selected{% endif %}>⚠️ Discrepancy</option>
+    </select>
+  </div>
+  <div>
+    <span class="fin-flabel">&nbsp;</span>
+    <div style="display:flex;gap:6px;">
+      <button type="submit" class="btn btn-sm" style="background:#1a2c4e;color:#fff;height:34px;font-size:.82rem;">
+        <i class="bi bi-funnel"></i> Filtrer
+      </button>
+      <a href="{% url 'finance_paiements' %}" class="btn btn-sm btn-outline-secondary" style="height:34px;font-size:.82rem;">Reset</a>
+    </div>
+  </div>
+</form>
+
+<!-- Table -->
+<div class="fin-tbl-wrap mb-2">
+  <table class="fin-tbl" id="tbl1">
+    <thead>
+      <tr>
+        <th>N° Paiement</th>
+        <th>Date</th>
+        <th>Partenaire</th>
+        <th style="text-align:right">Montant</th>
+        <th>Mode paiement</th>
+        <th>Journal</th>
+        <th style="text-align:center">Type</th>
+        <th style="text-align:center">Rapproché</th>
+        <th style="text-align:center">État</th>
+        <th>Réf.</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in rows %}
+      <tr data-row>
+        <td style="font-weight:700;font-size:.82rem;color:#1a2c4e;">{{ r.name }}</td>
+        <td style="font-size:.82rem;color:#64748b;">{{ r.date }}</td>
+        <td style="font-size:.82rem;">{{ r.partner }}</td>
+        <td style="text-align:right;font-weight:800;font-size:.85rem;color:{% if r.payment_type == 'inbound' %}#1a2c4e{% else %}#E87722{% endif %};">
+          {{ r.amount|floatformat:"2" }}
+        </td>
+        <td>
+          <span style="background:#f1f5f9;color:#334155;border-radius:5px;padding:2px 8px;font-size:.75rem;font-weight:600;">
+            {{ r.payment_method }}
+          </span>
+        </td>
+        <td style="font-size:.82rem;color:#64748b;">{{ r.journal }}</td>
+        <td style="text-align:center;">
+          {% if r.payment_type == 'inbound' %}
+            <span class="badge-fin bf-in"><i class="bi bi-arrow-down-circle"></i> Reçu</span>
+          {% else %}
+            <span class="badge-fin bf-out"><i class="bi bi-arrow-up-circle"></i> Envoyé</span>
+          {% endif %}
+        </td>
+        <td style="text-align:center;">
+          {% if r.state == 'posted' %}
+            <span class="rappro-badge rp-ok">✅ Rapproché</span>
+          {% elif r.state == 'draft' %}
+            <span class="rappro-badge rp-pending">⏳ En attente</span>
+          {% else %}
+            <span class="rappro-badge rp-disc">⚠️ Discrepancy</span>
+          {% endif %}
+        </td>
+        <td style="text-align:center;">
+          {% if r.state == 'posted' %}<span class="badge-fin bf-posted">Validé</span>
+          {% elif r.state == 'draft'  %}<span class="badge-fin bf-draft">Brouillon</span>
+          {% elif r.state == 'cancel' %}<span class="badge-fin bf-cancel">Annulé</span>
+          {% else %}<span class="badge-fin bf-draft">{{ r.state_label }}</span>{% endif %}
+        </td>
+        <td style="font-size:.78rem;color:#94a3b8;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ r.ref }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="10" class="text-center text-muted py-5">Aucun paiement trouvé.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<div class="fin-count" id="cnt1"></div>
+<div class="fin-pager" id="pgr1"></div>
+
+<div class="fin-export mb-4">
+  <span style="color:#888;font-size:.82rem;">Exporter :</span>
+  <a href="{% url 'finance_paiements_pdf' %}" class="btn btn-sm" style="background:#FFF4EA;color:#C85E0F;border:1px solid #F5A860;">
+    <i class="bi bi-file-earmark-pdf"></i> PDF
+  </a>
+  <a href="{% url 'finance_paiements_excel' %}" class="btn btn-sm" style="background:#1a2c4e;color:#fff;">
+    <i class="bi bi-file-earmark-excel"></i> Excel
+  </a>
+</div>
+
+<!-- Charts -->
+<div class="row g-3">
+  <div class="col-lg-8">
+    <div class="fin-chart-box">
+      <div class="fin-chart-title"><i class="bi bi-graph-up-arrow" style="color:#1a2c4e;"></i> Paiements reçus vs effectués — 12 mois</div>
+      <div class="fin-chart-wrap"><canvas id="chartMois"></canvas></div>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="fin-chart-box">
+      <div class="fin-chart-title"><i class="bi bi-pie-chart-fill" style="color:#E87722;"></i> Répartition modes de paiement</div>
+      <div class="fin-chart-wrap"><canvas id="chartMode"></canvas></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="{% static 'js/finance.js' %}"></script>
+<script>
+(function(){
+  var d = {{ chart_mois_json|safe }};
+  if (d && d.labels && d.labels.length) {
+    finBarMulti('chartMois', [
+      { label: 'Reçus',     data: d.recus,     backgroundColor: '#1a2c4e', borderRadius: 5 },
+      { label: 'Effectués', data: d.effectues, backgroundColor: '#E87722', borderRadius: 5 },
+    ], d.labels, null);
+  }
+})();
+finPie('chartMode', {{ chart_mode_json|safe }});
+setupFinFilter({ tableId:'tbl1', pagerEl:'pgr1', countEl:'cnt1', pageSize:50 });
+</script>
+{% endblock %}

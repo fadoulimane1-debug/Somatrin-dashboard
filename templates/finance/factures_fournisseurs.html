@@ -1,0 +1,191 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Finance — Factures fournisseurs{% endblock %}
+{% block breadcrumb %}
+<a href="{% url 'accueil' %}">Accueil</a><i class="bi bi-chevron-right"></i>
+<a href="{% url 'finance_dashboard' %}">Finance</a><i class="bi bi-chevron-right"></i>
+<span style="color:#1a2c4e;font-weight:600;">Factures fournisseurs</span>
+{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/finance.css' %}">{% endblock %}
+{% block content %}
+
+<section class="fin-hero">
+  <div>
+    <small style="opacity:.55;letter-spacing:1.4px;font-size:.75rem;text-transform:uppercase;">Finance · Achats</small>
+    <h1 class="mt-1">Factures fournisseurs</h1>
+    <p>{{ kpi_total }} facture{% if kpi_total != 1 %}s{% endif %} · HT : {{ kpi_ht|floatformat:"0" }} MAD · TTC : {{ kpi_ttc|floatformat:"0" }} MAD</p>
+  </div>
+  <div class="fin-hero-right">
+    <div class="fin-hero-icon"><i class="bi bi-receipt-cutoff"></i></div>
+  </div>
+</section>
+
+{% if error %}<div class="alert alert-danger mb-3">{{ error }}</div>{% endif %}
+
+<!-- KPI -->
+<div class="row g-3 mb-3 fin-kpi-uniform">
+  <div class="col-lg-3 col-md-6">
+    <div class="fin-kpi" style="border-top-color:#1a2c4e;">
+      <div class="fl">Total factures</div><div class="fv">{{ kpi_total }}</div>
+    </div>
+  </div>
+  <div class="col-lg-3 col-md-6">
+    <div class="fin-kpi" style="border-top-color:#E87722;">
+      <div class="fl">Total HT</div><div class="fv" style="color:#E87722;">{{ kpi_ht|floatformat:"0" }}</div>
+      <div class="fs">MAD</div>
+    </div>
+  </div>
+  <div class="col-lg-3 col-md-6">
+    <div class="fin-kpi">
+      <div class="fl">Total TTC</div><div class="fv">{{ kpi_ttc|floatformat:"0" }}</div>
+      <div class="fs">MAD</div>
+    </div>
+  </div>
+  <div class="col-lg-3 col-md-6">
+    <div class="fin-kpi">
+      <div class="fl">Reste à payer</div><div class="fv">{{ kpi_impaye|floatformat:"0" }}</div>
+      <div class="fs">MAD dû aux fournisseurs</div>
+    </div>
+  </div>
+</div>
+
+<!-- Filtres -->
+<form method="get" class="fin-fbar mb-2">
+  <div style="flex:2;min-width:160px;">
+    <span class="fin-flabel">Recherche</span>
+    <input type="text" name="q" class="form-control" placeholder="N° facture, fournisseur..." value="{{ q }}">
+  </div>
+  <div style="min-width:120px;">
+    <span class="fin-flabel">Date de</span>
+    <input type="date" name="date_from" class="form-control" value="{{ date_from }}">
+  </div>
+  <div style="min-width:120px;">
+    <span class="fin-flabel">Date à</span>
+    <input type="date" name="date_to" class="form-control" value="{{ date_to }}">
+  </div>
+  <div style="min-width:160px;">
+    <span class="fin-flabel">État paiement</span>
+    <select name="payment_state" class="form-select">
+      <option value="">Tous</option>
+      <option value="paid" {% if payment_state == 'paid' %}selected{% endif %}>Payée</option>
+      <option value="partial" {% if payment_state == 'partial' %}selected{% endif %}>Partielle</option>
+      <option value="not_paid" {% if payment_state == 'not_paid' %}selected{% endif %}>Impayée</option>
+    </select>
+  </div>
+  <div style="min-width:100px;">
+    <span class="fin-flabel">Min (MAD)</span>
+    <input type="number" name="amount_min" class="form-control" placeholder="0" value="{{ amount_min }}">
+  </div>
+  <div style="min-width:100px;">
+    <span class="fin-flabel">Max (MAD)</span>
+    <input type="number" name="amount_max" class="form-control" value="{{ amount_max }}">
+  </div>
+  <div>
+    <span class="fin-flabel">&nbsp;</span>
+    <div style="display:flex;gap:6px;">
+      <button type="submit" class="btn btn-sm" style="background:#E87722;color:#fff;height:34px;font-size:.82rem;">
+        <i class="bi bi-funnel"></i> Filtrer
+      </button>
+      <a href="{% url 'finance_factures_fournisseurs' %}" class="btn btn-sm btn-outline-secondary" style="height:34px;font-size:.82rem;">Reset</a>
+    </div>
+  </div>
+</form>
+
+<!-- Table -->
+<div class="fin-tbl-wrap mb-2">
+  <table class="fin-tbl" id="tbl1">
+    <thead>
+      <tr>
+        <th>N° Facture</th>
+        <th>Fournisseur</th>
+        <th>Date</th>
+        <th>Échéance</th>
+        <th style="text-align:right">Montant HT</th>
+        <th style="text-align:right">Montant TTC</th>
+        <th style="text-align:right">Payé</th>
+        <th style="text-align:right">Reste</th>
+        <th style="text-align:center">Paiement</th>
+        <th style="text-align:center">Statut</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in rows %}
+      <tr data-row class="{% if r.is_overdue %}row-overdue{% elif r.payment_state == 'paid' %}row-paid{% endif %}">
+        <td style="font-weight:700;font-size:.82rem;">
+          <a href="{% url 'finance_facture_detail' r.id %}" style="color:#E87722;text-decoration:none;">{{ r.name }}</a>
+        </td>
+        <td style="font-size:.82rem;">{{ r.partner }}</td>
+        <td style="font-size:.82rem;color:#64748b;">{{ r.date }}</td>
+        <td style="font-size:.82rem;{% if r.is_overdue %}color:#C85E0F;font-weight:700;{% else %}color:#64748b;{% endif %}">
+          {{ r.date_due }}{% if r.is_overdue %} <i class="bi bi-clock-history"></i>{% endif %}
+        </td>
+        <td style="text-align:right;font-size:.83rem;">{{ r.amount_ht|floatformat:"0" }}</td>
+        <td style="text-align:right;font-weight:700;font-size:.83rem;">{{ r.amount_ttc|floatformat:"0" }}</td>
+        <td style="text-align:right;color:#1a2c4e;font-size:.83rem;">{{ r.amount_paid|floatformat:"0" }}</td>
+        <td style="text-align:right;color:{% if r.amount_residual > 0 %}#E87722{% else %}#94a3b8{% endif %};font-size:.83rem;font-weight:{% if r.amount_residual > 0 %}700{% else %}400{% endif %};">
+          {{ r.amount_residual|floatformat:"0" }}
+        </td>
+        <td style="text-align:center;">
+          {% if r.payment_state == 'paid' %}
+            <span class="badge-fin bf-paid">Payée</span>
+          {% elif r.payment_state == 'partial' %}
+            <span class="badge-fin bf-partial">Partielle</span>
+          {% elif r.is_overdue %}
+            <span class="badge-fin bf-overdue">Retard {{ r.days_overdue }}j</span>
+          {% else %}
+            <span class="badge-fin bf-unpaid">Impayée</span>
+          {% endif %}
+        </td>
+        <td style="text-align:center;">
+          {% if r.state == 'posted' %}<span class="badge-fin bf-posted">Validée</span>
+          {% elif r.state == 'draft' %}<span class="badge-fin bf-draft">Brouillon</span>
+          {% else %}<span class="badge-fin bf-cancel">{{ r.state }}</span>{% endif %}
+        </td>
+        <td>
+          <a href="{% url 'finance_facture_detail' r.id %}" class="btn btn-sm btn-outline-secondary" style="font-size:.72rem;padding:2px 7px;"><i class="bi bi-eye"></i></a>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="11" class="text-center text-muted py-5">Aucune facture fournisseur trouvée.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<div class="fin-count" id="cnt1"></div>
+<div class="fin-pager" id="pgr1"></div>
+
+<div class="fin-export mb-4">
+  <span style="color:#888;font-size:.82rem;">Exporter :</span>
+  <a href="{% url 'finance_factures_fournisseurs_pdf' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-sm" style="background:#FFF4EA;color:#C85E0F;border:1px solid #F5A860;">
+    <i class="bi bi-file-earmark-pdf"></i> PDF
+  </a>
+  <a href="{% url 'finance_factures_fournisseurs_excel' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-sm" style="background:#1a2c4e;color:#fff;">
+    <i class="bi bi-file-earmark-excel"></i> Excel
+  </a>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-6">
+    <div class="fin-chart-box">
+      <div class="fin-chart-title"><i class="bi bi-bar-chart-fill" style="color:#E87722;"></i> Top 10 fournisseurs (achats HT)</div>
+      <div class="fin-chart-wrap"><canvas id="chartTop"></canvas></div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="fin-chart-box">
+      <div class="fin-chart-title"><i class="bi bi-graph-up" style="color:#1a2c4e;"></i> Factures par mois (12 derniers)</div>
+      <div class="fin-chart-wrap"><canvas id="chartMois"></canvas></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="{% static 'js/finance.js' %}"></script>
+<script>
+finBar('chartTop',   {{ chart_top_json|safe }},   null, '#E87722', true);
+finLine('chartMois', {{ chart_month_json|safe }},  null, '#1a2c4e');
+setupFinFilter({ tableId:'tbl1', pagerEl:'pgr1', countEl:'cnt1', pageSize:50 });
+</script>
+{% endblock %}

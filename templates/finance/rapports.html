@@ -1,0 +1,182 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Finance — Rapports & Analyses{% endblock %}
+{% block breadcrumb %}
+<a href="{% url 'accueil' %}">Accueil</a><i class="bi bi-chevron-right"></i>
+<a href="{% url 'finance_dashboard' %}">Finance</a><i class="bi bi-chevron-right"></i>
+<span style="color:#1a2c4e;font-weight:600;">Rapports & Analyses</span>
+{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/finance.css' %}">{% endblock %}
+{% block content %}
+<div class="fin-reports-page">
+<section class="fin-hero">
+  <div>
+    <small style="opacity:.55;letter-spacing:1.4px;font-size:.75rem;text-transform:uppercase;">Finance · Reporting</small>
+    <h1 class="mt-1">Rapports & Analyses</h1>
+    <p>Cash flow, impayés clients, dettes fournisseurs et analyses Top 10</p>
+  </div>
+  <div class="fin-hero-right"><div class="fin-hero-icon"><i class="bi bi-bar-chart-line"></i></div></div>
+</section>
+
+{% if error %}<div class="alert alert-danger mb-3">{{ error }}</div>{% endif %}
+
+<div class="row g-3 mb-3 fin-kpi-uniform">
+  <div class="col-lg-3 col-md-6"><div class="fin-kpi"><div class="fl">Factures impayées</div><div class="fv">{{ nb_overdue }}</div><div class="fs">{{ mt_overdue|floatformat:"0" }} MAD</div></div></div>
+  <div class="col-lg-3 col-md-6"><div class="fin-kpi"><div class="fl">Dettes fournisseurs</div><div class="fv">{{ nb_dettes }}</div><div class="fs">{{ mt_dettes|floatformat:"0" }} MAD</div></div></div>
+  <div class="col-lg-3 col-md-6"><div class="fin-kpi"><div class="fl">Encaissements</div><div class="fv">{{ kpis.encaiss|default:0|floatformat:"0" }}</div><div class="fs">MAD</div></div></div>
+  <div class="col-lg-3 col-md-6"><div class="fin-kpi"><div class="fl">Décaissements</div><div class="fv">{{ kpis.decaiss|default:0|floatformat:"0" }}</div><div class="fs">MAD</div></div></div>
+</div>
+
+{% if has_cash_flow %}
+<div class="row g-3 mb-3">
+  <div class="col-lg-12">
+    <div class="fin-chart-box">
+      <div class="fin-chart-title">Cash Flow mensuel (flux net)</div>
+      <div class="fin-chart-wrap soft-bg"><canvas id="chartCF"></canvas></div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Section factures impayées enrichie -->
+<div class="row g-3">
+  {% if has_overdue_table %}
+  <div class="{% if has_top_impayes_chart or has_dettes_table %}col-lg-7{% else %}col-lg-12{% endif %}" id="impayees">
+    <div class="fin-chart-box">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <div class="fin-chart-title" style="margin-bottom:0;">
+          <i class="bi bi-exclamation-triangle-fill" style="color:#E87722;"></i>
+          Factures clients impayées ({{ nb_overdue }})
+        </div>
+        <button class="btn btn-sm" style="background:#E87722;color:#fff;" onclick="sendRelanceMassive()">
+          <i class="bi bi-envelope-fill"></i> Relance massive
+        </button>
+      </div>
+      <div class="fin-tbl-wrap" style="max-height:380px;">
+        <table class="fin-tbl">
+          <thead>
+            <tr>
+              <th>N°</th>
+              <th>Client</th>
+              <th>Échéance</th>
+              <th style="text-align:center">Jours retard</th>
+              <th style="text-align:right">Reste (MAD)</th>
+              <th style="text-align:center">Risque</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in overdue_rows %}
+            <tr class="row-overdue">
+              <td style="font-size:.81rem;font-weight:700;">{{ r.name }}</td>
+              <td style="font-size:.81rem;">{{ r.partner }}</td>
+              <td style="font-size:.81rem;color:#64748b;">{{ r.date_due }}</td>
+              <td style="text-align:center;">
+                {% if r.days_overdue > 60 %}
+                  <span class="jours-retard jr-dark">+{{ r.days_overdue }}j</span>
+                {% elif r.days_overdue > 30 %}
+                  <span class="jours-retard jr-red">+{{ r.days_overdue }}j</span>
+                {% else %}
+                  <span class="jours-retard jr-orange">+{{ r.days_overdue }}j</span>
+                {% endif %}
+              </td>
+              <td style="text-align:right;font-weight:700;font-size:.83rem;color:#E87722;">{{ r.amount_residual|floatformat:"0" }}</td>
+              <td style="text-align:center;">
+                {% if r.days_overdue > 60 %}
+                  <span class="risque-badge rb-eleve">🔴 Élevé</span>
+                {% elif r.days_overdue > 30 %}
+                  <span class="risque-badge rb-moyen">🟡 Moyen</span>
+                {% else %}
+                  <span class="risque-badge rb-faible">🟢 Faible</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6" class="text-center text-muted py-4">Aucun impayé.</td></tr>
+            {% endfor %}
+          </tbody>
+          {% if overdue_rows %}
+          <tfoot>
+            <tr style="background:#FFF4EA;">
+              <td colspan="4" style="font-weight:700;font-size:.82rem;padding:8px 12px;">TOTAL IMPAYÉ</td>
+              <td style="text-align:right;font-weight:900;font-size:.88rem;color:#C85E0F;padding:8px 12px;">{{ mt_overdue|floatformat:"0" }} MAD</td>
+              <td></td>
+            </tr>
+          </tfoot>
+          {% endif %}
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+  {% if has_top_impayes_chart or has_dettes_table %}
+  <div class="{% if has_overdue_table %}col-lg-5{% else %}col-lg-12{% endif %}">
+    {% if has_top_impayes_chart %}
+    <div class="fin-chart-box">
+      <div class="fin-chart-title"><i class="bi bi-bar-chart-fill" style="color:#E87722;"></i> Top 10 clients impayés</div>
+      <div class="fin-chart-wrap soft-bg" style="height:220px;"><canvas id="chartTopImpaye"></canvas></div>
+    </div>
+    {% endif %}
+    {% if has_dettes_table %}
+    <div class="fin-chart-box {% if has_top_impayes_chart %}mt-3{% endif %}">
+      <div class="fin-chart-title"><i class="bi bi-building" style="color:#E87722;"></i> Dettes fournisseurs à payer</div>
+      <div class="fin-tbl-wrap" style="max-height:180px;">
+        <table class="fin-tbl">
+          <thead><tr><th>N°</th><th>Fournisseur</th><th>Échéance</th><th style="text-align:right">Reste</th></tr></thead>
+          <tbody>
+            {% for r in dettes_rows %}
+            <tr><td style="font-size:.81rem;font-weight:700;">{{ r.name }}</td><td style="font-size:.81rem;">{{ r.partner }}</td><td style="font-size:.81rem;color:#64748b;">{{ r.date_due }}</td><td style="text-align:right;font-weight:700;font-size:.83rem;">{{ r.amount_residual|floatformat:"0" }}</td></tr>
+            {% empty %}
+            <tr><td colspan="4" class="text-center text-muted py-4">Aucune dette.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+
+{% if has_top_clients or has_top_fournisseurs %}
+<div class="row g-3 mt-1">
+  {% if has_top_clients %}
+  <div class="col-lg-6">
+    <div class="fin-chart-box">
+      <div class="fin-chart-title">Top 10 clients (CA)</div>
+      <div class="fin-tbl-wrap"><table class="fin-tbl"><thead><tr><th>Client</th><th style="text-align:right">Montant HT</th></tr></thead><tbody>{% for n,v in top_clients %}<tr><td>{{ n }}</td><td style="text-align:right">{{ v|floatformat:"0" }}</td></tr>{% empty %}<tr><td colspan="2" class="text-center text-muted py-4">Aucune donnée.</td></tr>{% endfor %}</tbody></table></div>
+    </div>
+  </div>
+  {% endif %}
+  {% if has_top_fournisseurs %}
+  <div class="{% if has_top_clients %}col-lg-6{% else %}col-lg-12{% endif %}">
+    <div class="fin-chart-box">
+      <div class="fin-chart-title">Top 10 fournisseurs (achats)</div>
+      <div class="fin-tbl-wrap"><table class="fin-tbl"><thead><tr><th>Fournisseur</th><th style="text-align:right">Montant HT</th></tr></thead><tbody>{% for n,v in top_fournisseurs %}<tr><td>{{ n }}</td><td style="text-align:right">{{ v|floatformat:"0" }}</td></tr>{% empty %}<tr><td colspan="2" class="text-center text-muted py-4">Aucune donnée.</td></tr>{% endfor %}</tbody></table></div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+</div>
+{% endblock %}
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="{% static 'js/finance.js' %}"></script>
+<script>
+finLine('chartCF', {{ chart_cf_json|safe }}, null, '#1a2c4e');
+
+finBar('chartTopImpaye', {{ top_impayes_json|safe }}, null, '#E87722', true);
+
+function sendRelanceMassive() {
+  var nb = {{ nb_overdue|default:0 }};
+  if (nb === 0) { alert('Aucune facture impayée.'); return; }
+  if (confirm('Envoyer une relance groupée à ' + nb + ' client(s) avec factures impayées ?')) {
+    var t = document.createElement('div');
+    t.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:9999;padding:12px 20px;border-radius:10px;font-weight:700;font-size:.88rem;color:#fff;background:#E87722;box-shadow:0 4px 16px rgba(0,0,0,.2);';
+    t.textContent = 'Relance massive envoyée à ' + nb + ' client(s).';
+    document.body.appendChild(t);
+    setTimeout(function(){ t.style.opacity = '0'; t.style.transition = '.4s'; setTimeout(function(){ t.remove(); }, 400); }, 3500);
+  }
+}
+</script>
+{% endblock %}

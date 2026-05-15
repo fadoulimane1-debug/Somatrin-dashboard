@@ -1,0 +1,200 @@
+{% extends 'base.html' %}
+{% load static humanize %}
+
+{% block title %}Produits HSE — SOMATRIN{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/qhse.css' %}">
+{% endblock %}
+
+{% block breadcrumb %}
+<a href="{% url 'accueil' %}">Accueil</a>
+<i class="bi bi-chevron-right"></i>
+<a href="/qhse/dashboard/">QHSE</a>
+<i class="bi bi-chevron-right"></i>
+<span style="color:#1a2c4e;font-weight:600;">Produits HSE</span>
+{% endblock %}
+
+{% block content %}
+
+<!-- Page Header -->
+<div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+  <div>
+    <span class="page-title mb-0" style="margin-bottom:0!important;">Produits HSE</span>
+    <div style="font-size:13px;color:#6B7280;margin-top:2px;">
+      Catalogue des équipements de protection individuelle (EPI) et produits HSE dans Odoo
+    </div>
+    </div>
+</div>
+
+{% if error %}
+<div class="alert-odoo mb-3">
+  <i class="bi bi-exclamation-triangle-fill"></i>
+  <span>{{ error }} — Données de démonstration affichées.</span>
+</div>
+{% endif %}
+
+<!-- KPI Cards -->
+<div class="qhse-kpi-grid mb-3" style="grid-template-columns:repeat(4,1fr);">
+  <div class="qhse-kpi-card" style="border-top-color:#10B981;">
+    <div class="qhse-kpi-icon" style="background:#f0fdf4;color:#10B981;">
+      <i class="bi bi-shield-check"></i>
+    </div>
+    <div>
+      <div class="qhse-kpi-value" style="color:#10B981;">{{ kpi_total }}</div>
+      <div class="qhse-kpi-label">Produits HSE</div>
+    </div>
+  </div>
+  <div class="qhse-kpi-card" style="border-top-color:#3B82F6;">
+    <div class="qhse-kpi-icon" style="background:#eff6ff;color:#3B82F6;">
+      <i class="bi bi-box-seam-fill"></i>
+    </div>
+    <div>
+      <div class="qhse-kpi-value" style="color:#3B82F6;">{{ kpi_en_stock }}</div>
+      <div class="qhse-kpi-label">En stock</div>
+    </div>
+  </div>
+  <div class="qhse-kpi-card" style="border-top-color:#10B981;">
+    <div class="qhse-kpi-icon" style="background:#f0fdf4;color:#10B981;">
+      <i class="bi bi-cart-plus-fill"></i>
+    </div>
+    <div>
+      <div class="qhse-kpi-value" style="color:#10B981;">{{ kpi_achat }}</div>
+      <div class="qhse-kpi-label">Achetables</div>
+    </div>
+  </div>
+  <div class="qhse-kpi-card" style="border-top-color:#E87722;">
+    <div class="qhse-kpi-icon" style="background:#fff4e8;color:#E87722;">
+      <i class="bi bi-stack"></i>
+    </div>
+    <div>
+      <div class="qhse-kpi-value" style="color:#E87722;font-size:20px;">{{ kpi_stock_total }}</div>
+      <div class="qhse-kpi-label">Stock cumulé</div>
+    </div>
+  </div>
+</div>
+
+<div class="kpi-summary">
+  <strong>{{ kpi_total }}</strong> produits · <strong>{{ kpi_en_stock }}</strong> en stock · stock cumulé <strong>{{ kpi_stock_total }}</strong>
+</div>
+
+<!-- Filtres + Tableau -->
+<div class="qhse-table-section filters-section" style="border: 1.5px solid #d0d5dd !important;">
+  <form method="GET" id="filterForm">
+    <div class="qhse-filters-bar">
+      <!-- Type -->
+      <div>
+        <select name="statut" class="form-select form-select-sm" style="min-width:160px;font-size:13px;"
+                onchange="this.form.submit()">
+          <option value="all" {% if selected_statut == 'all' %}selected{% endif %}>Tous les types</option>
+          <option value="purchase" {% if selected_statut == 'purchase' %}selected{% endif %}>Achetables</option>
+          <option value="stock" {% if selected_statut == 'stock' %}selected{% endif %}>En stock</option>
+        </select>
+      </div>
+      <!-- Recherche -->
+      <div class="filter-search" style="min-width:220px;max-width:360px;">
+        <i class="bi bi-search"></i>
+        <input type="text" name="q" value="{{ search_term }}" id="produitsSearch"
+               placeholder="Code, produit, catégorie…" class="form-control search-somatrin">
+      </div>
+      <button type="submit" class="btn-export-pdf" style="padding:7px 16px;">
+        <i class="bi bi-funnel"></i> Filtrer
+      </button>
+      <div class="ms-auto">
+        <span class="filter-count"><span id="rowCount">{{ rows|length }}</span> produits</span>
+      </div>
+    </div>
+    <div class="somatrin-export-row">
+      <button type="button" class="btn btn-sm btn-smt-excel" onclick="qhseExportCSV('produitsTable','produits_hse.csv')"><i class="bi bi-file-earmark-excel"></i> Export Excel</button>
+      <button type="button" class="btn btn-sm btn-smt-csv" onclick="qhseExportCSV('produitsTable','produits_hse.csv')"><i class="bi bi-filetype-csv"></i> Export CSV</button>
+      <button type="button" class="btn btn-sm btn-smt-pdf" onclick="window.print()"><i class="bi bi-file-earmark-pdf"></i> Export PDF</button>
+      <a href="/qhse/produits-hse/" class="btn-smt-reset"><i class="bi bi-arrow-clockwise"></i> Réinitialiser</a>
+    </div>
+  </form>
+
+  <!-- Tableau -->
+  <div class="qhse-table-wrapper somatrin-table-wrap">
+    <table class="qhse-table somatrin-table" id="produitsTable">
+      <thead>
+        <tr>
+          <th data-col="0">Code <i class="bi bi-chevron-expand"></i></th>
+          <th data-col="1">Désignation <i class="bi bi-chevron-expand"></i></th>
+          <th data-col="2">Catégorie <i class="bi bi-chevron-expand"></i></th>
+          <th data-col="3" style="text-align:right;">Stock <i class="bi bi-chevron-expand"></i></th>
+          <th data-col="4">UoM <i class="bi bi-chevron-expand"></i></th>
+          <th data-col="5" style="text-align:center;">Achat</th>
+          <th data-col="6" style="text-align:center;">Vente</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <td data-label="Code">
+            <span class="cell-id">{{ row.code|default:"—" }}</span>
+          </td>
+          <td data-label="Désignation" style="font-weight:600;color:#374151;max-width:260px;">
+            <span style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{{ row.designation }}">
+              {{ row.designation }}
+            </span>
+          </td>
+          <td data-label="Catégorie">
+            <span style="font-size:11px;background:#f3f4f6;color:#374151;padding:2px 8px;border-radius:4px;">
+              {{ row.categorie|default:"—" }}
+            </span>
+          </td>
+          <td data-label="Stock" style="text-align:right;">
+            <span style="font-weight:700;{% if row.stock and row.stock > 0 %}color:#10B981;{% else %}color:#9ca3af;{% endif %}">
+              {{ row.stock|floatformat:2 }}
+            </span>
+          </td>
+          <td data-label="UoM" style="font-size:12px;color:#6B7280;">{{ row.uom|default:"—" }}</td>
+          <td data-label="Achat" style="text-align:center;">
+            {% if row.achat %}
+              <span class="badge-etat badge-done"><i class="bi bi-check-circle-fill"></i> Oui</span>
+            {% else %}
+              <span class="badge-etat badge-cancel"><i class="bi bi-x-circle"></i> Non</span>
+            {% endif %}
+          </td>
+          <td data-label="Vente" style="text-align:center;">
+            {% if row.vente %}
+              <span class="badge-etat badge-done"><i class="bi bi-check-circle-fill"></i> Oui</span>
+            {% else %}
+              <span class="badge-etat badge-cancel"><i class="bi bi-x-circle"></i> Non</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7">
+            <div class="qhse-empty">
+              <i class="bi bi-shield-exclamation"></i>
+              <p>Aucun produit HSE trouvé pour ce filtre.</p>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  {% if rows %}
+  <div class="qhse-pagination">
+    <div class="pag-info" id="pagInfo"></div>
+    <div class="pag-buttons" id="pagBtns"></div>
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/qhse.js' %}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  qhseInitTableSort('produitsTable');
+  qhseInitTableSearch('produitsSearch', 'produitsTable', 'rowCount');
+  qhseInitPagination('produitsTable', 80, 'pagInfo', 'pagBtns');
+});
+</script>
+{% endblock %}

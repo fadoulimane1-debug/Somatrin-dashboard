@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% load humanize %}
+{% block title %}{{ page_title }} — SOMATRIN{% endblock %}
+{% block content %}
+<span class="page-title">{{ page_title }}</span>
+{% if error %}<div class="alert-odoo"><i class="bi bi-exclamation-triangle-fill"></i><span>{{ error }}</span></div>{% endif %}
+<div class="row g-3">
+  <div class="col-md-6">
+    <div class="card p-3">
+      <h6>Rapport incidents par site</h6>
+      <table class="table table-sm"><thead><tr><th>Site</th><th>Incidents</th></tr></thead><tbody>
+      {% for r in incidents_by_site %}<tr><td>{{ r.0 }}</td><td>{{ r.1 }}</td></tr>{% empty %}<tr><td colspan="2" class="text-muted text-center">Aucune donnee</td></tr>{% endfor %}
+      </tbody></table>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card p-3">
+      <h6>Stock EPI detail par categorie</h6>
+      <table class="table table-sm"><thead><tr><th>Categorie</th><th>Stock</th></tr></thead><tbody>
+      {% for r in stock_by_category %}<tr><td>{{ r.0 }}</td><td>{{ r.1|floatformat:2|intcomma }}</td></tr>{% empty %}<tr><td colspan="2" class="text-muted text-center">Aucune donnee</td></tr>{% endfor %}
+      </tbody></table>
+    </div>
+  </div>
+</div>
+{% endblock %}

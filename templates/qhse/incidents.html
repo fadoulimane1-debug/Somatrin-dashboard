@@ -1,0 +1,585 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Incidents &amp; Accidents — SOMATRIN{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/qhse.css' %}">
+{% endblock %}
+
+{% block breadcrumb %}
+<a href="{% url 'accueil' %}">Accueil</a>
+<i class="bi bi-chevron-right"></i>
+<span style="color:#6B7280;">QHSE</span>
+<i class="bi bi-chevron-right"></i>
+<span style="color:#1a2c4e; font-weight:600;">Incidents &amp; Accidents</span>
+{% endblock %}
+
+{% block content %}
+
+<!-- Page Header -->
+<div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+  <div>
+    <span class="page-title mb-0" style="margin-bottom:0!important;">Incidents &amp; Accidents</span>
+    <div style="font-size:13px;color:#6B7280;margin-top:2px;">Gestion et analyse des incidents, accidents de travail et maladies professionnelles</div>
+  </div>
+  <div class="d-flex gap-2">
+    <button class="btn-export-pdf" onclick="window.print()">
+      <i class="bi bi-printer"></i> Imprimer
+    </button>
+    <button class="btn-export-excel" onclick="qhseExportCSV('incidentTable','incidents.csv')">
+      <i class="bi bi-download"></i> Export CSV
+    </button>
+  </div>
+</div>
+
+{% if error %}
+<div class="alert-odoo mb-3">
+  <i class="bi bi-exclamation-triangle-fill"></i>
+  <span>{{ error }} — Données de démonstration affichées.</span>
+</div>
+{% endif %}
+
+<!-- ═══════════════════════════════════════
+     MAIN LAYOUT: 2 COLUMNS
+     Left 25%: Body Synoptic
+     Right 75%: KPI + Charts + Table
+     ═══════════════════════════════════════ -->
+<div class="row g-3 align-items-start">
+
+  <!-- ══ GAUCHE: Synoptique corps humain ══ -->
+  <div class="col-lg-3">
+    <div class="qhse-synoptic-card">
+      <div class="synoptic-header">
+        <i class="bi bi-person-fill"></i>
+        <span>Synoptique corporel</span>
+      </div>
+      <div class="synoptic-total-badge">
+        <span class="synoptic-total-num">{{ body_total }}</span>
+        <span class="synoptic-total-label">accidents</span>
+      </div>
+
+      <!-- SVG Body Silhouette -->
+      <div class="body-svg-container">
+        <svg viewBox="0 0 240 380" class="body-svg" xmlns="http://www.w3.org/2000/svg">
+
+          <!-- ── Corps humain de face ── -->
+          <!-- Tête -->
+          <circle cx="88" cy="34" r="26" class="bz-head"/>
+          <!-- Yeux -->
+          <circle cx="80" cy="30" r="3.5" class="bz-eyes"/>
+          <circle cx="96" cy="30" r="3.5" class="bz-eyes"/>
+          <!-- Bouche -->
+          <path d="M80 40 Q88 46 96 40" fill="none" stroke="#1a2c4e" stroke-width="1.2" stroke-linecap="round"/>
+          <!-- Cou -->
+          <rect x="79" y="58" width="18" height="16" rx="3" class="bz-neck"/>
+
+          <!-- Épaules + Torse -->
+          <path d="M60 72 Q50 70 44 82 L54 104 Q65 90 74 86 L74 74 Z" class="bz-shoulder"/>
+          <path d="M116 72 Q126 70 132 82 L122 104 Q111 90 102 86 L102 74 Z" class="bz-shoulder"/>
+          <path d="M68 72 L108 72 L112 152 L64 152 Z" class="bz-torso"/>
+
+          <!-- Bras gauche -->
+          <path d="M54 104 L42 104 L36 158 L52 158 Z" class="bz-arm"/>
+          <!-- Avant-bras + main gauche -->
+          <path d="M52 158 L38 158 L34 200 L50 200 Z" class="bz-hand"/>
+          <!-- Main gauche (doigts) -->
+          <ellipse cx="42" cy="206" rx="10" ry="8" class="bz-hand"/>
+
+          <!-- Bras droit -->
+          <path d="M122 104 L134 104 L140 158 L124 158 Z" class="bz-arm"/>
+          <!-- Avant-bras + main droit -->
+          <path d="M124 158 L138 158 L142 200 L126 200 Z" class="bz-hand"/>
+          <!-- Main droite (doigts) -->
+          <ellipse cx="134" cy="206" rx="10" ry="8" class="bz-hand"/>
+
+          <!-- Jambe gauche -->
+          <path d="M72 152 L66 152 L62 260 L86 260 L86 152 Z" class="bz-leg"/>
+          <!-- Jambe droite -->
+          <path d="M104 152 L110 152 L114 260 L90 260 L90 152 Z" class="bz-leg"/>
+
+          <!-- Pied gauche -->
+          <ellipse cx="73" cy="267" rx="17" ry="9" class="bz-foot"/>
+          <!-- Pied droit -->
+          <ellipse cx="103" cy="267" rx="17" ry="9" class="bz-foot"/>
+
+          <!-- ── Lignes de connexion et labels ── -->
+          <!-- Tête -->
+          <line x1="114" y1="34" x2="148" y2="34" class="bz-connector"/>
+          <text x="150" y="31" class="bz-label">Tête</text>
+          <text x="150" y="43" class="bz-count">{{ body_zones.tete|default:0 }}</text>
+
+          <!-- Cou -->
+          <line x1="97" y1="65" x2="148" y2="65" class="bz-connector"/>
+          <text x="150" y="62" class="bz-label">Cou</text>
+          <text x="150" y="74" class="bz-count">{{ body_zones.cou|default:0 }}</text>
+
+          <!-- Épaule -->
+          <line x1="132" y1="88" x2="148" y2="96" class="bz-connector"/>
+          <text x="150" y="93" class="bz-label">Épaule</text>
+          <text x="150" y="105" class="bz-count">{{ body_zones.epaule|default:0 }}</text>
+
+          <!-- Torse / Dos -->
+          <line x1="112" y1="118" x2="148" y2="124" class="bz-connector"/>
+          <text x="150" y="121" class="bz-label">Torse/Dos</text>
+          <text x="150" y="133" class="bz-count">{{ body_zones.dos|default:0 }}</text>
+
+          <!-- Bras -->
+          <line x1="140" y1="132" x2="148" y2="152" class="bz-connector"/>
+          <text x="150" y="149" class="bz-label">Bras</text>
+          <text x="150" y="161" class="bz-count">{{ body_zones.bras|default:0 }}</text>
+
+          <!-- Main -->
+          <line x1="142" y1="192" x2="148" y2="183" class="bz-connector"/>
+          <text x="150" y="180" class="bz-label">Main</text>
+          <text x="150" y="192" class="bz-count">{{ body_zones.main|default:0 }}</text>
+
+          <!-- Jambe -->
+          <line x1="114" y1="210" x2="148" y2="214" class="bz-connector"/>
+          <text x="150" y="211" class="bz-label">Jambe</text>
+          <text x="150" y="223" class="bz-count">{{ body_zones.jambe|default:0 }}</text>
+
+          <!-- Pied -->
+          <line x1="114" y1="258" x2="148" y2="250" class="bz-connector"/>
+          <text x="150" y="247" class="bz-label">Pied</text>
+          <text x="150" y="259" class="bz-count">{{ body_zones.pied|default:0 }}</text>
+
+        </svg>
+      </div>
+
+      <!-- Zones supplémentaires -->
+      <div class="synoptic-autres">
+        <div class="synoptic-autre-row body-zone-item" data-zone="oeil">
+          <span><i class="bi bi-eye me-1" style="color:#6B7280;"></i>Œil / Vue</span>
+          <span class="badge-synoptic">{{ body_zones.oeil|default:0 }}</span>
+        </div>
+        <div class="synoptic-autre-row body-zone-item" data-zone="autre">
+          <span><i class="bi bi-question-circle me-1" style="color:#6B7280;"></i>Autre / NR</span>
+          <span class="badge-synoptic">{{ body_zones.autre|default:0 }}</span>
+        </div>
+      </div>
+
+      <!-- Legend status -->
+      <div style="margin-top:12px;padding-top:10px;border-top:1px solid #f1f3f5;">
+        <div style="font-size:11px;color:#9ca3af;margin-bottom:6px;">Légende</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <span style="font-size:11px;"><span style="color:#E87722;font-weight:700;">■</span> Fréquent</span>
+          <span style="font-size:11px;"><span style="color:#1a2c4e;font-weight:700;">■</span> Modéré</span>
+          <span style="font-size:11px;"><span style="color:#e5e7eb;font-weight:700;">■</span> Rare</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ DROITE: KPI + Charts + Table ══ -->
+  <div class="col-lg-9">
+
+    <!-- ── KPI Cards ── -->
+    <div class="qhse-kpi-grid mb-3">
+      <div class="qhse-kpi-card" style="border-top-color:#E87722;">
+        <div class="qhse-kpi-icon" style="background:#fff4e8;color:#E87722;">
+          <i class="bi bi-person-x-fill"></i>
+        </div>
+        <div>
+          <div class="qhse-kpi-value" id="kpi-arret">{{ kpi_avec_arret }}</div>
+          <div class="qhse-kpi-label">Accident avec arrêt</div>
+        </div>
+      </div>
+      <div class="qhse-kpi-card" style="border-top-color:#1a2c4e;">
+        <div class="qhse-kpi-icon" style="background:#e8edf5;color:#1a2c4e;">
+          <i class="bi bi-person-check-fill"></i>
+        </div>
+        <div>
+          <div class="qhse-kpi-value" id="kpi-sanss">{{ kpi_sans_arret }}</div>
+          <div class="qhse-kpi-label">Accident sans arrêt</div>
+        </div>
+      </div>
+      <div class="qhse-kpi-card" style="border-top-color:#6B7280;">
+        <div class="qhse-kpi-icon" style="background:#f3f4f6;color:#6B7280;">
+          <i class="bi bi-cone-striped"></i>
+        </div>
+        <div>
+          <div class="qhse-kpi-value" id="kpi-inc">{{ kpi_incidents }}</div>
+          <div class="qhse-kpi-label">Incidents</div>
+        </div>
+      </div>
+      <div class="qhse-kpi-card" style="border-top-color:#DC2626;">
+        <div class="qhse-kpi-icon" style="background:#fef2f2;color:#DC2626;">
+          <i class="bi bi-calendar-x-fill"></i>
+        </div>
+        <div>
+          <div class="qhse-kpi-value" id="kpi-jours">{{ kpi_jours_arret }}</div>
+          <div class="qhse-kpi-label">Jours d'arrêts</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Month Selector ── -->
+    <div class="month-selector-card mb-3">
+      <div class="month-selector-label">
+        <i class="bi bi-calendar3 me-1 text-warning"></i>
+        Sélectionner le mois :
+      </div>
+      <div class="month-buttons" id="monthButtons">
+        {% for m in months_list %}
+        <button type="button" class="month-btn {% if m == selected_month %}active{% endif %}" data-month="{{ m }}">
+          {{ m }}
+        </button>
+        {% empty %}
+        <button type="button" class="month-btn active">Jan</button>
+        <button type="button" class="month-btn">Fév</button>
+        <button type="button" class="month-btn">Mar</button>
+        <button type="button" class="month-btn">Avr</button>
+        <button type="button" class="month-btn">Mai</button>
+        <button type="button" class="month-btn">Jun</button>
+        <button type="button" class="month-btn">Jul</button>
+        <button type="button" class="month-btn">Aoû</button>
+        <button type="button" class="month-btn">Sep</button>
+        <button type="button" class="month-btn">Oct</button>
+        <button type="button" class="month-btn">Nov</button>
+        <button type="button" class="month-btn">Déc</button>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- ── 6 Graphiques (2×3 grid) ── -->
+    <div class="row g-3 mb-3">
+      <div class="col-md-6">
+        <div class="qhse-chart-card">
+          <div class="qhse-chart-title">
+            <i class="bi bi-graph-up-arrow"></i> Évolution mensuelle
+          </div>
+          <canvas id="chartEvol" height="155"></canvas>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="qhse-chart-card">
+          <div class="qhse-chart-title">
+            <i class="bi bi-people-fill"></i> Top 5 employés impliqués
+          </div>
+          <canvas id="chartEmp" height="155"></canvas>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="qhse-chart-card">
+          <div class="qhse-chart-title">
+            <i class="bi bi-building"></i> Événements par unité/site
+          </div>
+          <canvas id="chartUnite" height="155"></canvas>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="qhse-chart-card">
+          <div class="qhse-chart-title">
+            <i class="bi bi-bandaid-fill"></i> Type de lésion
+          </div>
+          <canvas id="chartLesion" height="155"></canvas>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="qhse-chart-card">
+          <div class="qhse-chart-title">
+            <i class="bi bi-pie-chart-fill"></i> Répartition type d'accident
+          </div>
+          <canvas id="chartType" height="155"></canvas>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="qhse-chart-card">
+          <div class="qhse-chart-title">
+            <i class="bi bi-tools"></i> Accidents par activité
+          </div>
+          <canvas id="chartActivite" height="155"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Tabs + Table ── -->
+    <div class="qhse-table-section" style="border: 1.5px solid #d0d5dd !important;">
+
+      <!-- Tabs -->
+      <ul class="nav qhse-tabs" id="incidentTabs" role="tablist">
+        <li class="nav-item">
+          <a class="nav-link active" id="tab-arret-lnk" data-bs-toggle="tab" href="#tab-arret" role="tab">
+            Accident arrêt <span class="tab-badge orange">{{ kpi_avec_arret }}</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" id="tab-sanss-lnk" data-bs-toggle="tab" href="#tab-sanss" role="tab">
+            Sans arrêt <span class="tab-badge blue">{{ kpi_sans_arret }}</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" id="tab-incident-lnk" data-bs-toggle="tab" href="#tab-incident" role="tab">
+            Incident <span class="tab-badge gray">{{ kpi_incidents }}</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" id="tab-jours-lnk" data-bs-toggle="tab" href="#tab-jours" role="tab">
+            Jours arrêt <span class="tab-badge red">{{ kpi_jours_arret }}</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" id="tab-all-lnk" data-bs-toggle="tab" href="#tab-all" role="tab">
+            Tous <span class="tab-badge green">{{ rows|length }}</span>
+          </a>
+        </li>
+      </ul>
+
+      <!-- Filter Bar -->
+      <div class="qhse-filters-bar">
+        <div class="filter-search">
+          <i class="bi bi-search"></i>
+          <input type="text" id="incidentSearch" placeholder="Rechercher par référence, site, état…" class="form-control">
+        </div>
+        <select class="form-select form-select-sm" id="filterEtat" style="max-width:150px;font-size:13px;">
+          <option value="">Tous les états</option>
+          <option value="draft">Brouillon</option>
+          <option value="in_progress">En cours</option>
+          <option value="pending">En attente</option>
+          <option value="done">Résolu</option>
+          <option value="cancel">Annulé</option>
+        </select>
+        <span class="filter-count"><span id="rowCount">{{ rows|length }}</span> incidents</span>
+        <div class="ms-auto d-flex gap-2">
+          <button class="btn-export-pdf" onclick="window.print()">
+            <i class="bi bi-printer"></i> Imprimer
+          </button>
+          <button class="btn-export-excel" onclick="qhseExportCSV('incidentTable','incidents_somatrin.csv')">
+            <i class="bi bi-download"></i> CSV
+          </button>
+        </div>
+      </div>
+
+      <!-- Tab Content -->
+      <div class="tab-content">
+
+        <!-- All incidents table (shown in all tabs via JS filter) -->
+        <div class="tab-pane show active" id="tab-arret" role="tabpanel">
+          <div class="qhse-table-wrapper">
+            <table class="qhse-table" id="incidentTable" style="border-left: 2px solid #d0d5dd; border-right: 2px solid #d0d5dd;">
+              <thead>
+                <tr>
+                  <th data-col="0">N° <i class="bi bi-chevron-expand"></i></th>
+                  <th data-col="1">Date <i class="bi bi-chevron-expand"></i></th>
+                  <th data-col="2">Référence <i class="bi bi-chevron-expand"></i></th>
+                  <th data-col="3">Site / Lieu <i class="bi bi-chevron-expand"></i></th>
+                  <th data-col="4">Catégorie <i class="bi bi-chevron-expand"></i></th>
+                  <th data-col="5">Responsable <i class="bi bi-chevron-expand"></i></th>
+                  <th data-col="6">État <i class="bi bi-chevron-expand"></i></th>
+                  <th data-col="7">Priorité</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for row in rows %}
+                {% with state=row.state|default:"draft" %}
+                <tr data-state="{{ state }}"
+                    data-location="{{ row.location_id.1|default:'' }}"
+                    data-category="{{ row.category_id.1|default:'' }}">
+                  <td class="cell-id" data-label="N°">#{{ forloop.counter }}</td>
+                  <td class="cell-date" data-label="Date">
+                    {% if row.date %}
+                      {{ row.date|slice:":10" }}
+                    {% else %}—{% endif %}
+                  </td>
+                  <td data-label="Référence">
+                    <span style="font-weight:600;color:#1a2c4e;">{{ row.name|default:"—" }}</span>
+                  </td>
+                  <td data-label="Site">
+                    <i class="bi bi-geo-alt" style="color:#E87722;font-size:11px;"></i>
+                    {{ row.location_id.1|default:"—" }}
+                  </td>
+                  <td data-label="Catégorie">
+                    <span style="font-size:12px;background:#f3f4f6;padding:2px 8px;border-radius:4px;">
+                      {{ row.category_id.1|default:"—" }}
+                    </span>
+                  </td>
+                  <td data-label="Responsable">
+                    <i class="bi bi-person-circle" style="color:#6B7280;font-size:11px;"></i>
+                    {{ row.user_id.1|default:"—" }}
+                  </td>
+                  <td data-label="État">
+                    {% if state == "done" or state == "solved" or state == "closed" %}
+                      <span class="badge-etat badge-done"><i class="bi bi-check-circle-fill"></i> Résolu</span>
+                    {% elif state == "in_progress" %}
+                      <span class="badge-etat badge-en_cours"><i class="bi bi-play-circle-fill"></i> En cours</span>
+                    {% elif state == "pending" %}
+                      <span class="badge-etat badge-pending"><i class="bi bi-hourglass-split"></i> En attente</span>
+                    {% elif state == "cancel" %}
+                      <span class="badge-etat badge-cancel"><i class="bi bi-x-circle"></i> Annulé</span>
+                    {% else %}
+                      <span class="badge-etat badge-ouvert"><i class="bi bi-circle-fill"></i> Ouvert</span>
+                    {% endif %}
+                  </td>
+                  <td data-label="Priorité">
+                    {% with idx=forloop.counter0 %}
+                    {% if idx|divisibleby:7 %}
+                      <span class="priority-stars">★★★</span>
+                    {% elif idx|divisibleby:3 %}
+                      <span class="priority-stars">★★<span class="priority-low">★</span></span>
+                    {% else %}
+                      <span class="priority-stars">★<span class="priority-low">★★</span></span>
+                    {% endif %}
+                    {% endwith %}
+                  </td>
+                  <td class="td-actions" data-label="Actions">
+                    <button class="btn-action btn-view" title="Voir détail">
+                      <i class="bi bi-eye"></i>
+                    </button>
+                    <button class="btn-action btn-edit" title="Modifier">
+                      <i class="bi bi-pencil"></i>
+                    </button>
+                  </td>
+                </tr>
+                {% endwith %}
+                {% empty %}
+                <tr>
+                  <td colspan="9">
+                    <div class="qhse-empty">
+                      <i class="bi bi-inbox"></i>
+                      <p>
+                        {% if error %}
+                          Aucun incident pour cette sélection (Odoo : {{ error }}).
+                        {% else %}
+                          Aucun incident pour cette période ou ces filtres.
+                        {% endif %}
+                      </p>
+                    </div>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Pagination -->
+          <div class="qhse-pagination">
+            <span class="pag-info">
+              Affichage <strong id="pagInfo"></strong>
+            </span>
+            <div class="pag-buttons" id="pagBtns"></div>
+          </div>
+        </div>
+
+        <!-- Other tabs (sans arrêt, incident, jours) - filtered via JS -->
+        <div class="tab-pane" id="tab-sanss" role="tabpanel">
+          <div style="padding:30px;text-align:center;color:#6B7280;">
+            <i class="bi bi-filter-circle" style="font-size:32px;color:#d1d5db;display:block;margin-bottom:8px;"></i>
+            Filtrage "accidents sans arrêt" — même tableau avec filtre d'état appliqué.
+          </div>
+        </div>
+        <div class="tab-pane" id="tab-incident" role="tabpanel">
+          <div style="padding:30px;text-align:center;color:#6B7280;">
+            <i class="bi bi-filter-circle" style="font-size:32px;color:#d1d5db;display:block;margin-bottom:8px;"></i>
+            Filtrage "incidents" — même tableau avec filtre de catégorie appliqué.
+          </div>
+        </div>
+        <div class="tab-pane" id="tab-jours" role="tabpanel">
+          <div style="padding:24px;color:#6B7280;text-align:center;">
+            <i class="bi bi-calendar-range" style="font-size:32px;color:#d1d5db;display:block;margin-bottom:8px;"></i>
+            Suivi des jours d'arrêts — {{ kpi_jours_arret }} jours estimés.
+          </div>
+        </div>
+        <div class="tab-pane" id="tab-all" role="tabpanel">
+          <div style="padding:20px;color:#6B7280;text-align:center;font-size:13px;">
+            Voir l'onglet "Accident arrêt" pour le tableau complet des {{ rows|length }} enregistrements.
+          </div>
+        </div>
+
+      </div><!-- /tab-content -->
+    </div><!-- /table-section -->
+
+  </div><!-- /col-lg-9 -->
+</div><!-- /row -->
+
+<!-- ═════════ Chart Data (hidden JSON) ═════════ -->
+<script type="application/json" id="q-monthly-labels">{{ monthly_labels_json|safe }}</script>
+<script type="application/json" id="q-monthly-values">{{ monthly_values_json|safe }}</script>
+<script type="application/json" id="q-emp-labels">{{ emp_labels_json|safe }}</script>
+<script type="application/json" id="q-emp-values">{{ emp_values_json|safe }}</script>
+<script type="application/json" id="q-type-labels">{{ type_labels_json|safe }}</script>
+<script type="application/json" id="q-type-values">{{ type_values_json|safe }}</script>
+<script type="application/json" id="q-site-labels">{{ site_labels_json|safe }}</script>
+<script type="application/json" id="q-site-values">{{ site_values_json|safe }}</script>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script src="{% static 'js/qhse.js' %}"></script>
+<script>
+(function() {
+  /* ── Read chart data ── */
+  const monthLabels = qhseReadJson('q-monthly-labels') || ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+  const monthValues = qhseReadJson('q-monthly-values') || [8,12,7,15,10,18,9,14,11,13,6,9];
+  const empLabels   = qhseReadJson('q-emp-labels')   || ['Employé A','Employé B','Employé C','Employé D','Employé E'];
+  const empValues   = qhseReadJson('q-emp-values')   || [22, 18, 15, 12, 9];
+  const typeLabels  = qhseReadJson('q-type-labels')  || ['Chute','Coupure','Brûlure','Écrasement','Autre'];
+  const typeValues  = qhseReadJson('q-type-values')  || [35, 28, 18, 12, 7];
+  const siteLabels  = qhseReadJson('q-site-labels')  || ['Site 1','Site 2','Site 3','Admin','Atelier'];
+  const siteValues  = qhseReadJson('q-site-values')  || [45, 32, 28, 12, 8];
+
+  /* Fallback defaults if data empty */
+  const lesionLabels = ['Fracture','Entorse','Contusion','Coupure','Brûlure','Autre'];
+  const lesionValues = [18, 25, 30, 15, 8, 4];
+  const activiteLabels = ['Extraction','Transport','Traitement','Maintenance','Admin','Autre'];
+  const activiteValues = [38, 22, 18, 14, 5, 3];
+
+  /* ── Init 6 charts ── */
+  qhseLineChart('chartEvol', monthLabels, monthValues, 'Incidents', '#E87722');
+  qhseBarChart('chartEmp', empLabels, empValues, 'Accidents', '#1a2c4e', true);
+  qhseAreaChart('chartUnite', siteLabels, siteValues, 'Événements', '#3B82F6');
+  qhseBarChart('chartLesion', lesionLabels, lesionValues, 'Lésions', '#10B981', false);
+  qhsePieChart('chartType', ['Avec arrêt','Sans arrêt','Incident'], [{{ kpi_avec_arret }}, {{ kpi_sans_arret }}, {{ kpi_incidents }}], true);
+  qhseBarChart('chartActivite', activiteLabels, activiteValues, 'Accidents', '#E87722', true);
+
+  /* ── Month selector → rechargement avec ?mois= ── */
+  qhseInitMonthSelector('monthButtons', function(month) {
+    if (!month) return;
+    const u = new URL(window.location.href);
+    u.searchParams.set('mois', month);
+    window.location.href = u.toString();
+  });
+
+  /* ── Table search + filter ── */
+  qhseInitTableSearch('incidentSearch', 'incidentTable', 'rowCount');
+  qhseInitTableSort('incidentTable');
+
+  /* Filter by état */
+  const filterEtat = document.getElementById('filterEtat');
+  if (filterEtat) {
+    filterEtat.addEventListener('change', function() {
+      const val = this.value.toLowerCase();
+      const tbody = document.querySelector('#incidentTable tbody');
+      if (!tbody) return;
+      Array.from(tbody.querySelectorAll('tr')).forEach(row => {
+        const state = (row.dataset.state || '').toLowerCase();
+        row.style.display = (!val || state === val || state.includes(val)) ? '' : 'none';
+      });
+      const countEl = document.getElementById('rowCount');
+      if (countEl) {
+        const vis = Array.from(tbody.querySelectorAll('tr')).filter(r => r.style.display !== 'none').length;
+        countEl.textContent = vis;
+      }
+    });
+  }
+
+  /* ── Pagination ── */
+  const pagCtrl = qhseInitPagination('incidentTable', 25, 'pagInfo', 'pagBtns');
+
+  /* Re-paginate after search */
+  const searchEl = document.getElementById('incidentSearch');
+  if (searchEl && pagCtrl) {
+    searchEl.addEventListener('input', () => setTimeout(() => pagCtrl.refresh(), 50));
+  }
+  if (filterEtat && pagCtrl) {
+    filterEtat.addEventListener('change', () => setTimeout(() => pagCtrl.refresh(), 50));
+  }
+
+  /* ── Body zone hover ── */
+  qhseInitBodyZones();
+
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,68 @@
+﻿{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Production - Dashboard{% endblock %}
+
+{% block breadcrumb %}
+<a href="{% url 'accueil' %}">Accueil</a>
+<i class="bi bi-chevron-right"></i>
+<a href="{% url 'production_index' %}">Production</a>
+<i class="bi bi-chevron-right"></i>
+<span style="color:#1a2c4e; font-weight:600;">Dashboard Production</span>
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/production.css' %}?v=20260512">
+{% endblock %}
+
+{% block content %}
+<div class="prod-hero">
+  <h2 class="mb-1">Dashboard Production</h2>
+  <div>Pilotage mensuel de la performance production</div>
+</div>
+
+<div class="prod-kpi-grid">
+  <div class="prod-kpi-card"><div class="prod-kpi-label">Production mensuelle (Tonnes)</div><div class="prod-kpi-value">{{ kpis.production_mensuelle }}</div></div>
+  <div class="prod-kpi-card"><div class="prod-kpi-label">Coûts production (DH)</div><div class="prod-kpi-value">{{ kpis.couts_production }}</div></div>
+  <div class="prod-kpi-card"><div class="prod-kpi-label">Budget utilisé (%)</div><div class="prod-kpi-value">{{ kpis.budget_utilise }}</div></div>
+  <div class="prod-kpi-card"><div class="prod-kpi-label">Efficacité production (%)</div><div class="prod-kpi-value">{{ kpis.efficacite }}</div></div>
+  <div class="prod-kpi-card"><div class="prod-kpi-label">IPC</div><div class="prod-kpi-value">{{ kpis.ipc }}</div></div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-6"><div class="prod-chart-card"><div class="prod-chart-title">Production (12 derniers mois)</div><canvas id="prodLine"></canvas></div></div>
+  <div class="col-lg-6"><div class="prod-chart-card"><div class="prod-chart-title">Production vs Budget (6 mois)</div><canvas id="prodBudgetBar"></canvas></div></div>
+  <div class="col-lg-6"><div class="prod-chart-card"><div class="prod-chart-title">Répartition par site</div><canvas id="sitePie"></canvas></div></div>
+  <div class="col-lg-6"><div class="prod-chart-card"><div class="prod-chart-title">Coûts par site</div><canvas id="coutBar"></canvas></div></div>
+</div>
+
+{{ charts.line_production.labels|json_script:"line-labels" }}
+{{ charts.line_production.values|json_script:"line-values" }}
+{{ charts.bar_prod_budget.labels|json_script:"budget-labels" }}
+{{ charts.bar_prod_budget.production|json_script:"budget-prod-values" }}
+{{ charts.bar_prod_budget.budget|json_script:"budget-values" }}
+{{ charts.pie_sites.labels|json_script:"pie-labels" }}
+{{ charts.pie_sites.values|json_script:"pie-values" }}
+{{ charts.bar_couts_site.labels|json_script:"cout-labels" }}
+{{ charts.bar_couts_site.values|json_script:"cout-values" }}
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script src="{% static 'js/production.js' %}"></script>
+<script>
+  somaLineChart("prodLine", somaReadJsonScript("line-labels"), somaReadJsonScript("line-values"), "Production");
+  const labelsBudget = somaReadJsonScript("budget-labels");
+  const prodValues = somaReadJsonScript("budget-prod-values");
+  const budgetValues = somaReadJsonScript("budget-values");
+  const canvasPB = document.getElementById("prodBudgetBar");
+  if (canvasPB && typeof Chart !== "undefined") {
+    new Chart(canvasPB, {
+      type: "bar",
+      data: { labels: labelsBudget, datasets: [{ label: "Production", data: prodValues, backgroundColor: "#1a2c4e" }, { label: "Budget", data: budgetValues, backgroundColor: "#e87722" }] },
+    });
+  }
+  somaPieChart("sitePie", somaReadJsonScript("pie-labels"), somaReadJsonScript("pie-values"));
+  somaBarChart("coutBar", somaReadJsonScript("cout-labels"), somaReadJsonScript("cout-values"), "Coûts", "#e87722");
+</script>
+{% endblock %}

@@ -1,0 +1,479 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Parc — Interventions{% endblock %}
+{% block breadcrumb %}
+<a href="{% url 'accueil' %}">Accueil</a>
+<i class="bi bi-chevron-right"></i>
+<a href="{% url 'parc_module' %}">Parc &amp; Maintenance</a>
+<i class="bi bi-chevron-right"></i>
+<span style="color:#1a2c4e;font-weight:600;">Interventions</span>
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/parc.css' %}">
+<style>
+.hero {
+    background: linear-gradient(135deg, #0f1e38, #1a2c4e);
+    border-radius: 16px;
+    padding: 22px 26px;
+    color: #fff;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.kpi-grid .kpi {
+    background: #fff;
+    border: 1px solid #E5E7EB;
+    border-radius: 12px;
+    padding: 16px 20px;
+    height: 100%;
+}
+.kpi-grid .kpi .lbl { font-size: 0.83rem; color: #666; }
+.kpi-grid .kpi .v  { font-size: 28px; line-height: 1.2; font-weight: 800; color: #1a2c4e; margin-top: 4px; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Hero -->
+<div class="hero mb-4">
+    <div>
+        <small style="opacity:.6;letter-spacing:1.4px;font-size:.78rem;text-transform:uppercase;">Module Parc</small>
+        <h2 class="mb-0 mt-1">Interventions</h2>
+    </div>
+    <div style="font-size:48px;font-weight:900;color:rgba(255,255,255,.06)">INT</div>
+</div>
+
+{% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+
+<!-- KPIs -->
+<div class="row g-3 mb-4 kpi-grid">
+    <div class="col-lg-3 col-6">
+        <div class="kpi">
+            <div class="lbl">Total interventions</div>
+            <div class="v">{{ kpi_total }}</div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-6">
+        <div class="kpi">
+            <div class="lbl">Durée totale (h)</div>
+            <div class="v">{{ kpi_total_h|floatformat:"2g" }}</div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-6">
+        <div class="kpi">
+            <div class="lbl">Durée moyenne (h)</div>
+            <div class="v">{{ kpi_avg_h|floatformat:"2g" }}</div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-6">
+        <div class="kpi">
+            <div class="lbl">Tech. le plus actif</div>
+            <div class="v" style="font-size:16px;margin-top:8px;">{{ kpi_top_tech }}</div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-6">
+        <div class="kpi" style="border-top:3px solid #7c3aed;">
+            <div class="lbl">Taux préventif</div>
+            <div class="v" style="color:#7c3aed;">{{ preventive_rate }}%</div>
+        </div>
+    </div>
+</div>
+
+<!-- Graphiques -->
+<div class="row g-3 mb-4">
+    <div class="col-lg-4">
+        <div style="background:#fff;border:1px solid #E5E7EB;border-radius:12px;padding:18px;box-shadow:0 2px 8px rgba(0,0,0,.05);">
+            <div style="font-size:.82rem;font-weight:700;color:#1a2c4e;text-transform:uppercase;letter-spacing:.4px;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid #E87722;">
+                <i class="bi bi-pie-chart-fill" style="color:#E87722;"></i> Corrective vs Préventive
+            </div>
+            <div style="position:relative;height:190px;"><canvas id="chartType"></canvas></div>
+        </div>
+    </div>
+    <div class="col-lg-8">
+        <div style="background:#fff;border:1px solid #E5E7EB;border-radius:12px;padding:18px;box-shadow:0 2px 8px rgba(0,0,0,.05);">
+            <div style="font-size:.82rem;font-weight:700;color:#1a2c4e;text-transform:uppercase;letter-spacing:.4px;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid #1a2c4e;">
+                <i class="bi bi-bar-chart-fill" style="color:#1a2c4e;"></i> Durée totale / technicien (h) — Top 5
+            </div>
+            <div style="position:relative;height:190px;"><canvas id="chartTech"></canvas></div>
+        </div>
+    </div>
+</div>
+
+<!-- Exports -->
+<div style="background:#fff;border:1px solid #E5E7EB;border-radius:10px;padding:12px 18px;margin-bottom:20px;">
+    <div class="d-flex gap-2 flex-wrap align-items-center">
+        <span style="color:#888;font-size:.85rem;margin-right:2px;">Exporter :</span>
+        <a class="btn btn-sm btn-success" href="{% url 'parc_interventions_excel' %}">
+            <i class="bi bi-file-earmark-excel"></i> Excel
+        </a>
+        <a class="btn btn-sm btn-outline-primary" href="{% url 'parc_interventions_csv' %}">
+            <i class="bi bi-file-earmark-text"></i> CSV
+        </a>
+        <a class="btn btn-sm btn-outline-danger" href="{% url 'parc_interventions_pdf' %}">
+            <i class="bi bi-file-earmark-pdf"></i> PDF
+        </a>
+    </div>
+</div>
+
+<!-- Filtres avancés -->
+<div class="filters-section">
+    <div class="card-filters">
+        <div class="filters-title">
+            <i class="bi bi-funnel-fill" style="color:#E87722;"></i> Filtres avancés
+        </div>
+        <div class="row g-3">
+            <!-- Recherche -->
+            <div class="col-lg-3 col-md-6">
+                <label class="form-label">Recherche</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input type="text" class="form-control" id="f-search"
+                           placeholder="N°, équipement, technicien...">
+                </div>
+            </div>
+            <!-- Date de -->
+            <div class="col-lg-2 col-md-3 col-6">
+                <label class="form-label">Date (de)</label>
+                <input type="date" class="form-control" id="f-date-from">
+            </div>
+            <!-- Date à -->
+            <div class="col-lg-2 col-md-3 col-6">
+                <label class="form-label">Date (à)</label>
+                <input type="date" class="form-control" id="f-date-to">
+            </div>
+            <!-- Type -->
+            <div class="col-lg-2 col-md-3 col-6">
+                <label class="form-label">Type</label>
+                <select class="form-select" id="f-type">
+                    <option value="">Tous les types</option>
+                    <option value="corrective">Corrective</option>
+                    <option value="preventive">Préventive</option>
+                </select>
+            </div>
+            <!-- État -->
+            <div class="col-lg-2 col-md-3 col-6">
+                <label class="form-label">État</label>
+                <select class="form-select" id="f-state">
+                    <option value="">Tous les états</option>
+                    <option value="progress">En cours</option>
+                    <option value="done">Terminé</option>
+                    <option value="new">Nouveau</option>
+                    <option value="request">Demande</option>
+                </select>
+            </div>
+            <!-- Durée min -->
+            <div class="col-lg-1 col-md-3 col-6">
+                <label class="form-label">Dur. min (h)</label>
+                <input type="number" class="form-control" id="f-dur-min"
+                       step="0.5" min="0" placeholder="0">
+            </div>
+            <!-- Durée max -->
+            <div class="col-lg-1 col-md-3 col-6">
+                <label class="form-label">Dur. max (h)</label>
+                <input type="number" class="form-control" id="f-dur-max"
+                       step="0.5" min="0" placeholder="∞">
+            </div>
+            <!-- Trier par -->
+            <div class="col-lg-2 col-md-3 col-6">
+                <label class="form-label">Trier par</label>
+                <select class="form-select" id="f-sort">
+                    <option value="-date">Date (récent)</option>
+                    <option value="date">Date (ancien)</option>
+                    <option value="-dur">Durée (long)</option>
+                    <option value="dur">Durée (court)</option>
+                </select>
+            </div>
+            <!-- Reset -->
+            <div class="col-lg-2 col-md-3 d-flex align-items-end">
+                <button type="button" class="btn btn-outline-secondary w-100"
+                        onclick="resetFilters()">
+                    <i class="bi bi-arrow-counterclockwise"></i> Réinitialiser
+                </button>
+            </div>
+        </div>
+        <!-- Filtres actifs -->
+        <div class="active-filters mt-3" id="active-filters"></div>
+    </div>
+</div>
+
+<!-- Tableau moderne -->
+<div class="table-container">
+
+    <!-- Header -->
+    <div class="table-header-container">
+        <h5 class="table-header-title">
+            <i class="bi bi-hammer"></i> Liste des interventions
+        </h5>
+        <div class="table-stats">
+            <div class="stat-item">
+                <span class="stat-label">Affichés</span>
+                <span class="stat-value" id="stat-count">{{ kpi_total }}</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Durée totale</span>
+                <span class="stat-value">{{ kpi_total_h|floatformat:"2g" }}h</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Moyenne</span>
+                <span class="stat-value">{{ kpi_avg_h|floatformat:"2g" }}h</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Count -->
+    <div class="table-count" id="row-count">{{ kpi_total }} résultat(s)</div>
+
+    <!-- Table -->
+    <div class="table-responsive">
+        <table class="table-modern" id="tbl">
+            <thead>
+                <tr>
+                    <th style="width:14%">N° Ordre</th>
+                    <th style="width:10%">Date</th>
+                    <th style="width:20%">Équipement</th>
+                    <th style="width:12%">Technicien</th>
+                    <th style="width:10%">Type</th>
+                    <th style="width:9%;text-align:right">Durée (h)</th>
+                    <th style="width:16%">Description</th>
+                    <th style="width:9%;text-align:center">État</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in rows %}
+                <tr data-row
+                    data-date="{{ r.date }}"
+                    data-type="{{ r.type|lower }}"
+                    data-dur="{{ r.duree }}"
+                    data-equip="{{ r.equipement|lower }}"
+                    data-tech="{{ r.technicien|lower }}"
+                    data-state="{{ r.etat|lower }}">
+                    <td class="col-numero">{{ r.name }}</td>
+                    <td class="col-date">{{ r.date }}</td>
+                    <td><small>{{ r.equipement }}</small></td>
+                    <td>
+                        <span class="badge bg-light text-dark border" style="font-weight:500;">
+                            {{ r.technicien }}
+                        </span>
+                    </td>
+                    <td>
+                        {% if r.type == 'Corrective' %}
+                            <span class="badge bg-danger">Corrective</span>
+                        {% elif r.type == 'Preventive' or r.type == 'Préventive' %}
+                            <span class="badge bg-success">Préventive</span>
+                        {% else %}
+                            <span class="badge bg-secondary">{{ r.type }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="col-duree">
+                        {% if r.duree > 0 %}
+                            {{ r.duree|floatformat:"2g" }}
+                        {% else %}
+                            <span class="text-muted">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <small class="text-muted">{{ r.description|truncatechars:55 }}</small>
+                    </td>
+                    <td class="col-statut">
+                        {% if 'progress' in r.etat|lower or 'cours' in r.etat|lower %}
+                            <span class="badge-statut badge-en-progress">
+                                <i class="bi bi-hourglass-split"></i> En cours
+                            </span>
+                        {% elif 'done' in r.etat|lower or 'termin' in r.etat|lower %}
+                            <span class="badge-statut badge-termine">
+                                <i class="bi bi-check-circle"></i> Terminé
+                            </span>
+                        {% elif 'request' in r.etat|lower %}
+                            <span class="badge-statut badge-request">
+                                <i class="bi bi-send"></i> Demande
+                            </span>
+                        {% else %}
+                            <span class="badge-statut badge-nouveau">
+                                <i class="bi bi-circle"></i> {{ r.etat }}
+                            </span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8" class="text-center text-muted py-5">
+                        <i class="bi bi-inbox" style="font-size:2rem;display:block;margin-bottom:8px;"></i>
+                        Aucune intervention trouvée
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="5">TOTAL</td>
+                    <td style="text-align:right">{{ kpi_total_h|floatformat:"2g" }}h</td>
+                    <td colspan="2">{{ kpi_total }} interventions</td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    <div class="table-pager" id="pager"></div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="{% static 'js/parc.js' %}"></script>
+<script>
+parcPie('chartType', {{ chart_type_json|safe }});
+parcBar('chartTech', {{ chart_tech_json|safe }}, null, '#1a2c4e', false);
+</script>
+<script>
+(function () {
+    const allRows = Array.from(document.querySelectorAll('#tbl tbody tr[data-row]'));
+    let currentVisible = allRows.slice();
+    let page = 1;
+    const PAGE_SIZE = 50;
+
+    function parseRowDate(str) {
+        if (!str || str === '—') return null;
+        const p = str.split('/');
+        if (p.length !== 3) return null;
+        return new Date(parseInt(p[2], 10), parseInt(p[1], 10) - 1, parseInt(p[0], 10));
+    }
+
+    function getFilters() {
+        const durMaxRaw = parseFloat(document.getElementById('f-dur-max').value);
+        return {
+            search:   (document.getElementById('f-search').value || '').toLowerCase().trim(),
+            dateFrom: document.getElementById('f-date-from').value || '',
+            dateTo:   document.getElementById('f-date-to').value || '',
+            type:     (document.getElementById('f-type').value || '').toLowerCase(),
+            state:    (document.getElementById('f-state').value || '').toLowerCase(),
+            durMin:   parseFloat(document.getElementById('f-dur-min').value) || 0,
+            durMax:   isNaN(durMaxRaw) ? Infinity : durMaxRaw,
+            sort:     document.getElementById('f-sort').value || '-date',
+        };
+    }
+
+    function applyFilters() {
+        const f = getFilters();
+        const dateFrom = f.dateFrom ? new Date(f.dateFrom) : null;
+        const dateTo   = f.dateTo   ? new Date(f.dateTo + 'T23:59:59') : null;
+
+        let visible = allRows.filter(function (tr) {
+            if (f.search && !tr.textContent.toLowerCase().includes(f.search)) return false;
+
+            if (dateFrom || dateTo) {
+                const d = parseRowDate(tr.dataset.date);
+                if (d) {
+                    if (dateFrom && d < dateFrom) return false;
+                    if (dateTo   && d > dateTo)   return false;
+                }
+            }
+
+            if (f.type && !tr.dataset.type.includes(f.type)) return false;
+            if (f.state && !tr.dataset.state.includes(f.state)) return false;
+
+            const dur = parseFloat(tr.dataset.dur) || 0;
+            if (f.durMin > 0      && dur < f.durMin) return false;
+            if (f.durMax < Infinity && dur > f.durMax) return false;
+
+            return true;
+        });
+
+        // Sort
+        visible.sort(function (a, b) {
+            if (f.sort === '-date' || f.sort === 'date') {
+                const da = parseRowDate(a.dataset.date);
+                const db = parseRowDate(b.dataset.date);
+                if (!da && !db) return 0;
+                if (!da) return 1;
+                if (!db) return -1;
+                return f.sort === '-date' ? db - da : da - db;
+            }
+            if (f.sort === '-dur' || f.sort === 'dur') {
+                const da = parseFloat(a.dataset.dur) || 0;
+                const db = parseFloat(b.dataset.dur) || 0;
+                return f.sort === '-dur' ? db - da : da - db;
+            }
+            return 0;
+        });
+
+        currentVisible = visible;
+        page = 1;
+        render();
+        updateBadges(f);
+    }
+
+    function render() {
+        const total      = currentVisible.length;
+        const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+        if (page > totalPages) page = totalPages;
+
+        allRows.forEach(function (tr) { tr.style.display = 'none'; });
+        currentVisible
+            .slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+            .forEach(function (tr) { tr.style.display = ''; });
+
+        var countEl = document.getElementById('row-count');
+        if (countEl) countEl.textContent = total + ' résultat(s)';
+
+        var statEl = document.getElementById('stat-count');
+        if (statEl) statEl.textContent = total;
+
+        var pager = document.getElementById('pager');
+        pager.innerHTML = '';
+        if (totalPages > 1) {
+            for (var i = 1; i <= totalPages; i++) {
+                var btn = document.createElement('button');
+                btn.className = 'btn btn-sm ' + (i === page ? 'btn-dark' : 'btn-outline-secondary');
+                btn.textContent = i;
+                btn.onclick = (function (p) {
+                    return function () { page = p; render(); };
+                })(i);
+                pager.appendChild(btn);
+            }
+        }
+    }
+
+    function updateBadges(f) {
+        var el = document.getElementById('active-filters');
+        if (!el) return;
+        var parts = [];
+        if (f.search)        parts.push('Recherche : "' + f.search + '"');
+        if (f.dateFrom)      parts.push('De : ' + f.dateFrom);
+        if (f.dateTo)        parts.push('À : ' + f.dateTo);
+        if (f.type)          parts.push('Type : ' + f.type);
+        if (f.state)         parts.push('État : ' + f.state);
+        if (f.durMin > 0)    parts.push('Dur. ≥ ' + f.durMin + 'h');
+        if (f.durMax < Infinity) parts.push('Dur. ≤ ' + f.durMax + 'h');
+        el.innerHTML = parts.length
+            ? '<span style="color:#888;font-size:.82rem;font-weight:600;">Filtres actifs :</span> ' +
+              parts.map(function (p) { return '<span class="filter-badge">' + p + '</span>'; }).join('')
+            : '';
+    }
+
+    window.resetFilters = function () {
+        ['f-search', 'f-date-from', 'f-date-to', 'f-dur-min', 'f-dur-max'].forEach(function (id) {
+            var el = document.getElementById(id);
+            if (el) el.value = '';
+        });
+        ['f-type', 'f-state'].forEach(function (id) {
+            var el = document.getElementById(id);
+            if (el) el.value = '';
+        });
+        document.getElementById('f-sort').value = '-date';
+        applyFilters();
+    };
+
+    // Live filtering
+    ['f-search', 'f-date-from', 'f-date-to', 'f-type', 'f-state',
+     'f-dur-min', 'f-dur-max', 'f-sort'].forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el) el.addEventListener('input', applyFilters);
+    });
+
+    applyFilters();
+}());
+</script>
+{% endblock %}

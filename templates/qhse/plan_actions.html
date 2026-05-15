@@ -1,0 +1,298 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Plan d'actions — SOMATRIN{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/qhse.css' %}">
+{% endblock %}
+
+{% block breadcrumb %}
+<a href="{% url 'accueil' %}">Accueil</a>
+<i class="bi bi-chevron-right"></i>
+<a href="/qhse/dashboard/">QHSE</a>
+<i class="bi bi-chevron-right"></i>
+<span style="color:#1a2c4e;font-weight:600;">Plan d'actions</span>
+{% endblock %}
+
+{% block content %}
+
+<!-- Page Header -->
+<div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+  <div>
+    <span class="page-title mb-0" style="margin-bottom:0!important;">Plan d'actions</span>
+    <div style="font-size:13px;color:#6B7280;margin-top:2px;">
+      Suivi des actions correctives, préventives et d'amélioration (JAM)
+    </div>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    <button type="button" class="btn btn-sm" style="background:#1a2c4e;color:#fff;border-radius:7px;font-size:13px;font-weight:600;padding:7px 16px;">
+      <i class="bi bi-plus-circle me-1"></i> Nouveau
+    </button>
+  </div>
+</div>
+
+{% if error %}
+<div class="alert-odoo mb-3">
+  <i class="bi bi-exclamation-triangle-fill"></i>
+  <span>{{ error }} — Données de démonstration affichées.</span>
+</div>
+{% endif %}
+
+<!-- ══ KPI CARDS ══ -->
+<div class="qhse-kpi-grid mb-3" style="grid-template-columns:repeat(5,1fr);">
+  <div class="qhse-kpi-card" style="border-top-color:#1a2c4e;">
+    <div class="qhse-kpi-icon" style="background:#e8edf5;color:#1a2c4e;">
+      <i class="bi bi-list-task"></i>
+    </div>
+    <div>
+      <div class="qhse-kpi-value">{{ kpi_total }}</div>
+      <div class="qhse-kpi-label">Total actions</div>
+    </div>
+  </div>
+  <div class="qhse-kpi-card" style="border-top-color:#E87722;">
+    <div class="qhse-kpi-icon" style="background:#fff4e8;color:#E87722;">
+      <i class="bi bi-clock-history"></i>
+    </div>
+    <div>
+      <div class="qhse-kpi-value">{{ kpi_open }}</div>
+      <div class="qhse-kpi-label">En cours / Ouvertes</div>
+    </div>
+  </div>
+  <div class="qhse-kpi-card" style="border-top-color:#10B981;">
+    <div class="qhse-kpi-icon" style="background:#f0fdf4;color:#10B981;">
+      <i class="bi bi-check-circle-fill"></i>
+    </div>
+    <div>
+      <div class="qhse-kpi-value">{{ kpi_closed }}</div>
+      <div class="qhse-kpi-label">Traitées / Clôturées</div>
+    </div>
+  </div>
+  <div class="qhse-kpi-card" style="border-top-color:#DC2626;">
+    <div class="qhse-kpi-icon" style="background:#fef2f2;color:#DC2626;">
+      <i class="bi bi-exclamation-triangle-fill"></i>
+    </div>
+    <div>
+      <div class="qhse-kpi-value">{{ kpi_en_retard }}</div>
+      <div class="qhse-kpi-label">En retard</div>
+    </div>
+  </div>
+  <div class="qhse-kpi-card" style="border-top-color:#3B82F6;">
+    <div class="qhse-kpi-icon" style="background:#eff6ff;color:#3B82F6;">
+      <i class="bi bi-speedometer2"></i>
+    </div>
+    <div>
+      <div class="qhse-kpi-value">{{ kpi_taux_cloture }}%</div>
+      <div class="qhse-kpi-label">Taux clôture</div>
+    </div>
+  </div>
+</div>
+
+<div class="kpi-summary">
+  <strong>{{ kpi_total }}</strong> actions · <strong>{{ kpi_open }}</strong> en cours · <strong>{{ kpi_closed }}</strong> traitées · taux clôture <strong>{{ kpi_taux_cloture }}%</strong>
+</div>
+
+<!-- ══ FILTRES ══ -->
+<div class="qhse-table-section filters-section mb-0" style="border-radius:12px 12px 0 0; border: 1.5px solid #d0d5dd !important;">
+  <form method="GET" id="filterForm">
+    <div class="qhse-filters-bar" style="background:#f0f4f8;border-bottom:1px solid #e5e7eb;flex-wrap:wrap;gap:10px;padding:14px 18px;">
+      <!-- Recherche -->
+      <div class="filter-search" style="min-width:220px;max-width:320px;">
+        <i class="bi bi-search"></i>
+        <input type="text" name="q" value="{{ search_query }}" id="actionsSearch"
+               placeholder="Rechercher une action…" class="form-control search-somatrin">
+      </div>
+      <!-- État -->
+      <div>
+        <select name="state" class="form-select form-select-sm" style="min-width:140px;font-size:13px;"
+                onchange="this.form.submit()">
+          <option value="">Tous les états</option>
+          <option value="draft" {% if selected_state == "draft" %}selected{% endif %}>Nouveau</option>
+          <option value="in_progress" {% if selected_state == "in_progress" %}selected{% endif %}>En cours</option>
+          <option value="done" {% if selected_state == "done" %}selected{% endif %}>Traité</option>
+          <option value="cancel" {% if selected_state == "cancel" %}selected{% endif %}>Annulé</option>
+        </select>
+      </div>
+      <!-- Projet / Processus -->
+      <div>
+        <select name="project" class="form-select form-select-sm" style="min-width:200px;font-size:13px;"
+                onchange="this.form.submit()">
+          <option value="">Tous les processus</option>
+          {% for proj, cnt in by_project %}
+          <option value="{{ proj }}" {% if selected_project == proj %}selected{% endif %}>
+            {{ proj }} ({{ cnt }})
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <!-- Assigné -->
+      <div>
+        <select name="assignee" class="form-select form-select-sm" style="min-width:160px;font-size:13px;"
+                onchange="this.form.submit()">
+          <option value="">Tous les assignés</option>
+          {% for name, cnt in top_assignees %}
+          <option value="{{ name }}" {% if selected_assignee == name %}selected{% endif %}>
+            {{ name }} ({{ cnt }})
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <button type="submit" class="btn-export-pdf" style="padding:7px 16px;">
+        <i class="bi bi-funnel"></i> Filtrer
+      </button>
+      <div class="ms-auto d-flex gap-2 align-items-center">
+        <span class="filter-count"><span id="rowCount">{{ rows|length }}</span> actions</span>
+      </div>
+    </div>
+    <div class="somatrin-export-row">
+      <button type="button" class="btn btn-sm btn-smt-excel" onclick="qhseExportCSV('actionsTable','plan_actions.csv')"><i class="bi bi-file-earmark-excel"></i> Export Excel</button>
+      <button type="button" class="btn btn-sm btn-smt-csv" onclick="qhseExportCSV('actionsTable','plan_actions.csv')"><i class="bi bi-filetype-csv"></i> Export CSV</button>
+      <button type="button" class="btn btn-sm btn-smt-pdf" onclick="window.print()"><i class="bi bi-file-earmark-pdf"></i> Export PDF</button>
+      <a href="/qhse/plan-actions/" class="btn-smt-reset"><i class="bi bi-arrow-clockwise"></i> Réinitialiser</a>
+    </div>
+  </form>
+
+  <!-- ══ TABLEAU ══ -->
+  <div class="qhse-table-wrapper somatrin-table-wrap">
+    <table class="qhse-table somatrin-table" id="actionsTable">
+      <thead>
+        <tr>
+          <th style="width:36px;"><input type="checkbox" id="checkAll" style="accent-color:#E87722;"></th>
+          <th data-col="1" style="min-width:220px;">Action <i class="bi bi-chevron-expand"></i></th>
+          <th data-col="2" style="min-width:140px;">Assigné à <i class="bi bi-chevron-expand"></i></th>
+          <th data-col="3" style="min-width:110px;">Date échéance <i class="bi bi-chevron-expand"></i></th>
+          <th data-col="4" style="min-width:130px;">Date traitement <i class="bi bi-chevron-expand"></i></th>
+          <th data-col="5" style="min-width:200px;">Processus <i class="bi bi-chevron-expand"></i></th>
+          <th data-col="6" style="min-width:160px;">Origine <i class="bi bi-chevron-expand"></i></th>
+          <th data-col="7" style="min-width:160px;">Type d'action <i class="bi bi-chevron-expand"></i></th>
+          <th data-col="8" style="min-width:200px;">Anomalie <i class="bi bi-chevron-expand"></i></th>
+          <th data-col="9" style="width:90px;">Priorité</th>
+          <th data-col="10" style="min-width:110px;">État <i class="bi bi-chevron-expand"></i></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+        <tr data-state="{{ r.state }}" data-overdue="{% if r.overdue %}1{% endif %}">
+          <td data-label=""><input type="checkbox" style="accent-color:#E87722;"></td>
+          <td data-label="Action">
+            <a href="/qhse/action/{{ r.id }}/"
+               style="color:#1a2c4e;font-weight:700;text-decoration:none;font-size:13px;"
+               title="{{ r.name }}">
+              {{ r.name|truncatechars:60 }}
+            </a>
+            {% if r.overdue %}
+              <span style="font-size:10px;background:#fef2f2;color:#b91c1c;padding:2px 6px;border-radius:4px;margin-left:6px;font-weight:600;">
+                EN RETARD
+              </span>
+            {% endif %}
+          </td>
+          <td data-label="Assigné à">
+            <span style="display:flex;align-items:center;gap:5px;">
+              <span style="width:28px;height:28px;background:#e8edf5;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#1a2c4e;flex-shrink:0;">
+                {{ r.assignee|slice:":1" }}
+              </span>
+              <span style="font-size:13px;">{{ r.assignee }}</span>
+            </span>
+          </td>
+          <td data-label="Échéance">
+            <span class="cell-date {% if r.overdue %}text-danger{% endif %}">{{ r.date_deadline }}</span>
+          </td>
+          <td data-label="Traitement">
+            <span class="cell-date">{{ r.date_done }}</span>
+          </td>
+          <td data-label="Processus">
+            <span style="font-size:11px;color:#374151;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;display:block;" title="{{ r.project }}">
+              {{ r.project }}
+            </span>
+          </td>
+          <td data-label="Origine">
+            <span style="font-size:11px;color:#6B7280;background:#f3f4f6;padding:2px 8px;border-radius:4px;white-space:nowrap;">
+              {{ r.origin }}
+            </span>
+          </td>
+          <td data-label="Type">
+            <span style="font-size:11px;color:#1a2c4e;font-weight:600;white-space:nowrap;">
+              {{ r.task_type }}
+            </span>
+          </td>
+          <td data-label="Anomalie">
+            <span style="font-size:12px;color:#374151;" title="{{ r.anomaly }}">
+              {{ r.anomaly|truncatechars:80 }}
+            </span>
+          </td>
+          <td data-label="Priorité">
+            {% if r.priority == "3" %}
+              <span style="color:#E87722;">★★★</span>
+            {% elif r.priority == "2" %}
+              <span style="color:#E87722;">★★</span><span style="color:#d1d5db;">★</span>
+            {% else %}
+              <span style="color:#E87722;">★</span><span style="color:#d1d5db;">★★</span>
+            {% endif %}
+          </td>
+          <td data-label="État">
+            {% if r.state == "done" %}
+              <span class="badge-etat badge-done"><i class="bi bi-check-circle-fill"></i> Traité</span>
+            {% elif r.state == "in_progress" %}
+              <span class="badge-etat badge-en_cours"><i class="bi bi-play-circle-fill"></i> En cours</span>
+            {% elif r.state == "cancel" %}
+              <span class="badge-etat badge-cancel"><i class="bi bi-x-circle"></i> Annulé</span>
+            {% else %}
+              <span class="badge-etat badge-ouvert"><i class="bi bi-circle"></i> Nouveau</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="11">
+            <div class="qhse-empty">
+              <i class="bi bi-list-check"></i>
+              <p>Aucune action trouvée pour les filtres appliqués.</p>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  <div class="qhse-pagination">
+    <span class="pag-info"><strong id="pagInfo"></strong></span>
+    <div class="pag-buttons" id="pagBtns"></div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/qhse.js' %}"></script>
+<script>
+(function(){
+  // Search
+  qhseInitTableSearch('actionsSearch', 'actionsTable', 'rowCount');
+  qhseInitTableSort('actionsTable');
+
+  // Checkbox "Select All"
+  const checkAll = document.getElementById('checkAll');
+  if (checkAll) {
+    checkAll.addEventListener('change', function(){
+      document.querySelectorAll('#actionsTable tbody input[type=checkbox]')
+        .forEach(cb => cb.checked = this.checked);
+    });
+  }
+
+  // Pagination 25 per page
+  const pagCtrl = qhseInitPagination('actionsTable', 25, 'pagInfo', 'pagBtns');
+
+  const searchEl = document.getElementById('actionsSearch');
+  if (searchEl && pagCtrl) {
+    searchEl.addEventListener('input', () => setTimeout(() => pagCtrl.refresh(), 50));
+  }
+
+  // Highlight overdue rows
+  document.querySelectorAll('#actionsTable tr[data-overdue="1"]').forEach(row => {
+    row.style.borderLeft = '3px solid #DC2626';
+  });
+})();
+</script>
+{% endblock %}

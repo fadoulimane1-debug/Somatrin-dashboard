@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}Production{% endblock %}
 
@@ -8,32 +9,258 @@
   <span style="color:#1a2c4e; font-weight:600;">Production</span>
 {% endblock %}
 
-{% block content %}
-<span class="page-title">Production</span>
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/production.css' %}?v=20260512">
+<style>
+  body { background: #f5f5f5; }
 
-<div class="row g-3 mt-1">
-  <div class="col-md-4">
-    <a href="{% url 'production_gasoil' %}" class="text-decoration-none">
-      <div class="card h-100 p-3">
-        <div class="fw-semibold mb-2"><i class="bi bi-fuel-pump me-2"></i>Gasoil</div>
-        <div class="text-muted small">Suivi consommation, montants, regroupements par mois, véhicule et conducteur.</div>
+  .prod-hero {
+    background: linear-gradient(135deg, #1a2c4e, #e87722);
+    border-radius: 14px;
+    padding: 30px 34px;
+    color: #fff;
+    margin-bottom: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    box-shadow: 0 8px 26px rgba(26, 44, 78, 0.28);
+  }
+  .prod-hero h1 {
+    margin: 0 0 6px;
+    font-size: 34px;
+    font-weight: 800;
+    line-height: 1.15;
+  }
+  .prod-hero p {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 15px;
+  }
+  .prod-hero-right {
+    text-align: right;
+    min-width: 220px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+  }
+  .prod-date {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.92);
+    margin-bottom: 10px;
+  }
+  .prod-hero-icon {
+    font-size: 46px;
+    line-height: 1;
+    opacity: 0.95;
+    width: 62px;
+    height: 62px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.16);
+  }
+
+  .prod-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 20px;
+    min-height: 228px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+    border-left: 8px solid #ddd;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    text-decoration: none;
+    color: inherit;
+    transform: translateY(8px);
+    opacity: 0;
+    animation: fadeInUp 0.45s ease forwards;
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+  }
+  .prod-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 16px 28px rgba(0, 0, 0, 0.16);
+    color: inherit;
+  }
+  .prod-card .icon {
+    font-size: 48px;
+    line-height: 1;
+    margin-bottom: 14px;
+    display: block;
+  }
+  .prod-card h3 {
+    font-size: 18px;
+    font-weight: 700;
+    margin: 0 0 8px;
+  }
+  .prod-card p {
+    color: #6b7280;
+    font-size: 14px;
+    margin: 0 0 14px;
+  }
+  .prod-card .go {
+    margin-top: auto;
+    font-weight: 700;
+    color: #1f2937;
+    font-size: 14px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    padding: 8px 12px;
+    align-self: flex-start;
+    background: #fff;
+  }
+
+  .c1 { border-left-color: #1a2c4e; } .c1 .icon { color: #1a2c4e; }
+  .c2 { border-left-color: #ef6c00; } .c2 .icon { color: #ef6c00; }
+  .c3 { border-left-color: #233b69; } .c3 .icon { color: #233b69; }
+  .c4 { border-left-color: #fb8c00; } .c4 .icon { color: #fb8c00; }
+  .c5 { border-left-color: #1a2c4e; } .c5 .icon { color: #1a2c4e; }
+
+  .a1 { animation-delay: 0.03s; } .a2 { animation-delay: 0.08s; } .a3 { animation-delay: 0.13s; }
+  .a4 { animation-delay: 0.18s; } .a5 { animation-delay: 0.23s; }
+
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @media (max-width: 768px) {
+    .prod-hero { flex-direction: column; align-items: flex-start; }
+    .prod-hero-right { text-align: left; min-width: auto; align-items: flex-start; }
+    .prod-hero h1 { font-size: 26px; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="prod-hero">
+  <div>
+    <h1>Production — Exploitation carrière</h1>
+    <p>Suivi aligné sur vos flux Odoo : pointage opérations (hr.attendance.operation), forages &amp; minages, gasoil engins, IPC et rentabilité par site.</p>
+  </div>
+  <div class="prod-hero-right">
+    <div class="prod-date"><i class="bi bi-calendar3 me-1"></i>{% now "d/m/Y" %}</div>
+    <div class="prod-hero-icon"><i class="bi bi-cone-striped"></i></div>
+  </div>
+</section>
+
+<!-- EXPORT BUTTONS -->
+<div class="export-buttons">
+  <a href="{% url 'export_production_excel' %}" class="btn btn-export btn-excel">📊 Excel</a>
+  <a href="{% url 'export_production_csv' %}" class="btn btn-export btn-csv">📄 CSV</a>
+  <a href="{% url 'export_production_pdf' %}" class="btn btn-export btn-pdf">📑 PDF</a>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-4 col-md-6">
+    <a href="/production/dashboard/" class="prod-card c1 a1">
+      <div>
+        <span class="icon"><i class="bi bi-speedometer2"></i></span>
+        <h3>Dashboard Production</h3>
+        <p>KPI mensuels, production vs budget, répartition LH BENSLIMANE / LH OUJDA / SME AIT BAHA et coûts par site.</p>
       </div>
+      <span class="go">Accéder →</span>
     </a>
   </div>
-  <div class="col-md-4">
-    <a href="{% url 'production_couts_nature' %}" class="text-decoration-none">
-      <div class="card h-100 p-3">
-        <div class="fw-semibold mb-2"><i class="bi bi-pie-chart me-2"></i>Coûts par nature</div>
-        <div class="text-muted small">Analyse des coûts analytiques par catégorie produit, mois et véhicule.</div>
+  <div class="col-lg-4 col-md-6">
+    <a href="/production/gasoil/" class="prod-card c1 a1">
+      <div>
+        <span class="icon"><i class="bi bi-fuel-pump-fill"></i></span>
+        <h3>Gasoil</h3>
+        <p>Litres et montants par site carrière ; même logique que les sorties terrain (véhicules / affectations).</p>
       </div>
+      <span class="go">Accéder →</span>
     </a>
   </div>
-  <div class="col-md-4">
-    <a href="{% url 'production_facturation_ventes' %}" class="text-decoration-none">
-      <div class="card h-100 p-3">
-        <div class="fw-semibold mb-2"><i class="bi bi-receipt-cutoff me-2"></i>Facturation (Ventes)</div>
-        <div class="text-muted small">Factures de ventes production, regroupements et chiffre d'affaires par lieu.</div>
+  <div class="col-lg-4 col-md-6">
+    <a href="/production/pointages-operations-foration/" class="prod-card c2 a2">
+      <div>
+        <span class="icon"><i class="bi bi-clipboard2-check"></i></span>
+        <h3>Pointages Opérations &amp; Foration</h3>
+        <p>Vue type « Pointage opérations » : ouvrages analytiques, affectations équipement (ex. SRO…, OP 11/…), foration détectée sur la trace opération.</p>
       </div>
+      <span class="go">Accéder →</span>
+    </a>
+  </div>
+  <div class="col-lg-4 col-md-6">
+    <a href="/production/machines-heures-tonnages/" class="prod-card c3 a3">
+      <div>
+        <span class="icon"><i class="bi bi-truck-front"></i></span>
+        <h3>Machines / Heures / Tonnages</h3>
+        <p>Heures machines, tonnages et rendements — machines de forage (SRO…), pelles, chargeurs par site.</p>
+      </div>
+      <span class="go">Accéder →</span>
+    </a>
+  </div>
+  <div class="col-lg-4 col-md-6">
+    <a href="/production/couts-par-nature/" class="prod-card c2 a2">
+      <div>
+        <span class="icon"><i class="bi bi-pie-chart-fill"></i></span>
+        <h3>Coûts par nature</h3>
+        <p>Répartition main d'œuvre, matières, énergie &amp; carburant, maintenance — masses cohérentes avec le pilotage carrière.</p>
+      </div>
+      <span class="go">Accéder →</span>
+    </a>
+  </div>
+  <div class="col-lg-4 col-md-6">
+    <a href="/production/facturation-ventes/" class="prod-card c3 a3">
+      <div>
+        <span class="icon"><i class="bi bi-receipt-cutoff"></i></span>
+        <h3>Facturation Ventes</h3>
+        <p>Factures clients (LAFARGEHOLCIM, GRABEMARO, etc.), CA mensuel et statuts de paiement.</p>
+      </div>
+      <span class="go">Accéder →</span>
+    </a>
+  </div>
+  <div class="col-lg-4 col-md-6">
+    <a href="/production/ratios/" class="prod-card c4 a4">
+      <div>
+        <span class="icon"><i class="bi bi-clipboard-data"></i></span>
+        <h3>Ratio Exploitation</h3>
+        <p>Rendement forage (ML/h), métrage foré, tonnage, efficacité — comparatif des trois sites carrière.</p>
+      </div>
+      <span class="go">Accéder →</span>
+    </a>
+  </div>
+  <div class="col-lg-4 col-md-6">
+    <a href="/production/ipc/" class="prod-card c5 a5">
+      <div>
+        <span class="icon"><i class="bi bi-link-45deg"></i></span>
+        <h3>IPC</h3>
+        <p>IPC = VA / coûts contrôlés par site (LH BENSLIMANE, LH OUJDA, SME AIT BAHA) avec seuil de référence 1,0.</p>
+      </div>
+      <span class="go">Accéder →</span>
+    </a>
+  </div>
+  <div class="col-lg-4 col-md-6">
+    <a href="/production/rentabilite/" class="prod-card c4 a4">
+      <div>
+        <span class="icon"><i class="bi bi-graph-up-arrow"></i></span>
+        <h3>Rentabilité</h3>
+        <p>Marges, ROI et budgets par site carrière ; lecture rapide des écarts vs prévisionnel.</p>
+      </div>
+      <span class="go">Accéder →</span>
+    </a>
+  </div>
+  <div class="col-lg-4 col-md-6">
+    <a href="/production/rapports/" class="prod-card c6 a6">
+      <div>
+        <span class="icon"><i class="bi bi-file-earmark-text"></i></span>
+        <h3>Rapports &amp; Analyses</h3>
+        <p>Rapports mensuels production / IPC, comparaison sites, exports PDF ou Excel.</p>
+      </div>
+      <span class="go">Accéder →</span>
+    </a>
+  </div>
+  <div class="col-lg-4 col-md-6">
+    <a href="/production/sites/" class="prod-card c5 a5">
+      <div>
+        <span class="icon"><i class="bi bi-geo-alt-fill"></i></span>
+        <h3>Sites</h3>
+        <p>Classement et suivi par site réel (carrières) : volumes gasoil, anomalies, indice d'optimisation.</p>
+      </div>
+      <span class="go">Accéder →</span>
     </a>
   </div>
 </div>

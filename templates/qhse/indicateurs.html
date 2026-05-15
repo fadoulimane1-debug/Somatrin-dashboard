@@ -1,0 +1,223 @@
+{% extends 'base.html' %}
+{% load static humanize %}
+
+{% block title %}Indicateurs HSE — SOMATRIN{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/qhse.css' %}">
+{% endblock %}
+
+{% block breadcrumb %}
+<a href="{% url 'accueil' %}">Accueil</a>
+<i class="bi bi-chevron-right"></i>
+<a href="/qhse/dashboard/">QHSE</a>
+<i class="bi bi-chevron-right"></i>
+<span style="color:#1a2c4e;font-weight:600;">Indicateurs HSE</span>
+{% endblock %}
+
+{% block content %}
+
+<!-- Page Header -->
+<div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+  <div>
+    <span class="page-title mb-0" style="margin-bottom:0!important;">Indicateurs HSE (TF, TG)</span>
+    <div style="font-size:13px;color:#6B7280;margin-top:2px;">
+      Suivi extincteurs, contrôle réglementaire et alertes J&#8209;7
+    </div>
+    </div>
+</div>
+
+{% if error %}
+<div class="alert-odoo mb-3">
+  <i class="bi bi-exclamation-triangle-fill"></i>
+  <span>{{ error }} — Données de démonstration affichées.</span>
+</div>
+{% endif %}
+
+<!-- KPI Cards -->
+<div class="qhse-kpi-grid mb-3" style="grid-template-columns:repeat(4,1fr);">
+  <div class="qhse-kpi-card" style="border-top-color:#1a2c4e;">
+    <div class="qhse-kpi-icon" style="background:#e8edf5;color:#1a2c4e;">
+      <i class="bi bi-fire"></i>
+    </div>
+    <div>
+      <div class="qhse-kpi-value" style="color:#1a2c4e;">{{ kpi_total|default:"0" }}</div>
+      <div class="qhse-kpi-label">Extincteurs</div>
+    </div>
+  </div>
+  <div class="qhse-kpi-card" style="border-top-color:#F59E0B;">
+    <div class="qhse-kpi-icon" style="background:#fffbeb;color:#F59E0B;">
+      <i class="bi bi-bell-fill"></i>
+    </div>
+    <div>
+      <div class="qhse-kpi-value" style="color:#F59E0B;">{{ kpi_j7|default:"0" }}</div>
+      <div class="qhse-kpi-label">Alertes J&#8209;7</div>
+    </div>
+  </div>
+  <div class="qhse-kpi-card" style="border-top-color:#DC2626;">
+    <div class="qhse-kpi-icon" style="background:#fef2f2;color:#DC2626;">
+      <i class="bi bi-exclamation-triangle-fill"></i>
+    </div>
+    <div>
+      <div class="qhse-kpi-value" style="color:#DC2626;">{{ kpi_echus|default:"0" }}</div>
+      <div class="qhse-kpi-label">Échus</div>
+    </div>
+  </div>
+  <div class="qhse-kpi-card" style="border-top-color:#E87722;">
+    <div class="qhse-kpi-icon" style="background:#fff4e8;color:#E87722;">
+      <i class="bi bi-shield-exclamation"></i>
+    </div>
+    <div>
+      <div class="qhse-kpi-value" style="color:#E87722;">{{ kpi_alertes|default:"0" }}</div>
+      <div class="qhse-kpi-label">Total alertes</div>
+    </div>
+  </div>
+</div>
+
+<div class="kpi-summary">
+  <strong>{{ kpi_total|default:"0" }}</strong> extincteurs · <strong>{{ kpi_j7|default:"0" }}</strong> alertes J-7 · <strong>{{ kpi_echus|default:"0" }}</strong> échus · <strong>{{ kpi_alertes|default:"0" }}</strong> alertes
+</div>
+
+<!-- Info Box réglementaire -->
+<div style="background:#f0f9ff;border-left:4px solid #3B82F6;border-radius:8px;padding:14px 18px;margin-bottom:18px;display:flex;align-items:flex-start;gap:12px;">
+  <i class="bi bi-info-circle-fill" style="color:#3B82F6;font-size:18px;flex-shrink:0;margin-top:1px;"></i>
+  <div>
+    <div style="font-weight:700;color:#1e40af;font-size:13px;margin-bottom:3px;">Rappel réglementaire</div>
+    <div style="font-size:13px;color:#374151;">
+      Un rappel est déclenché au moins une semaine avant la date d'échéance <strong>(J&#8209;7)</strong>.
+      Tout extincteur dont la date de validité est dépassée est considéré comme <strong>échu</strong> et doit être remplacé immédiatement.
+    </div>
+  </div>
+</div>
+
+<!-- Filtre site -->
+<div class="qhse-table-section filters-section" style="border: 1.5px solid #d0d5dd !important;">
+  <form method="GET" id="filterForm">
+    <div class="qhse-filters-bar">
+      <!-- Recherche rapide -->
+      <div class="filter-search" style="min-width:220px;max-width:340px;">
+        <i class="bi bi-search"></i>
+        <input type="text" id="indicSearch" placeholder="Extincteur, site, zone…"
+               class="form-control search-somatrin">
+      </div>
+      <!-- Site (GET param) -->
+      <input type="text" name="site" value="{{ selected_site }}" placeholder="Filtrer par site…"
+             class="form-control form-control-sm" style="max-width:200px;font-size:13px;">
+      <button type="submit" class="btn-export-pdf" style="padding:7px 16px;">
+        <i class="bi bi-funnel"></i> Filtrer
+      </button>
+      <div class="ms-auto d-flex gap-2 align-items-center">
+        <span class="filter-count"><span id="rowCount">{{ rows|length }}</span> extincteurs</span>
+      </div>
+    </div>
+    <div class="somatrin-export-row">
+      <button type="button" class="btn btn-sm btn-smt-excel" onclick="qhseExportCSV('indicateursTable','indicateurs_hse.csv')"><i class="bi bi-file-earmark-excel"></i> Export Excel</button>
+      <button type="button" class="btn btn-sm btn-smt-csv" onclick="qhseExportCSV('indicateursTable','indicateurs_hse.csv')"><i class="bi bi-filetype-csv"></i> Export CSV</button>
+      <button type="button" class="btn btn-sm btn-smt-pdf" onclick="window.print()"><i class="bi bi-file-earmark-pdf"></i> Export PDF</button>
+      <a href="/qhse/indicateurs-hse/" class="btn-smt-reset"><i class="bi bi-arrow-clockwise"></i> Réinitialiser</a>
+    </div>
+  </form>
+
+  <!-- Tableau -->
+  <div class="qhse-table-wrapper somatrin-table-wrap">
+    <table class="qhse-table somatrin-table" id="indicateursTable">
+      <thead>
+        <tr>
+          <th data-col="0">Extincteur <i class="bi bi-chevron-expand"></i></th>
+          <th data-col="1">Site <i class="bi bi-chevron-expand"></i></th>
+          <th data-col="2">Zone <i class="bi bi-chevron-expand"></i></th>
+          <th data-col="3">Type <i class="bi bi-chevron-expand"></i></th>
+          <th data-col="4">Numéro <i class="bi bi-chevron-expand"></i></th>
+          <th data-col="5">Date validité <i class="bi bi-chevron-expand"></i></th>
+          <th data-col="6" style="text-align:center;">Jours restants <i class="bi bi-chevron-expand"></i></th>
+          <th data-col="7">Statut <i class="bi bi-chevron-expand"></i></th>
+          <th data-col="8">Dernier contrôle <i class="bi bi-chevron-expand"></i></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+        <tr>
+          <td data-label="Extincteur">
+            <span style="display:flex;align-items:center;gap:7px;">
+              <span style="width:30px;height:30px;background:#fef2f2;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <i class="bi bi-fire" style="color:#DC2626;font-size:14px;"></i>
+              </span>
+              <span style="font-weight:600;color:#374151;font-size:13px;">{{ r.designation }}</span>
+            </span>
+          </td>
+          <td data-label="Site">
+            <span style="font-size:12px;color:#6B7280;background:#f3f4f6;padding:2px 8px;border-radius:4px;white-space:nowrap;">
+              {{ r.site }}
+            </span>
+          </td>
+          <td data-label="Zone" style="font-size:12px;color:#374151;">{{ r.zone|default:"—" }}</td>
+          <td data-label="Type" style="font-size:12px;color:#374151;">{{ r.type_extincteur|default:"—" }}</td>
+          <td data-label="Numéro"><span class="cell-id">{{ r.serial|default:"—" }}</span></td>
+          <td data-label="Date validité"><span class="cell-date">{{ r.date_validite }}</span></td>
+          <td data-label="Jours restants" style="text-align:center;">
+            {% if r.jours_restant != '—' and r.jours_restant != None %}
+              {% if r.jours_restant < 0 %}
+                <span style="background:#fef2f2;color:#b91c1c;font-weight:700;padding:3px 10px;border-radius:20px;font-size:12px;">
+                  <i class="bi bi-exclamation-triangle-fill"></i> {{ r.jours_restant }}j
+                </span>
+              {% elif r.jours_restant <= 7 %}
+                <span style="background:#fffbeb;color:#b45309;font-weight:700;padding:3px 10px;border-radius:20px;font-size:12px;">
+                  <i class="bi bi-bell-fill"></i> {{ r.jours_restant }}j
+                </span>
+              {% else %}
+                <span style="background:#f0fdf4;color:#15803d;font-weight:700;padding:3px 10px;border-radius:20px;font-size:12px;">
+                  {{ r.jours_restant }}j
+                </span>
+              {% endif %}
+            {% else %}
+              <span style="color:#9ca3af;">—</span>
+            {% endif %}
+          </td>
+          <td data-label="Statut">
+            {% if r.statut == 'Echu' %}
+              <span class="badge-etat badge-critique"><i class="bi bi-x-octagon-fill"></i> Échu</span>
+            {% elif r.statut == 'Alerte J-7' %}
+              <span class="badge-etat badge-ouvert"><i class="bi bi-bell-fill"></i> Alerte J-7</span>
+            {% elif r.statut == 'OK' %}
+              <span class="badge-etat badge-done"><i class="bi bi-check-circle-fill"></i> Valide</span>
+            {% else %}
+              <span class="badge-etat badge-pending">{{ r.statut|default:"—" }}</span>
+            {% endif %}
+          </td>
+          <td data-label="Dernier contrôle"><span class="cell-date">{{ r.dernier_controle|default:"—" }}</span></td>
+        </tr>
+        {% empty %}
+        <tr data-qhse-placeholder>
+          <td colspan="9">
+            <div class="qhse-empty">
+              <i class="bi bi-fire"></i>
+              <p>Aucun extincteur trouvé pour ce filtre.</p>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  {% if rows %}
+  <div class="qhse-pagination">
+    <div class="pag-info" id="pagInfo"></div>
+    <div class="pag-buttons" id="pagBtns"></div>
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/qhse.js' %}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  qhseInitTableSort('indicateursTable');
+  qhseInitTableSearch('indicSearch', 'indicateursTable', 'rowCount');
+  qhseInitPagination('indicateursTable', 80, 'pagInfo', 'pagBtns');
+});
+</script>
+{% endblock %}

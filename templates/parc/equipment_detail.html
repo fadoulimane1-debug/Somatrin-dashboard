@@ -1,0 +1,332 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Équipement{% if equipment %} — {{ equipment.name }}{% endif %}{% endblock %}
+{% block breadcrumb %}
+<a href="{% url 'accueil' %}">Accueil</a>
+<i class="bi bi-chevron-right"></i>
+<a href="{% url 'parc_module' %}">Parc &amp; Maintenance</a>
+<i class="bi bi-chevron-right"></i>
+<a href="{% url 'parc_equipements' %}">Équipements</a>
+<i class="bi bi-chevron-right"></i>
+<span style="color:#1a2c4e;font-weight:600;">{% if equipment %}{{ equipment.name }}{% else %}Détail{% endif %}</span>
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/parc.css' %}">
+<style>
+.hero {
+    background: linear-gradient(135deg, #0f1e38, #1a2c4e);
+    border-radius: 16px;
+    padding: 22px 26px;
+    color: #fff;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.detail-group {
+    display: flex;
+    align-items: flex-start;
+    padding: 11px 0;
+    border-bottom: 1px solid #f0f0f0;
+    gap: 16px;
+}
+.detail-group:last-child { border-bottom: none; }
+.detail-group label {
+    min-width: 190px;
+    font-size: .82rem;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+    margin: 0;
+    padding-top: 2px;
+}
+.detail-value {
+    color: #1a2c4e;
+    font-size: .95rem;
+    font-weight: 500;
+}
+.info-card {
+    background: #fff;
+    border: 1px solid #E5E7EB;
+    border-radius: 14px;
+    padding: 22px 24px;
+    box-shadow: 0 4px 12px rgba(0,0,0,.06);
+    height: 100%;
+}
+.info-card-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #1a2c4e;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #E87722;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.kpi-mini {
+    background: #f8f9fa;
+    border-radius: 10px;
+    padding: 14px 18px;
+    text-align: center;
+}
+.kpi-mini .v { font-size: 24px; font-weight: 800; color: #1a2c4e; }
+.kpi-mini .l { font-size: .8rem; color: #666; margin-top: 2px; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Hero -->
+<div class="hero mb-4">
+    <div>
+        <small style="opacity:.6;letter-spacing:1.4px;font-size:.78rem;text-transform:uppercase;">Module Parc · Équipement</small>
+        <h2 class="mb-0 mt-1">{% if equipment %}{{ equipment.name }}{% else %}Détail équipement{% endif %}</h2>
+        {% if equipment %}
+        <p style="margin:4px 0 0;opacity:.8;font-size:.9rem;">
+            {{ equipment.category }}{% if equipment.subcategory != '—' %} › {{ equipment.subcategory }}{% endif %}
+        </p>
+        {% endif %}
+    </div>
+    <div>
+        <a href="{% url 'parc_equipements' %}" class="btn btn-sm" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);">
+            <i class="bi bi-arrow-left"></i> Retour liste
+        </a>
+    </div>
+</div>
+
+{% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+
+{% if equipment %}
+
+<!-- KPIs mini -->
+<div class="row g-3 mb-4">
+    <div class="col-lg-3 col-6">
+        <div class="kpi-mini"><div class="v">{{ interventions|length }}</div><div class="l">Interventions</div></div>
+    </div>
+    <div class="col-lg-3 col-6">
+        <div class="kpi-mini"><div class="v" style="color:#E87722;">{{ total_hours|floatformat:"1" }}h</div><div class="l">Durée totale</div></div>
+    </div>
+    <div class="col-lg-3 col-6">
+        <div class="kpi-mini"><div class="v" style="color:#1a2c4e;">{{ total_cost|floatformat:"0" }}</div><div class="l">Coût total (DH)</div></div>
+    </div>
+    <div class="col-lg-3 col-6">
+        <div class="kpi-mini">
+            {% if equipment.computed_state == 'active' %}<div class="v" style="color:#16a34a;">Actif</div>
+            {% elif equipment.computed_state == 'breakdown' %}<div class="v" style="color:#dc2626;">Panne</div>
+            {% else %}<div class="v" style="color:#64748b;">Arrêté</div>{% endif %}
+            <div class="l">État actuel</div>
+        </div>
+    </div>
+</div>
+
+<!-- ONGLETS -->
+<ul class="nav nav-tabs mb-0" id="eqTabs" role="tablist" style="border-bottom:2px solid #E87722;">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="tab-info-tab" data-bs-toggle="tab" data-bs-target="#tab-info" type="button" role="tab">
+            <i class="bi bi-gear-fill"></i> Informations
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="tab-interv-tab" data-bs-toggle="tab" data-bs-target="#tab-interv" type="button" role="tab">
+            <i class="bi bi-hammer"></i> Interventions
+            <span class="badge rounded-pill" style="background:#E87722;color:#fff;font-size:.7rem;">{{ interventions|length }}</span>
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="tab-couts-tab" data-bs-toggle="tab" data-bs-target="#tab-couts" type="button" role="tab">
+            <i class="bi bi-cash-coin"></i> Coûts
+        </button>
+    </li>
+</ul>
+<div class="tab-content" id="eqTabsContent" style="background:#fff;border:1px solid #dee2e6;border-top:none;border-radius:0 0 12px 12px;padding:24px;">
+
+  <!-- ONGLET 1 : Infos -->
+  <div class="tab-pane fade show active" id="tab-info" role="tabpanel">
+    <div class="row g-4">
+      <div class="col-lg-6">
+        <div class="info-card-title"><i class="bi bi-gear-fill" style="color:#E87722;"></i> Informations équipement</div>
+        <div class="detail-group"><label>Modèle</label><div class="detail-value">{{ equipment.model }}</div></div>
+        <div class="detail-group"><label>N° Série</label><div class="detail-value font-monospace">{{ equipment.serial_no }}</div></div>
+        <div class="detail-group"><label>Catégorie</label><div class="detail-value">{{ equipment.category }}</div></div>
+        <div class="detail-group"><label>Sous-catégorie</label><div class="detail-value">{{ equipment.subcategory }}</div></div>
+        <div class="detail-group"><label>Fournisseur</label><div class="detail-value">{{ equipment.supplier }}</div></div>
+        <div class="detail-group"><label>UDM</label><div class="detail-value">{{ equipment.uom }}</div></div>
+        <div class="detail-group">
+            <label>État</label>
+            <div class="detail-value">
+                {% if equipment.computed_state == 'active' %}
+                    <span class="badge-statut badge-termine" style="font-size:.8rem;"><i class="bi bi-check-circle"></i> Actif</span>
+                {% elif equipment.computed_state == 'breakdown' %}
+                    <span class="badge-statut badge-request" style="font-size:.8rem;"><i class="bi bi-exclamation-circle"></i> Panne</span>
+                {% else %}
+                    <span class="badge-statut" style="background:#e2e3e5;color:#383d41;font-size:.8rem;"><i class="bi bi-pause-circle"></i> Arrêté</span>
+                {% endif %}
+            </div>
+        </div>
+        {% if equipment.description %}
+        <div class="detail-group">
+            <label>Description</label>
+            <div class="detail-value" style="white-space:pre-wrap;font-size:.88rem;color:#475569;">{{ equipment.description }}</div>
+        </div>
+        {% endif %}
+      </div>
+      <div class="col-lg-6">
+        <div class="info-card-title"><i class="bi bi-calendar-check-fill" style="color:#E87722;"></i> Maintenance</div>
+        <div class="detail-group"><label>Équipe maintenance</label><div class="detail-value">{{ equipment.team }}</div></div>
+        <div class="detail-group"><label>Technicien référent</label><div class="detail-value">{{ equipment.technician }}</div></div>
+        <div class="detail-group"><label>Type maintenance</label><div class="detail-value">{{ equipment.maintenance_type }}</div></div>
+        <div class="detail-group">
+            <label>Dernière maintenance</label>
+            <div class="detail-value">{% if equipment.last_maintenance %}{{ equipment.last_maintenance }}{% else %}<span class="text-muted">Non renseigné</span>{% endif %}</div>
+        </div>
+        <div class="detail-group">
+            <label>Total interventions</label>
+            <div class="detail-value"><strong style="color:#E87722;font-size:1.1rem;">{{ interventions|length }}</strong> intervention(s)</div>
+        </div>
+        <div class="detail-group">
+            <label>Coût total estimé</label>
+            <div class="detail-value"><strong style="color:#1a2c4e;font-size:1.1rem;">{{ total_cost|floatformat:"0" }} DH</strong></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ONGLET 2 : Interventions -->
+  <div class="tab-pane fade" id="tab-interv" role="tabpanel">
+    {% if interventions %}
+    <div class="row g-3 mb-3">
+        <div class="col-lg-5">
+            <div style="background:#f8fafc;border-radius:10px;padding:14px;">
+                <div style="font-size:.8rem;font-weight:700;color:#1a2c4e;text-transform:uppercase;letter-spacing:.4px;margin-bottom:10px;">Type d'interventions</div>
+                <div style="position:relative;height:160px;"><canvas id="detailChartType"></canvas></div>
+            </div>
+        </div>
+        <div class="col-lg-7">
+            <div style="background:#f8fafc;border-radius:10px;padding:14px;">
+                <div style="font-size:.8rem;font-weight:700;color:#1a2c4e;text-transform:uppercase;letter-spacing:.4px;margin-bottom:10px;">Coûts par intervention</div>
+                <div style="position:relative;height:160px;"><canvas id="detailChartCosts"></canvas></div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    <div class="table-responsive">
+      <table class="table-modern">
+        <thead>
+          <tr>
+            <th style="width:22%">N° Ordre</th>
+            <th style="width:11%">Date</th>
+            <th style="width:12%">Type</th>
+            <th style="width:17%">Technicien</th>
+            <th style="width:10%;text-align:right">Durée (h)</th>
+            <th style="width:12%;text-align:right">Coût (DH)</th>
+            <th style="text-align:center">État</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for i in interventions %}
+          <tr>
+            <td class="col-numero">{{ i.name }}</td>
+            <td class="col-date">{{ i.date }}</td>
+            <td>
+              {% if i.type == 'Corrective' %}<span class="badge bg-danger">Corrective</span>
+              {% elif 'prev' in i.type|lower or 'prév' in i.type|lower %}<span class="badge bg-success">Préventive</span>
+              {% else %}<span class="badge bg-secondary">{{ i.type }}</span>{% endif %}
+            </td>
+            <td><span class="badge bg-light text-dark border">{{ i.technician }}</span></td>
+            <td class="col-duree">{% if i.duration > 0 %}{{ i.duration|floatformat:"2g" }}{% else %}<span class="text-muted">—</span>{% endif %}</td>
+            <td class="col-cout">{% if i.cost > 0 %}{{ i.cost|floatformat:"0" }}{% else %}<span class="text-muted">—</span>{% endif %}</td>
+            <td class="col-statut">
+              {% if 'progress' in i.state|lower or 'cours' in i.state|lower %}
+                  <span class="badge-statut badge-en-progress"><i class="bi bi-hourglass-split"></i> En cours</span>
+              {% elif 'done' in i.state|lower or 'termin' in i.state|lower %}
+                  <span class="badge-statut badge-termine"><i class="bi bi-check-circle"></i> Terminé</span>
+              {% else %}
+                  <span class="badge-statut badge-nouveau"><i class="bi bi-circle"></i> {{ i.state }}</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="7" class="text-center text-muted py-5">
+            <i class="bi bi-inbox" style="font-size:2rem;display:block;margin-bottom:8px;"></i>
+            Aucune intervention enregistrée
+          </td></tr>
+          {% endfor %}
+        </tbody>
+        {% if interventions %}
+        <tfoot>
+          <tr>
+            <td colspan="4">TOTAL</td>
+            <td style="text-align:right">{{ total_hours|floatformat:"1" }}h</td>
+            <td style="text-align:right">{{ total_cost|floatformat:"0" }} DH</td>
+            <td>{{ interventions|length }} interv.</td>
+          </tr>
+        </tfoot>
+        {% endif %}
+      </table>
+    </div>
+  </div>
+
+  <!-- ONGLET 3 : Coûts -->
+  <div class="tab-pane fade" id="tab-couts" role="tabpanel">
+    <div class="row g-3 mb-4">
+      <div class="col-lg-4">
+        <div class="kpi-mini"><div class="v" style="color:#E87722;">{{ total_cost|floatformat:"0" }} DH</div><div class="l">Coût total estimé</div></div>
+      </div>
+      <div class="col-lg-4">
+        <div class="kpi-mini">
+            <div class="v" style="color:#1a2c4e;">
+                {% if interventions %}{{ total_cost|floatformat:"0"|slice:":-0" }}{% else %}0{% endif %}
+            </div>
+            <div class="l">Coût moyen / intervention</div>
+        </div>
+      </div>
+      <div class="col-lg-4">
+        <div class="kpi-mini"><div class="v">{{ total_hours|floatformat:"1" }}h</div><div class="l">Durée totale</div></div>
+      </div>
+    </div>
+    <div style="background:#f8fafc;border-radius:10px;padding:18px;">
+      <div style="font-size:.82rem;font-weight:700;color:#1a2c4e;text-transform:uppercase;letter-spacing:.4px;margin-bottom:14px;">Coût estimé × taux horaire 150 DH/h</div>
+      <div style="position:relative;height:220px;">
+        {% if interventions %}<canvas id="detailChartCostsBar"></canvas>{% else %}
+        <div class="text-center text-muted py-5">Aucune donnée de coût disponible</div>{% endif %}
+      </div>
+    </div>
+  </div>
+
+</div><!-- /.tab-content -->
+
+{% else %}
+<div class="alert alert-warning">
+    <i class="bi bi-exclamation-triangle me-2"></i>
+    Équipement introuvable (ID: {{ equipment_id }}).
+    <a href="{% url 'parc_equipements' %}" class="alert-link">Retour à la liste</a>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+{% if interventions %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="{% static 'js/parc.js' %}"></script>
+<script>
+(function() {
+  var typeData = {};
+  var costData = {};
+  var costBarData = {};
+  {% for i in interventions %}
+  var tp = '{{ i.type|escapejs }}';
+  typeData[tp] = (typeData[tp] || 0) + 1;
+  var c = {{ i.cost|default:0 }};
+  if (c > 0) { costData['{{ i.name|truncatechars:20|escapejs }}'] = c; }
+  costBarData['{{ i.date|escapejs }}'] = (costBarData['{{ i.date|escapejs }}'] || 0) + c;
+  {% endfor %}
+  parcPie('detailChartType', typeData);
+  parcBar('detailChartCosts', costData, null, '#E87722', false);
+  parcBar('detailChartCostsBar', costBarData, null, '#1a2c4e', false);
+}());
+</script>
+{% endif %}
+{% endblock %}

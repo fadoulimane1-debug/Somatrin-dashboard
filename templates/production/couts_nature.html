@@ -1,140 +1,213 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
+{% load static %}
 {% load vehicle_extras %}
 
-{% block title %}Production - Coûts par nature{% endblock %}
+{% block title %}Production — Coûts par nature{% endblock %}
 
 {% block breadcrumb %}
   <a href="{% url 'accueil' %}">Accueil</a>
   <i class="bi bi-chevron-right"></i>
-  <span style="color:#1a2c4e; font-weight:600;">Production - Coûts par nature</span>
+  <a href="{% url 'production_index' %}">Production</a>
+  <i class="bi bi-chevron-right"></i>
+  <span style="color:#1a2c4e; font-weight:600;">Coûts par nature</span>
 {% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/production.css' %}?v=20260512">
 <style>
-  .loader-bar {
-    background: linear-gradient(90deg, #16a34a, #14532d) !important;
-  }
+.loader-bar { background: linear-gradient(90deg, #1a2c4e, #E87722) !important; }
 </style>
 {% endblock %}
 
 {% block content %}
-<span class="page-title">Coûts par nature</span>
 {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
 
-<div class="filters-card">
-  <form method="get" class="row g-3 align-items-end">
+<!-- Hero -->
+<div style="background:linear-gradient(135deg,#1a2c4e,#e87722);border-radius:14px;padding:22px 28px;color:#fff;margin-bottom:22px;display:flex;align-items:center;justify-content:space-between;gap:16px;">
+  <div>
+    <small style="opacity:.5;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;">Module Production</small>
+    <h1 style="margin:6px 0 4px;font-size:26px;font-weight:800;">Coûts par nature</h1>
+    <p style="margin:0;font-size:13px;opacity:.85;">Périmètre : Production / Exploitation</p>
+  </div>
+  <div style="font-size:40px;opacity:.85;"><i class="bi bi-pie-chart-fill"></i></div>
+</div>
+
+<!-- Filtres -->
+<div class="filters-card filters-section">
+  <form method="get" id="couts-form" class="row g-3 align-items-end">
     <div class="col-md-3"><label class="form-label">Date début</label><input type="date" name="date_debut" class="form-control" value="{{ date_debut }}"></div>
     <div class="col-md-3"><label class="form-label">Date fin</label><input type="date" name="date_fin" class="form-control" value="{{ date_fin }}"></div>
     <div class="col-md-3">
       <label class="form-label">Catégorie produit</label>
       <select name="nature" class="form-select">
         <option value="">— Toutes —</option>
-        {% for n in nature_options %}
-          <option value="{{ n }}" {% if nature == n %}selected{% endif %}>{{ n }}</option>
-        {% endfor %}
+        {% for n in nature_options %}<option value="{{ n }}" {% if nature == n %}selected{% endif %}>{{ n }}</option>{% endfor %}
       </select>
     </div>
     <div class="col-md-3">
       <label class="form-label">Véhicule</label>
       <select name="vehicule" class="form-select">
         <option value="">— Tous —</option>
-        {% for v in vehicules %}
-          <option value="{{ v }}" {% if vehicule == v %}selected{% endif %}>{{ v }}</option>
-        {% endfor %}
+        {% for v in vehicules %}<option value="{{ v }}" {% if vehicule == v %}selected{% endif %}>{{ v }}</option>{% endfor %}
       </select>
     </div>
     <div class="col-md-3">
       <label class="form-label">Produit</label>
       <select name="product_id" class="form-select">
         <option value="">— Tous —</option>
-        {% for p in product_options %}
-          <option value="{{ p.id }}" {% if product_id == p.id|stringformat:"d" %}selected{% endif %}>{{ p.name }}</option>
-        {% endfor %}
+        {% for p in product_options %}<option value="{{ p.id }}" {% if product_id == p.id|stringformat:"d" %}selected{% endif %}>{{ p.name }}</option>{% endfor %}
       </select>
     </div>
     <div class="col-md-3">
       <label class="form-label">Société</label>
       <select name="company_id" class="form-select">
         <option value="">— Toutes —</option>
-        {% for c in company_options %}
-          <option value="{{ c.id }}" {% if company_id == c.id|stringformat:"d" %}selected{% endif %}>{{ c.name }}</option>
-        {% endfor %}
+        {% for c in company_options %}<option value="{{ c.id }}" {% if company_id == c.id|stringformat:"d" %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
       </select>
     </div>
     <div class="col-md-3">
       <label class="form-label">Regroupement</label>
       <select name="group_by" class="form-select">
         <option value="" {% if not group_by %}selected{% endif %}>Détail (ligne à ligne)</option>
-        <option value="nature" {% if group_by == 'nature' %}selected{% endif %}>Catégorie produit</option>
-        <option value="month" {% if group_by == 'month' %}selected{% endif %}>Mois</option>
+        <option value="nature"  {% if group_by == 'nature'  %}selected{% endif %}>Catégorie produit</option>
+        <option value="month"   {% if group_by == 'month'   %}selected{% endif %}>Mois</option>
         <option value="vehicle" {% if group_by == 'vehicle' %}selected{% endif %}>Véhicule</option>
       </select>
     </div>
     <div class="col-12 d-flex gap-2">
-      <button class="btn btn-primary" type="submit">Filtrer</button>
-      <a class="btn btn-outline-secondary" href="{% url 'production_couts_nature' %}">Réinitialiser</a>
+      <button class="btn btn-primary" type="submit"><i class="bi bi-funnel-fill me-1"></i>Filtrer</button>
+      <a class="btn btn-outline-secondary" href="{% url 'production_couts_nature' %}"><i class="bi bi-arrow-counterclockwise me-1"></i>Réinitialiser</a>
     </div>
   </form>
+  <div class="somatrin-export-row">
+    <a href="{% url 'export_couts_excel' %}" class="btn btn-sm btn-smt-excel"><i class="bi bi-file-earmark-excel"></i> Excel</a>
+    <a href="{% url 'export_couts_csv' %}" class="btn btn-sm btn-smt-csv"><i class="bi bi-filetype-csv"></i> CSV</a>
+    <a href="{% url 'export_couts_pdf' %}" class="btn btn-sm btn-smt-pdf"><i class="bi bi-file-earmark-pdf"></i> PDF</a>
+  </div>
 </div>
 
-<div class="card">
-  <div class="mb-2">
-    <strong>{{ total_rows|num_plain:0 }}</strong> N° Bon
-    {% if group_by and grouped_rows %} · <strong>{{ grouped_rows|length|num_plain:0 }}</strong> groupe(s){% endif %}
-    <span class="ms-2">| Total : <strong>{{ total_montant|num_plain:2 }}</strong></span>
+<div class="kpi-summary">
+  <strong>{{ total_rows|num_plain:0 }}</strong> ligne(s) · montant total <strong>{{ total_montant|num_plain:2 }}</strong> DH
+</div>
+
+<!-- Table -->
+<div class="prod-table-wrap somatrin-table-wrap" style="border: 1.5px solid #d0d5dd !important;">
+
+  <!-- Toolbar -->
+  <div class="prod-table-toolbar">
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+      <div class="prod-table-title">
+        <i class="bi bi-pie-chart-fill" style="color:#E87722;"></i>
+        {% if group_by %}Regroupé par {{ group_by }}{% else %}Détail des coûts{% endif %}
+      </div>
+      <span class="prod-table-count" id="coutsTblCount">{{ total_rows }} ligne(s)</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <div class="prod-rpp">
+        <label for="rppCouts">Lignes :</label>
+        <select id="rppCouts">
+          <option value="25">25</option>
+          <option value="50">50</option>
+          <option value="100">100</option>
+          <option value="9999">Tous</option>
+        </select>
+      </div>
+      <div class="prod-search-wrap">
+        <i class="bi bi-search prod-search-icon"></i>
+        <input type="text" id="searchCouts" class="prod-search-input" placeholder="Rechercher...">
+        <button class="prod-search-clear" title="Effacer">×</button>
+      </div>
+    </div>
   </div>
+
   <div class="table-responsive">
-    <table class="table table-sm table-striped align-middle">
-      {% if group_by and grouped_rows %}
-      <thead class="table-dark">
+    {% if group_by and grouped_rows %}
+    <table class="prod-table somatrin-table" id="tblCouts">
+      <thead>
         <tr>
-          <th>{% if group_by == 'nature' %}Catégorie produit{% elif group_by == 'month' %}Mois{% else %}Véhicule{% endif %}</th>
-          <th class="text-end">N° Bon</th>
-          <th class="text-end">Montant</th>
+          <th class="pt-sort" data-col="0">
+            {% if group_by == 'nature' %}Catégorie produit
+            {% elif group_by == 'month' %}Mois
+            {% else %}Véhicule{% endif %}
+          </th>
+          <th class="pt-sort" data-col="1" style="text-align:right">N° Bons</th>
+          <th class="pt-sort" data-col="2" style="text-align:right">Montant</th>
         </tr>
       </thead>
       <tbody>
       {% for row in grouped_rows %}
-        <tr>
-          <td>{{ row.label }}</td>
-          <td class="text-end">{{ row.count|num_plain:0 }}</td>
-          <td class="text-end">{{ row.montant|num_plain:2 }}</td>
+        <tr data-row>
+          <td class="pt-id" data-label="Groupe">{{ row.label }}</td>
+          <td class="pt-num" data-label="N° Bons">{{ row.count|num_plain:0 }}</td>
+          <td class="pt-amt" data-label="Montant">{{ row.montant|num_plain:2 }}</td>
         </tr>
       {% empty %}
-        <tr><td colspan="3" class="text-center text-muted">Aucune donnée</td></tr>
+        <tr><td colspan="3"><div class="pt-empty"><i class="bi bi-inbox"></i><p>Aucune donnée</p></div></td></tr>
       {% endfor %}
       </tbody>
-      <tfoot class="table-secondary">
+      {% if grouped_rows %}
+      <tfoot>
         <tr>
           <th>Total</th>
-          <th class="text-end">{{ total_rows|num_plain:0 }}</th>
-          <th class="text-end">{{ total_montant|num_plain:2 }}</th>
-        </tr>
-      </tfoot>
-      {% else %}
-      <thead class="table-dark">
-        <tr><th>Date</th><th>Véhicule</th><th>Catégorie produit</th><th class="text-end">Montant</th></tr>
-      </thead>
-      <tbody>
-      {% for row in rows %}
-        <tr>
-          <td>{{ row.date }}</td>
-          <td>{{ row.vehicule|matricule_only }}</td>
-          <td>{{ row.nature }}</td>
-          <td class="text-end">{{ row.montant|num_plain:2 }}</td>
-        </tr>
-      {% empty %}
-        <tr><td colspan="4" class="text-center text-muted">Aucune donnée</td></tr>
-      {% endfor %}
-      </tbody>
-      <tfoot class="table-secondary">
-        <tr>
-          <th colspan="3">Total</th>
-          <th class="text-end">{{ total_montant|num_plain:2 }}</th>
+          <th style="text-align:right">{{ total_rows|num_plain:0 }}</th>
+          <th style="text-align:right">{{ total_montant|num_plain:2 }}</th>
         </tr>
       </tfoot>
       {% endif %}
     </table>
+    {% else %}
+    <table class="prod-table somatrin-table" id="tblCouts">
+      <thead>
+        <tr>
+          <th class="pt-sort" data-col="0">Date</th>
+          <th class="pt-sort" data-col="1">Véhicule</th>
+          <th class="pt-sort" data-col="2">Catégorie produit</th>
+          <th class="pt-sort" data-col="3" style="text-align:right">Montant</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for row in rows %}
+        <tr data-row>
+          <td class="pt-date" data-label="Date">{{ row.date }}</td>
+          <td class="pt-id"   data-label="Véhicule">{{ row.vehicule|matricule_only }}</td>
+          <td data-label="Catégorie">{{ row.nature }}</td>
+          <td class="pt-amt"  data-label="Montant">{{ row.montant|num_plain:2 }}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="4"><div class="pt-empty"><i class="bi bi-inbox"></i><p>Aucune donnée</p></div></td></tr>
+      {% endfor %}
+      </tbody>
+      {% if rows %}
+      <tfoot>
+        <tr>
+          <th colspan="3">Total</th>
+          <th style="text-align:right">{{ total_montant|num_plain:2 }}</th>
+        </tr>
+      </tfoot>
+      {% endif %}
+    </table>
+    {% endif %}
   </div>
+
+  <!-- Pager -->
+  <div class="prod-pager-bar">
+    <div class="prod-pager-info" id="coutsTblCount"></div>
+    <div class="prod-pager" id="coutsTblPager"></div>
+  </div>
+
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/production.js' %}"></script>
+<script>
+initProdTable({
+  tableId:  'tblCouts',
+  searchId: 'searchCouts',
+  countId:  'coutsTblCount',
+  pagerId:  'coutsTblPager',
+  rppId:    'rppCouts',
+  pageSize: 25,
+});
+</script>
 {% endblock %}

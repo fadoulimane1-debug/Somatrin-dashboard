@@ -119,9 +119,11 @@
 
   .td-date  { font-family: monospace; font-size: 12px; white-space: nowrap; color: #6b7280; }
   .td-bon   { font-weight: 600; color: #1a2c4e; white-space: nowrap; }
+  .th-cb, .td-cb { width: 40px; text-align: center; }
   .td-num   { text-align: right; font-variant-numeric: tabular-nums; }
   .td-total { text-align: right; font-weight: 700; color: #16a34a; }
   .td-ref   { font-size: 11px; color: #9ca3af; }
+  .row-selected { background: #e6f1fb !important; }
 
   .badge-entree {
     display: inline-flex; align-items: center; gap: 4px;
@@ -131,6 +133,13 @@
   }
   .empty-state { text-align: center; padding: 52px 20px; color: #9ca3af; }
   .empty-state i { font-size: 40px; display: block; margin-bottom: 10px; }
+
+  .btn-select {
+    padding: 7px 12px; background: #eef2ff; color: #1e3a8a;
+    border: 1px solid #c7d2fe; border-radius: 7px; font-size: 12px; font-weight: 700;
+    display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+  }
+  .btn-select:hover { background: #e0e7ff; }
 </style>
 {% endblock %}
 
@@ -249,6 +258,12 @@
 <!-- ══ TABLEAU ══════════════════════════ -->
 <div class="summary-bar">
   <span><strong>{{ total_bons|num_plain:0 }}</strong> N° Bon GASOIL trouvé{{ total_bons|pluralize }}</span>
+  <div class="d-flex align-items-center gap-2">
+    <span id="selected-count" class="text-muted" style="font-size:12px;">0 sélectionné(s)</span>
+    <button type="button" class="btn-select" id="btn-select-all">
+      <i class="bi bi-check2-square"></i>Sélectionner tout
+    </button>
+  </div>
 </div>
 
 <div class="table-card">
@@ -256,6 +271,9 @@
     <table class="table-somatrin">
       <thead>
         <tr>
+          <th class="th-cb">
+            <input type="checkbox" id="cb-all">
+          </th>
           <th>Date facture</th>
           <th>N° Facture</th>
           <th>Réf. fournisseur</th>
@@ -271,6 +289,7 @@
         {% if bons %}
           {% for bon in bons %}
           <tr>
+            <td class="td-cb"><input type="checkbox" class="cb-row"></td>
             <td class="td-date">{{ bon.date }}</td>
             <td class="td-bon">{{ bon.name }}</td>
             <td class="td-ref">{{ bon.ref|default:"—" }}</td>
@@ -290,7 +309,7 @@
           {% endfor %}
         {% else %}
           <tr>
-            <td colspan="9">
+            <td colspan="10">
               <div class="empty-state">
                 <i class="bi bi-inbox"></i>
                 <p>Aucune ligne GASOIL trouvée dans les factures fournisseurs.</p>
@@ -303,4 +322,39 @@
   </div>
 </div>
 
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  const cbAll = document.getElementById('cb-all');
+  const rowCbs = Array.from(document.querySelectorAll('.cb-row'));
+  const btnSelectAll = document.getElementById('btn-select-all');
+  const selectedCount = document.getElementById('selected-count');
+
+  if (!cbAll || !btnSelectAll || !selectedCount || !rowCbs.length) return;
+
+  function syncUi() {
+    const checked = rowCbs.filter(cb => cb.checked).length;
+    selectedCount.textContent = checked + ' sélectionné(s)';
+    cbAll.checked = checked > 0 && checked === rowCbs.length;
+    cbAll.indeterminate = checked > 0 && checked < rowCbs.length;
+    rowCbs.forEach(cb => cb.closest('tr').classList.toggle('row-selected', cb.checked));
+  }
+
+  cbAll.addEventListener('change', function () {
+    rowCbs.forEach(cb => { cb.checked = cbAll.checked; });
+    syncUi();
+  });
+
+  btnSelectAll.addEventListener('click', function () {
+    const allChecked = rowCbs.every(cb => cb.checked);
+    rowCbs.forEach(cb => { cb.checked = !allChecked; });
+    syncUi();
+  });
+
+  rowCbs.forEach(cb => cb.addEventListener('change', syncUi));
+  syncUi();
+})();
+</script>
 {% endblock %}

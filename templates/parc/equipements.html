@@ -1,0 +1,276 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Parc — Équipements{% endblock %}
+{% block breadcrumb %}<a href="{% url 'accueil' %}">Accueil</a><i class="bi bi-chevron-right"></i><a href="{% url 'parc_module' %}">Parc &amp; Maintenance</a><i class="bi bi-chevron-right"></i><span style="color:#1a2c4e;font-weight:600;">Équipements</span>{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/parc.css' %}">
+<style>
+.hero{background:linear-gradient(135deg,#0f1e38,#1a2c4e);border-radius:18px;padding:26px 30px;color:#fff;display:flex;justify-content:space-between;align-items:center;box-shadow:0 10px 24px rgba(26,44,78,.18)}
+.hero small{opacity:.75;letter-spacing:1px;font-size:12px;font-weight:700}
+.hero h2{margin:4px 0 0;font-size:38px;font-weight:800;line-height:1.05}
+.kpi{background:#fff;border:1px solid #E5E7EB;border-radius:14px;padding:16px 18px;box-shadow:0 4px 10px rgba(15,23,42,.05)}
+.kpi .l{font-size:12px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.4px}
+.kpi .v{font-size:30px;font-weight:900;color:#1a2c4e;line-height:1.1}
+.kpi .s{font-size:12px;color:#94a3b8}
+.card{background:#fff;border:1px solid #E5E7EB;border-radius:14px;padding:14px;box-shadow:0 6px 16px rgba(15,23,42,.05)}
+.filters-card .form-select,.filters-card .form-control,.filters-card .input-group-text{height:38px}
+.filters-card .input-group-text{background:#f8fafc;border-color:#dbe3ef;color:#64748b}
+.f-label{font-size:11px;color:#64748b;font-weight:800;text-transform:uppercase;letter-spacing:.45px}
+.btn-primary-pro{background:#E87722;border-color:#E87722;color:#fff}
+.btn-primary-pro:hover{background:#d76613;border-color:#d76613;color:#fff}
+.btn-ghost{background:#fff;border:1px solid #cbd5e1;color:#475569}
+.btn-ghost:hover{background:#f8fafc;color:#334155}
+.table-wrap{max-height:62vh;overflow:auto;border:1px solid #e2e8f0;border-radius:12px}
+.eq-table{width:100%;min-width:1300px;border-collapse:separate;border-spacing:0;table-layout:fixed}
+.eq-table thead th{position:sticky;top:0;background:#1a2c4e!important;color:#fff;font-size:12px;white-space:nowrap;z-index:4;padding:11px 12px;border-right:1px solid rgba(255,255,255,.18);font-weight:700}
+.eq-table thead th:last-child{border-right:none}
+.eq-table tbody td{padding:11px 12px;border-top:1px solid #edf2f7;vertical-align:middle;color:#1f2937;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:14px}
+.eq-table tbody tr:nth-child(even){background:#f8fafc}
+.eq-table tbody tr:hover{background:#eef4ff}
+.state-ok{background:#dcfce7;color:#15803d;border-radius:99px;padding:4px 10px;font-size:11px;font-weight:800}
+.state-ko{background:#fee2e2;color:#b91c1c;border-radius:99px;padding:4px 10px;font-size:11px;font-weight:800}
+.c-name{width:170px}
+.c-cat{width:170px}
+.c-sub{width:150px}
+.c-model{width:170px}
+.c-serie{width:170px}
+.c-etat{width:90px}
+.c-team{width:170px}
+.c-type{width:140px}
+.c-udm{width:80px}
+</style>
+{% endblock %}
+{% block content %}
+<div class="hero mb-3"><div><small>MODULE PARC</small><h2 class="mb-0">Équipements</h2></div><div style="font-size:46px;font-weight:900;color:rgba(255,255,255,.08)">EQP</div></div>
+{% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+
+<!-- FILTRES AVANCÉS - UNE SEULE LIGNE AVEC CATÉGORIES & FOURNISSEURS DYNAMIQUES -->
+<div class="filters-section mb-4">
+    <div class="card-filters">
+        <h5 class="filters-title">
+            <i class="bi bi-funnel"></i> Filtres avancés
+        </h5>
+        
+        <form method="get" id="filter-form-equipment">
+            <div class="row g-2">
+                
+                <!-- RECHERCHE -->
+                <div class="col-lg-2 col-md-6">
+                    <div class="input-group">
+                        <span class="input-group-text" style="background: #f8f9fa; border: 1px solid #ddd;">
+                            <i class="bi bi-search"></i>
+                        </span>
+                        <input type="text" class="form-control" 
+                               placeholder="N°, modèle..."
+                               name="search" value="{{ search }}"
+                               style="border: 1px solid #ddd;">
+                    </div>
+                </div>
+                
+                <!-- CATÉGORIE (DYNAMIQUE) -->
+                <div class="col-lg-1-8 col-md-6">
+                    <select class="form-select" name="category" style="border: 1px solid #ddd; font-size: 0.9rem;">
+                        <option value="">Catégorie</option>
+                        {% for cat in categories %}
+                            <option value="{{ cat.name }}" {% if category == cat.name %}selected{% endif %}>
+                                {{ cat.name|truncatewords:2 }}
+                            </option>
+                        {% empty %}
+                            <option value="">Aucune catégorie</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <!-- ÉTAT -->
+                <div class="col-lg-1-8 col-md-6">
+                    <select class="form-select" name="state" style="border: 1px solid #ddd; font-size: 0.9rem;">
+                        <option value="">État</option>
+                        <option value="active" {% if state == 'active' %}selected{% endif %}>
+                            Actif
+                        </option>
+                        <option value="breakdown" {% if state == 'breakdown' %}selected{% endif %}>
+                            Panne
+                        </option>
+                        <option value="inactive" {% if state == 'inactive' %}selected{% endif %}>
+                            Inactif
+                        </option>
+                    </select>
+                </div>
+                
+                <!-- FOURNISSEUR (DYNAMIQUE) -->
+                <div class="col-lg-1-8 col-md-6">
+                    <select class="form-select" name="supplier" style="border: 1px solid #ddd; font-size: 0.9rem;">
+                        <option value="">Fournisseur</option>
+                        {% for supp in suppliers %}
+                            <option value="{{ supp.name }}" {% if supplier == supp.name %}selected{% endif %}>
+                                {{ supp.name|truncatewords:2 }}
+                            </option>
+                        {% empty %}
+                            <option value="">Aucun fournisseur</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <!-- MAINTENANCE DEPUIS -->
+                <div class="col-lg-1-8 col-md-6">
+                    <input type="date" class="form-control" 
+                           placeholder="Maint. depuis"
+                           name="maint_date" value="{{ maint_date }}"
+                           style="border: 1px solid #ddd; font-size: 0.9rem;">
+                </div>
+                
+                <!-- BOUTONS (FILTRER + RESET) -->
+                <div class="col-lg-1-8 col-md-12 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary flex-grow-1" style="font-size: 0.9rem;">
+                        <i class="bi bi-funnel"></i> Filtrer
+                    </button>
+                    <a href="?reset=1" class="btn btn-outline-secondary" style="font-size: 0.9rem;">
+                        <i class="bi bi-arrow-counterclockwise"></i>
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- STATISTIQUES PAR CATÉGORIE -->
+<div class="row mb-4 g-3">
+    <div class="col-lg-3 col-md-6">
+        <div class="kpi-card">
+            <div class="kpi-label">Camion Engin</div>
+            <div class="kpi-value">{{ camion_count }}</div>
+            <div class="kpi-subtext">équipements</div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+        <div class="kpi-card">
+            <div class="kpi-label">Semi-Remorque</div>
+            <div class="kpi-value">{{ semi_count }}</div>
+            <div class="kpi-subtext">équipements</div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+        <div class="kpi-card">
+            <div class="kpi-label">Voiture Service</div>
+            <div class="kpi-value">{{ voiture_count }}</div>
+            <div class="kpi-subtext">équipements</div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+        <div class="kpi-card">
+            <div class="kpi-label">Autre</div>
+            <div class="kpi-value">{{ autre_count }}</div>
+            <div class="kpi-subtext">équipements</div>
+        </div>
+    </div>
+</div>
+
+<!-- TABLEAU ÉQUIPEMENTS AMÉLIORÉ -->
+<div class="table-container">
+    <div class="table-header-container">
+        <h5 class="table-header-title">
+            <i class="bi bi-gear"></i> Liste des équipements ({{ results_count }})
+        </h5>
+        <div class="table-stats">
+            <div class="stat-item">
+                <span class="stat-label">Total</span>
+                <span class="stat-value">{{ kpi_total }}</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Actifs</span>
+                <span class="stat-value" style="color: #16a34a;">{{ kpi_actifs }}</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">En panne</span>
+                <span class="stat-value" style="color: #dc2626;">{{ kpi_breakdown }}</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table-modern">
+            <thead>
+                <tr>
+                    <th style="width: 12%">N° Équipement</th>
+                    <th style="width: 14%">Catégorie</th>
+                    <th style="width: 12%">Sous-catégorie</th>
+                    <th style="width: 12%">Modèle</th>
+                    <th style="width: 10%">N° Série</th>
+                    <th style="width: 8%">État</th>
+                    <th style="width: 12%">Fournisseur</th>
+                    <th style="width: 12%">Dernière maint.</th>
+                    <th style="width: 8%">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for equip in equipements %}
+                <tr data-equipment-id="{{ equip.id }}" class="equipment-row">
+                    <td class="col-numero">
+                        <a href="{% url 'parc_equipment_detail' equip.id %}"
+                           class="text-decoration-none fw-bold">
+                            {{ equip.name }}
+                        </a>
+                    </td>
+                    <td>
+                        <span class="badge bg-light text-dark" style="font-size: 0.9rem;">
+                            {{ equip.category }}
+                        </span>
+                    </td>
+                    <td>
+                        <small class="text-muted">{{ equip.subcategory }}</small>
+                    </td>
+                    <td>
+                        <small>{{ equip.model }}</small>
+                    </td>
+                    <td>
+                        <small class="text-muted">{{ equip.serial_number }}</small>
+                    </td>
+                    <td>
+                        {% if equip.state == 'active' %}
+                            <span class="badge-statut" style="background: #d4edda; color: #155724; font-weight: 600;">
+                                <i class="bi bi-check-circle"></i> Actif
+                            </span>
+                        {% elif equip.state == 'breakdown' or equip.state == 'panne' %}
+                            <span class="badge-statut" style="background: #f8d7da; color: #721c24; font-weight: 600;">
+                                <i class="bi bi-exclamation-circle"></i> Panne
+                            </span>
+                        {% else %}
+                            <span class="badge-statut" style="background: #e2e3e5; color: #383d41; font-weight: 600;">
+                                <i class="bi bi-pause-circle"></i> Arrêté
+                            </span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if equip.supplier %}
+                            <small>{{ equip.supplier }}</small>
+                        {% else %}
+                            <span class="text-muted">—</span>
+                        {% endif %}
+                    </td>
+                    <td class="col-date">
+                        {% if equip.last_maintenance %}
+                            <small>{{ equip.last_maintenance|date:"d/m/Y" }}</small>
+                        {% else %}
+                            <span class="text-muted text-center">—</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-center">
+                        <a href="{% url 'parc_equipment_detail' equip.id %}"
+                           class="btn btn-sm btn-outline-primary"
+                           title="Voir détail">
+                            <i class="bi bi-eye"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="9" class="text-center text-muted py-4">
+                        <i class="bi bi-inbox"></i> Aucun équipement trouvé
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

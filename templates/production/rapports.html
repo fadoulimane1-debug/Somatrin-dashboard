@@ -1,0 +1,232 @@
+﻿{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Production - Rapports & Analyses{% endblock %}
+
+{% block breadcrumb %}
+<a href="{% url 'accueil' %}">Accueil</a>
+<i class="bi bi-chevron-right"></i>
+<a href="{% url 'production_index' %}">Production</a>
+<i class="bi bi-chevron-right"></i>
+<span style="color:#1a2c4e; font-weight:600;">Rapports & Analyses</span>
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/production.css' %}?v=20260512">
+<style>
+  .reports-page {
+    background: linear-gradient(180deg, #f4f6fb 0%, #eef2f8 100%);
+    border: 1px solid #dfe5ef;
+    border-radius: 14px;
+    padding: 14px;
+  }
+  .reports-page .prod-chart-card {
+    background: #f8fafd;
+    border: 1px solid #dfe5ef;
+    box-shadow: 0 2px 8px rgba(26, 44, 78, 0.04);
+  }
+  .reports-page .prod-chart-title {
+    color: #1a2c4e;
+    font-weight: 800;
+    letter-spacing: .2px;
+  }
+  .reports-page .form-label {
+    color: #1f2937;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+  }
+  .reports-page .form-control,
+  .reports-page .form-select {
+    background: #fff;
+    border-color: #d8deea;
+  }
+  .reports-page .form-control:focus,
+  .reports-page .form-select:focus {
+    border-color: #e87722;
+    box-shadow: 0 0 0 3px rgba(232, 119, 34, 0.14);
+  }
+  .report-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+  .report-item {
+    border: 1px solid #e8ebf0;
+    border-radius: 10px;
+    padding: 12px 14px;
+    background: #fdfefe;
+    transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease;
+    cursor: pointer;
+  }
+  .report-item:hover {
+    border-color: #e87722;
+    box-shadow: 0 4px 12px rgba(232,119,34,.14);
+    transform: translateY(-1px);
+  }
+  .report-item.active {
+    border-color: #e87722;
+    background: #fff3e9;
+  }
+  .report-item-title { color: #1a2c4e; font-weight: 700; margin-bottom: 4px; }
+  .report-item-sub { color: #6b7280; font-size: 12px; margin: 0; }
+  .reports-summary-table thead th {
+    background: linear-gradient(135deg, #1a2c4e, #3d5a7f);
+    color: #fff;
+    border-bottom: 3px solid #e87722;
+  }
+  .reports-summary-table tbody td {
+    background: #f9fbff;
+  }
+  @media (max-width: 992px) {
+    .report-grid { grid-template-columns: 1fr; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="reports-page">
+  <div class="prod-hero">
+    <h2 class="mb-1">Rapports & Analyses</h2>
+    <div>Production - Génération et export de rapports opérationnels</div>
+  </div>
+
+  <!-- EXPORT BUTTONS (fichier structuré démo) -->
+  <div class="export-buttons">
+    <a href="{% url 'export_rapports_excel' %}" class="btn btn-export btn-excel">📊 Excel</a>
+    <a href="{% url 'export_rapports_csv' %}" class="btn btn-export btn-csv">📄 CSV</a>
+    <a href="{% url 'export_rapports_pdf' %}" class="btn btn-export btn-pdf">📑 PDF</a>
+  </div>
+
+  {% if action_message %}
+  <div class="alert alert-info d-flex align-items-center gap-2">
+    <i class="bi bi-info-circle"></i> {{ action_message }}
+  </div>
+  {% endif %}
+
+  <form method="get" id="rapport-filters">
+    <div class="prod-chart-card filters-section mb-3">
+      <div class="prod-chart-title">Sélecteurs de rapport</div>
+      <div class="row g-3 align-items-end">
+        <div class="col-lg-3 col-md-6">
+          <label class="form-label fw-semibold">Période</label>
+          <select name="periode" class="form-select" aria-label="Periode">
+            {% for p in periodes %}
+            <option value="{{ p }}" {% if selected_periode == p %}selected{% endif %}>{{ p }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-lg-3 col-md-6">
+          <label class="form-label fw-semibold">Site(s)</label>
+          <select name="site" class="form-select" aria-label="Site">
+            {% for s in sites %}
+            <option value="{{ s }}" {% if selected_site == s %}selected{% endif %}>{{ s }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-lg-4 col-md-8">
+          <label class="form-label fw-semibold">Type rapport</label>
+          <select name="rapport" class="form-select" aria-label="Type rapport">
+            {% for r in types %}
+            <option value="{{ r }}" {% if selected_rapport == r %}selected{% endif %}>{{ r }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-lg-2 col-md-4">
+          <button class="btn btn-primary w-100" type="submit">
+            <i class="bi bi-funnel-fill me-1"></i>Appliquer
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="prod-chart-card mb-3">
+      <div class="prod-chart-title">Actions</div>
+      <div class="d-flex flex-wrap gap-2">
+        <button name="action" value="pdf" class="btn btn-export-pdf-prod" type="submit">
+          <i class="bi bi-file-earmark-pdf me-1"></i>Exporter PDF
+        </button>
+        <button name="action" value="excel" class="btn btn-export-excel-prod" type="submit">
+          <i class="bi bi-file-earmark-excel me-1"></i>Exporter Excel
+        </button>
+        <button name="action" value="email" class="btn btn-export-csv-prod" type="submit">
+          <i class="bi bi-envelope-paper me-1"></i>Envoyer Email
+        </button>
+        <button class="btn btn-outline-secondary" onclick="window.print()" type="button">
+          <i class="bi bi-printer me-1"></i>Imprimer
+        </button>
+      </div>
+    </div>
+  </form>
+
+  <div class="kpi-summary mb-3">
+    Rapport <strong>{{ selected_rapport }}</strong> · période <strong>{{ selected_periode }}</strong> · site <strong>{{ selected_site }}</strong>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-lg-7">
+      <div class="prod-chart-card h-100">
+        <div class="prod-chart-title">Rapports disponibles</div>
+        <div class="report-grid" id="reportCatalog">
+          <div class="report-item {% if selected_rapport == 'Rapport mensuel production' %}active{% endif %}" data-report="Rapport mensuel production">
+            <div class="report-item-title">A) Rapport mensuel production</div>
+            <p class="report-item-sub">KPI + tableaux + graphiques.</p>
+          </div>
+          <div class="report-item {% if selected_rapport == 'Rapport IPC mensuel' %}active{% endif %}" data-report="Rapport IPC mensuel">
+            <div class="report-item-title">B) Rapport IPC mensuel</div>
+            <p class="report-item-sub">IPC global, seuils et analyses.</p>
+          </div>
+          <div class="report-item {% if selected_rapport == 'Analyse écarts budget' %}active{% endif %}" data-report="Analyse écarts budget">
+            <div class="report-item-title">C) Analyse écarts budget</div>
+            <p class="report-item-sub">Budget vs réalisé par période/site.</p>
+          </div>
+          <div class="report-item {% if selected_rapport == 'Comparaison sites' %}active{% endif %}" data-report="Comparaison sites">
+            <div class="report-item-title">D) Comparaison sites</div>
+            <p class="report-item-sub">LH BENSLIMANE vs LH OUJDA vs SME AIT BAHA.</p>
+          </div>
+          <div class="report-item {% if selected_rapport == 'Prévisions production' %}active{% endif %}" data-report="Prévisions production">
+            <div class="report-item-title">E) Prévisions production</div>
+            <p class="report-item-sub">Projection du mois suivant.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-5">
+      <div class="prod-chart-card h-100">
+        <div class="prod-chart-title">Résumé sélection</div>
+        <div class="small text-muted mb-2">Paramètres qui seront utilisés pour l’export.</div>
+        <table class="table table-sm mb-0 prod-data-table reports-summary-table somatrin-table">
+          <thead>
+            <tr>
+              <th><i class="bi bi-sliders th-icon"></i>Paramètre</th>
+              <th><i class="bi bi-check2-circle th-icon"></i>Valeur</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>Période</td><td class="prod-cell-id">{{ selected_periode }}</td></tr>
+            <tr><td>Site</td><td class="prod-cell-id">{{ selected_site }}</td></tr>
+            <tr><td>Type rapport</td><td class="prod-cell-id">{{ selected_rapport }}</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  (function () {
+    const catalog = document.getElementById('reportCatalog');
+    const select = document.querySelector('#rapport-filters select[name="rapport"]');
+    if (!catalog || !select) return;
+    catalog.querySelectorAll('.report-item').forEach((item) => {
+      item.addEventListener('click', function () {
+        catalog.querySelectorAll('.report-item').forEach((n) => n.classList.remove('active'));
+        item.classList.add('active');
+        select.value = item.dataset.report || select.value;
+      });
+    });
+  })();
+</script>
+{% endblock %}

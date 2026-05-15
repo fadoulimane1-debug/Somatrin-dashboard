@@ -1,5 +1,5 @@
-{% extends 'base.html' %}
-{% load vehicle_extras %}
+﻿{% extends 'base.html' %}
+{% load static vehicle_extras %}
 
 {% block title %}Production - Facturation ventes{% endblock %}
 
@@ -10,6 +10,7 @@
 {% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/production.css' %}?v=20260512">
 <style>
   .loader-bar {
     background: linear-gradient(90deg, #16a34a, #14532d) !important;
@@ -21,25 +22,33 @@
 <span class="page-title">Facturation (Ventes)</span>
 {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
 
-<div class="filters-card">
-  <form method="get" class="row g-3 align-items-end">
+<div class="row g-2 mb-3">
+  <div class="col-md-4 col-lg-2"><div class="card p-2"><small class="text-muted">Taux payées</small><div><strong>{{ kpi_paid_rate|num_plain:1 }}%</strong></div></div></div>
+  <div class="col-md-4 col-lg-2"><div class="card p-2"><small class="text-muted">Taux en retard</small><div><strong>{{ kpi_overdue_rate|num_plain:1 }}%</strong></div></div></div>
+  <div class="col-md-4 col-lg-2"><div class="card p-2"><small class="text-muted">Ticket moyen TTC</small><div><strong>{{ kpi_ticket_moyen|num_plain:2 }}</strong></div></div></div>
+  <div class="col-md-6 col-lg-3"><div class="card p-2"><small class="text-muted">Client leader</small><div><strong>{{ kpi_top_client }}</strong></div></div></div>
+  <div class="col-md-3 col-lg-1"><div class="card p-2"><small class="text-muted">Part leader</small><div><strong>{{ kpi_top_client_share|num_plain:1 }}%</strong></div></div></div>
+  <div class="col-md-3 col-lg-2"><div class="card p-2"><small class="text-muted">Évolution CA</small><div><strong>{{ kpi_ca_evolution|num_plain:1 }}%</strong></div></div></div>
+</div>
+<div class="kpi-summary">
+  <strong>{{ total_rows|num_plain:0 }}</strong> facture(s) · HT <strong>{{ total_ht|num_plain:2 }}</strong> · TVA <strong>{{ total_tva|num_plain:2 }}</strong> · TTC <strong>{{ total_ttc|num_plain:2 }}</strong>
+</div>
+<div class="mb-2"><small class="text-muted">Source : Odoo ERP (XML-RPC)</small></div>
+
+<div class="filters-card filters-section">
+  <form method="get" class="row g-3 align-items-end" id="ventes-filter-form">
     <div class="col-md-3"><label class="form-label">Date début</label><input type="date" name="date_debut" class="form-control" value="{{ date_debut }}"></div>
     <div class="col-md-3"><label class="form-label">Date fin</label><input type="date" name="date_fin" class="form-control" value="{{ date_fin }}"></div>
+    <div class="col-md-3">
+      <label class="form-label">N° Facture</label>
+      <input type="text" name="numero_facture" class="form-control" value="{{ numero_facture }}" placeholder="Ex: INV/2025/0012">
+    </div>
     <div class="col-md-3">
       <label class="form-label">Client</label>
       <select name="client_id" class="form-select">
         <option value="">— Tous —</option>
         {% for c in clients %}
           <option value="{{ c.id }}" {% if client_id == c.id|stringformat:"d" %}selected{% endif %}>{{ c.name }}</option>
-        {% endfor %}
-      </select>
-    </div>
-    <div class="col-md-3">
-      <label class="form-label">Lieu de livraison</label>
-      <select name="shipping_id" class="form-select">
-        <option value="">— Tous —</option>
-        {% for s in shippings %}
-          <option value="{{ s.id }}" {% if shipping_id == s.id|stringformat:"d" %}selected{% endif %}>{{ s.name }}</option>
         {% endfor %}
       </select>
     </div>
@@ -51,37 +60,6 @@
           <option value="{{ c.id }}" {% if company_id == c.id|stringformat:"d" %}selected{% endif %}>{{ c.name }}</option>
         {% endfor %}
       </select>
-    </div>
-    <div class="col-md-3">
-      <label class="form-label">Etat</label>
-      <select name="etat" class="form-select">
-        <option value="" {% if not etat %}selected{% endif %}>Tous</option>
-        <option value="posted" {% if etat == 'posted' %}selected{% endif %}>Validée</option>
-        <option value="draft" {% if etat == 'draft' %}selected{% endif %}>Brouillon</option>
-        <option value="cancel" {% if etat == 'cancel' %}selected{% endif %}>Annulée</option>
-      </select>
-    </div>
-    <div class="col-md-3">
-      <label class="form-label">Paiement</label>
-      <select name="paiement" class="form-select">
-        <option value="" {% if not paiement %}selected{% endif %}>Tous</option>
-        <option value="paid" {% if paiement == 'paid' %}selected{% endif %}>Payée</option>
-        <option value="not_paid" {% if paiement == 'not_paid' %}selected{% endif %}>Non payée</option>
-        <option value="in_payment" {% if paiement == 'in_payment' %}selected{% endif %}>En cours</option>
-      </select>
-    </div>
-    <div class="col-md-3">
-      <label class="form-label">Commercial</label>
-      <select name="commercial_id" class="form-select">
-        <option value="">— Tous —</option>
-        {% for c in commercials %}
-          <option value="{{ c.id }}" {% if commercial_id == c.id|stringformat:"d" %}selected{% endif %}>{{ c.name }}</option>
-        {% endfor %}
-      </select>
-    </div>
-    <div class="col-md-3">
-      <label class="form-label">Echéance</label>
-      <input type="date" name="due_date" class="form-control" value="{{ due_date }}">
     </div>
     <div class="col-md-3">
       <label class="form-label">Regroupement</label>
@@ -99,25 +77,25 @@
       <a class="btn btn-outline-secondary" href="{% url 'production_facturation_ventes' %}">Réinitialiser</a>
     </div>
   </form>
+  <div class="somatrin-export-row">
+    <a class="btn btn-sm btn-smt-excel" href="{% url 'production_facturation_ventes' %}?date_debut={{ date_debut|urlencode }}&amp;date_fin={{ date_fin|urlencode }}&amp;numero_facture={{ numero_facture|urlencode }}&amp;client_id={{ client_id|urlencode }}&amp;company_id={{ company_id|urlencode }}&amp;group_by={{ group_by|urlencode }}&amp;export=excel"><i class="bi bi-file-earmark-excel"></i> Export Excel</a>
+    <a class="btn btn-sm btn-smt-csv" href="{% url 'production_facturation_ventes' %}?date_debut={{ date_debut|urlencode }}&amp;date_fin={{ date_fin|urlencode }}&amp;numero_facture={{ numero_facture|urlencode }}&amp;client_id={{ client_id|urlencode }}&amp;company_id={{ company_id|urlencode }}&amp;group_by={{ group_by|urlencode }}&amp;export=csv"><i class="bi bi-filetype-csv"></i> Export CSV</a>
+    <a class="btn btn-sm btn-smt-pdf" href="{% url 'production_facturation_ventes' %}?date_debut={{ date_debut|urlencode }}&amp;date_fin={{ date_fin|urlencode }}&amp;numero_facture={{ numero_facture|urlencode }}&amp;client_id={{ client_id|urlencode }}&amp;company_id={{ company_id|urlencode }}&amp;group_by={{ group_by|urlencode }}&amp;export=pdf"><i class="bi bi-file-earmark-pdf"></i> Export PDF</a>
+  </div>
 </div>
 
-<div class="card">
-  <div class="mb-2">
-    <strong>{{ total_rows|num_plain:0 }}</strong> facture(s) |
-    HT: <strong>{{ total_ht|num_plain:2 }}</strong> |
-    TVA: <strong>{{ total_tva|num_plain:2 }}</strong> |
-    TTC: <strong>{{ total_ttc|num_plain:2 }}</strong>
-  </div>
-  <div class="table-responsive">
-    <table class="table table-sm table-striped align-middle">
+
+<div class="somatrin-table-card" style="border: 1.5px solid #d0d5dd !important;">
+  <div class="table-responsive prod-table-wrap somatrin-table-wrap">
+    <table class="table table-sm table-striped align-middle prod-data-table somatrin-table">
       {% if group_by and grouped_rows %}
-      <thead class="table-dark">
+      <thead>
         <tr>
-          <th>{% if group_by == 'month' %}Mois{% elif group_by == 'company' %}Société{% elif group_by == 'month_company' %}Mois + Société{% elif group_by == 'month_delivery' %}Mois + Lieu de livraison{% else %}Client{% endif %}</th>
-          <th class="text-end">Nb Factures</th>
-          <th class="text-end">HT</th>
-          <th class="text-end">TVA</th>
-          <th class="text-end">TTC</th>
+          <th class="prod-sortable"><i class="bi bi-diagram-3 th-icon"></i>{% if group_by == 'month' %}Mois{% elif group_by == 'company' %}Société{% elif group_by == 'month_company' %}Mois + Société{% elif group_by == 'month_delivery' %}Mois + Lieu de livraison{% else %}Client{% endif %}<span class="sort-icon">↑↓</span></th>
+          <th class="text-end prod-sortable"><i class="bi bi-hash th-icon"></i>Nb Factures<span class="sort-icon">↑↓</span></th>
+          <th class="text-end prod-sortable"><i class="bi bi-currency-exchange th-icon"></i>HT<span class="sort-icon">↑↓</span></th>
+          <th class="text-end prod-sortable"><i class="bi bi-currency-exchange th-icon"></i>TVA<span class="sort-icon">↑↓</span></th>
+          <th class="text-end prod-sortable"><i class="bi bi-cash-stack th-icon"></i>TTC<span class="sort-icon">↑↓</span></th>
         </tr>
       </thead>
       <tbody>
@@ -125,9 +103,9 @@
         <tr>
           <td>{{ row.label }}</td>
           <td class="text-end">{{ row.count|num_plain:0 }}</td>
-          <td class="text-end">{{ row.ht|num_plain:2 }}</td>
-          <td class="text-end">{{ row.tva|num_plain:2 }}</td>
-          <td class="text-end">{{ row.ttc|num_plain:2 }}</td>
+          <td class="text-end prod-cell-amount">{{ row.ht|num_plain:2 }} DH</td>
+          <td class="text-end prod-cell-amount">{{ row.tva|num_plain:2 }} DH</td>
+          <td class="text-end prod-cell-amount">{{ row.ttc|num_plain:2 }} DH</td>
         </tr>
       {% empty %}
         <tr><td colspan="5" class="text-center text-muted">Aucune donnée</td></tr>
@@ -143,35 +121,37 @@
         </tr>
       </tfoot>
       {% else %}
-      <thead class="table-dark">
+      <thead>
         <tr>
-          <th style="width:120px;">N° Facture</th>
-          <th style="width:100px; white-space:nowrap;">Date</th>
+          <th style="width:120px;" class="prod-sortable"><i class="bi bi-upc-scan th-icon"></i>N° Facture<span class="sort-icon">↑↓</span></th>
+          <th style="width:220px;">Projet / Référence</th>
+          <th style="width:100px; white-space:nowrap;" class="prod-sortable"><i class="bi bi-calendar3 th-icon"></i>Date<span class="sort-icon">↑↓</span></th>
           <th style="width:200px;">Client</th>
           <th style="width:200px;">Lieu de livraison</th>
           <th style="width:100px;">Société</th>
-          <th class="text-end" style="width:120px;">HT</th>
-          <th class="text-end" style="width:120px;">TVA</th>
-          <th class="text-end" style="width:120px;">TTC</th>
+          <th class="text-end" style="width:120px;"><i class="bi bi-currency-exchange th-icon"></i>HT</th>
+          <th class="text-end" style="width:120px;"><i class="bi bi-currency-exchange th-icon"></i>TVA</th>
+          <th class="text-end" style="width:120px;"><i class="bi bi-cash-stack th-icon"></i>TTC</th>
         </tr>
       </thead>
       <tbody>
       {% for row in rows %}
         <tr>
-          <td style="width:120px;">{{ row.numero }}</td>
-          <td style="width:100px; white-space:nowrap;">{{ row.date }}</td>
+          <td style="width:120px;" class="prod-cell-id">{{ row.numero }}</td>
+          <td style="width:220px;">{{ row.projet_reference }}</td>
+          <td style="width:100px; white-space:nowrap;" class="prod-cell-date">{{ row.date }}</td>
           <td style="width:200px;">{{ row.client }}</td>
           <td style="width:200px;">{{ row.lieu_livraison }}</td>
           <td style="width:100px;">{{ row.societe }}</td>
-          <td class="text-end">{{ row.ht|num_plain:2 }}</td><td class="text-end">{{ row.tva|num_plain:2 }}</td><td class="text-end">{{ row.ttc|num_plain:2 }}</td>
+          <td class="text-end prod-cell-amount">{{ row.ht|num_plain:2 }} DH</td><td class="text-end prod-cell-amount">{{ row.tva|num_plain:2 }} DH</td><td class="text-end prod-cell-amount">{{ row.ttc|num_plain:2 }} DH</td>
         </tr>
       {% empty %}
-        <tr><td colspan="8" class="text-center text-muted">Aucune donnée</td></tr>
+        <tr><td colspan="9" class="text-center text-muted">Aucune donnée</td></tr>
       {% endfor %}
       </tbody>
       <tfoot class="table-secondary">
         <tr>
-          <th colspan="5">Total</th>
+          <th colspan="6">Total</th>
           <th class="text-end">{{ total_ht|num_plain:2 }}</th>
           <th class="text-end">{{ total_tva|num_plain:2 }}</th>
           <th class="text-end">{{ total_ttc|num_plain:2 }}</th>
@@ -182,13 +162,11 @@
   </div>
 </div>
 
-<div class="card mt-4">
-  <div class="mb-2">
-    <strong>Chiffre d'affaires par Lieu de livraison</strong>
-  </div>
-  <div class="table-responsive">
-    <table class="table table-sm table-striped align-middle">
-      <thead class="table-dark">
+<div class="somatrin-table-card mt-4" style="border: 1.5px solid #d0d5dd !important;">
+  <div class="mb-2"><strong>Chiffre d'affaires par Lieu de livraison</strong></div>
+  <div class="table-responsive prod-table-wrap somatrin-table-wrap">
+    <table class="table table-sm table-striped align-middle prod-data-table somatrin-table">
+      <thead>
         <tr>
           <th>Lieu</th>
           <th class="text-end">Nb Factures</th>
@@ -202,9 +180,9 @@
         <tr>
           <td>{{ row.lieu }}</td>
           <td class="text-end">{{ row.count|num_plain:0 }}</td>
-          <td class="text-end">{{ row.ht|num_plain:2 }}</td>
-          <td class="text-end">{{ row.tva|num_plain:2 }}</td>
-          <td class="text-end">{{ row.ttc|num_plain:2 }}</td>
+          <td class="text-end prod-cell-amount">{{ row.ht|num_plain:2 }} DH</td>
+          <td class="text-end prod-cell-amount">{{ row.tva|num_plain:2 }} DH</td>
+          <td class="text-end prod-cell-amount">{{ row.ttc|num_plain:2 }} DH</td>
         </tr>
       {% empty %}
         <tr><td colspan="5" class="text-center text-muted">Aucune donnée</td></tr>
@@ -222,4 +200,8 @@
     </table>
   </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/production.js' %}"></script>
 {% endblock %}

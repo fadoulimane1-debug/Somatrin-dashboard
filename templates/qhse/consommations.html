@@ -1,0 +1,216 @@
+{% extends 'base.html' %}
+{% load static humanize %}
+
+{% block title %}Consommations QHSE — SOMATRIN{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/qhse.css' %}">
+{% endblock %}
+
+{% block breadcrumb %}
+<a href="{% url 'accueil' %}">Accueil</a>
+<i class="bi bi-chevron-right"></i>
+<a href="/qhse/dashboard/">QHSE</a>
+<i class="bi bi-chevron-right"></i>
+<span style="color:#1a2c4e;font-weight:600;">Consommations QHSE</span>
+{% endblock %}
+
+{% block content %}
+
+<!-- Page Header -->
+<div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+  <div>
+    <span class="page-title mb-0" style="margin-bottom:0!important;">Consommations QHSE</span>
+    <div style="font-size:13px;color:#6B7280;margin-top:2px;">
+      Sorties EPI détaillées : affectation, transfert site et suivi par personne
+    </div>
+  </div>
+</div>
+
+{% if error %}
+<div class="alert-odoo mb-3">
+  <i class="bi bi-exclamation-triangle-fill"></i>
+  <span>{{ error }} — Données de démonstration affichées.</span>
+</div>
+{% endif %}
+
+<!-- KPI Cards -->
+<div class="qhse-kpi-grid mb-3" style="grid-template-columns:repeat(4,1fr);">
+  <div class="qhse-kpi-card" style="border-top-color:#6B7280;">
+    <div class="qhse-kpi-icon" style="background:#f3f4f6;color:#6B7280;">
+      <i class="bi bi-box-arrow-right"></i>
+    </div>
+    <div>
+      <div class="qhse-kpi-value" style="color:#374151;">{{ kpis.total_sorties|default:"0" }}</div>
+      <div class="qhse-kpi-label">Sorties</div>
+    </div>
+  </div>
+  <div class="qhse-kpi-card" style="border-top-color:#1a2c4e;">
+    <div class="qhse-kpi-icon" style="background:#e8edf5;color:#1a2c4e;">
+      <i class="bi bi-arrow-left-right"></i>
+    </div>
+    <div>
+      <div class="qhse-kpi-value" style="color:#1a2c4e;">{{ kpis.total_transferts|default:"0" }}</div>
+      <div class="qhse-kpi-label">Transferts site</div>
+    </div>
+  </div>
+  <div class="qhse-kpi-card" style="border-top-color:#E87722;">
+    <div class="qhse-kpi-icon" style="background:#fff4e8;color:#E87722;">
+      <i class="bi bi-stack"></i>
+    </div>
+    <div>
+      <div class="qhse-kpi-value" style="color:#E87722;">{{ kpis.quantite_totale|floatformat:2|intcomma|default:"0,00" }}</div>
+      <div class="qhse-kpi-label">Quantité totale</div>
+    </div>
+  </div>
+  <div class="qhse-kpi-card" style="border-top-color:#3B82F6;">
+    <div class="qhse-kpi-icon" style="background:#eff6ff;color:#3B82F6;">
+      <i class="bi bi-people-fill"></i>
+    </div>
+    <div>
+      <div class="qhse-kpi-value" style="color:#3B82F6;">{{ kpis.personnes|default:"0" }}</div>
+      <div class="qhse-kpi-label">Personnes</div>
+    </div>
+  </div>
+</div>
+
+<div class="kpi-summary">
+  <strong>{{ kpis.total_sorties|default:"0" }}</strong> sorties · <strong>{{ kpis.total_transferts|default:"0" }}</strong> transferts · quantité <strong>{{ kpis.quantite_totale|floatformat:2|intcomma|default:"0" }}</strong> · <strong>{{ kpis.personnes|default:"0" }}</strong> personnes
+</div>
+
+<!-- Filtres + Tableau -->
+<div class="qhse-table-section filters-section" style="border: 1.5px solid #d0d5dd !important;">
+  <form method="GET" id="filterForm">
+    <div class="qhse-filters-bar">
+      <!-- Site -->
+      <div>
+        <select name="site" class="form-select form-select-sm" style="min-width:200px;font-size:13px;"
+                onchange="this.form.submit()">
+          <option value="">Tous les sites</option>
+          {% for s in sites %}
+            <option value="{{ s }}" {% if selected_site == s %}selected{% endif %}>{{ s }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <!-- Personne -->
+      <div>
+        <select name="personne" class="form-select form-select-sm" style="min-width:180px;font-size:13px;"
+                onchange="this.form.submit()">
+          <option value="">Toutes les personnes</option>
+          {% for p in personnes %}
+            <option value="{{ p }}" {% if selected_personne == p %}selected{% endif %}>{{ p }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <!-- Recherche rapide -->
+      <div class="filter-search" style="min-width:200px;max-width:280px;">
+        <i class="bi bi-search"></i>
+        <input type="text" id="consomSearch" placeholder="Produit, document…"
+               class="form-control search-somatrin" oninput="qhseInitTableSearch('consomSearch','consomTable','rowCount')">
+      </div>
+      <button type="submit" class="btn-export-pdf" style="padding:7px 16px;">
+        <i class="bi bi-funnel"></i> Filtrer
+      </button>
+      <div class="ms-auto">
+        <span class="filter-count"><span id="rowCount">{{ rows|length }}</span> mouvements</span>
+      </div>
+    </div>
+    <div class="somatrin-export-row">
+      <button type="button" class="btn btn-sm btn-smt-excel" onclick="qhseExportCSV('consomTable','consommations_qhse.csv')"><i class="bi bi-file-earmark-excel"></i> Export Excel</button>
+      <button type="button" class="btn btn-sm btn-smt-csv" onclick="qhseExportCSV('consomTable','consommations_qhse.csv')"><i class="bi bi-filetype-csv"></i> Export CSV</button>
+      <button type="button" class="btn btn-sm btn-smt-pdf" onclick="window.print()"><i class="bi bi-file-earmark-pdf"></i> Export PDF</button>
+      <a href="/qhse/consommations-qhse/" class="btn-smt-reset"><i class="bi bi-arrow-clockwise"></i> Réinitialiser</a>
+    </div>
+  </form>
+
+  <!-- Tableau -->
+  <div class="qhse-table-wrapper somatrin-table-wrap">
+    <table class="qhse-table somatrin-table" id="consomTable">
+      <thead>
+        <tr>
+          <th data-col="0">Date <i class="bi bi-chevron-expand"></i></th>
+          <th data-col="1">Document <i class="bi bi-chevron-expand"></i></th>
+          <th data-col="2">Produit <i class="bi bi-chevron-expand"></i></th>
+          <th data-col="3" style="text-align:right;">Quantité <i class="bi bi-chevron-expand"></i></th>
+          <th data-col="4">Personne <i class="bi bi-chevron-expand"></i></th>
+          <th data-col="5">Site <i class="bi bi-chevron-expand"></i></th>
+          <th data-col="6">Type <i class="bi bi-chevron-expand"></i></th>
+          <th data-col="7">TL <i class="bi bi-chevron-expand"></i></th>
+          <th data-col="8">Emplacement <i class="bi bi-chevron-expand"></i></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+        <tr>
+          <td data-label="Date"><span class="cell-date">{{ r.date }}</span></td>
+          <td data-label="Document">
+            <span class="cell-id">{{ r.document }}</span>
+          </td>
+          <td data-label="Produit" style="font-weight:600;color:#374151;max-width:200px;">
+            <span style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{{ r.produit }}">
+              {{ r.produit }}
+            </span>
+          </td>
+          <td data-label="Quantité" style="text-align:right;font-weight:700;color:#E87722;">
+            {{ r.quantite|floatformat:2 }}
+          </td>
+          <td data-label="Personne">
+            <span style="display:flex;align-items:center;gap:5px;">
+              <span style="width:26px;height:26px;background:#e8edf5;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#1a2c4e;flex-shrink:0;">
+                {{ r.personne|slice:":1" }}
+              </span>
+              <span style="font-size:13px;">{{ r.personne }}</span>
+            </span>
+          </td>
+          <td data-label="Site">
+            <span style="font-size:12px;color:#6B7280;background:#f3f4f6;padding:2px 8px;border-radius:4px;white-space:nowrap;">
+              {{ r.site }}
+            </span>
+          </td>
+          <td data-label="Type">
+            {% if r.type_mouvement == 'sortie' or r.type_mouvement == 'out' %}
+              <span class="badge-etat badge-ouvert"><i class="bi bi-box-arrow-right"></i> Sortie</span>
+            {% elif r.type_mouvement == 'transfert' or r.type_mouvement == 'internal' %}
+              <span class="badge-etat badge-en_cours"><i class="bi bi-arrow-left-right"></i> Transfert</span>
+            {% else %}
+              <span style="font-size:12px;color:#374151;">{{ r.type_mouvement }}</span>
+            {% endif %}
+          </td>
+          <td data-label="TL" style="font-size:12px;color:#374151;">{{ r.tl }}</td>
+          <td data-label="Emplacement" style="font-size:12px;color:#6B7280;">{{ r.emplacement }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="9">
+            <div class="qhse-empty">
+              <i class="bi bi-box-seam"></i>
+              <p>Aucune consommation EPI trouvée pour ce filtre.</p>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  {% if rows %}
+  <div class="qhse-pagination">
+    <div class="pag-info" id="pagInfo"></div>
+    <div class="pag-buttons" id="pagBtns"></div>
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/qhse.js' %}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  qhseInitTableSort('consomTable');
+  qhseInitTableSearch('consomSearch', 'consomTable', 'rowCount');
+  qhseInitPagination('consomTable', 80, 'pagInfo', 'pagBtns');
+});
+</script>
+{% endblock %}

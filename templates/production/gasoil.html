@@ -1,142 +1,447 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
+{% load static %}
 {% load vehicle_extras %}
 
-{% block title %}Production - Gasoil{% endblock %}
+{% block title %}Production — Gasoil{% endblock %}
 
 {% block breadcrumb %}
   <a href="{% url 'accueil' %}">Accueil</a>
   <i class="bi bi-chevron-right"></i>
-  <span style="color:#1a2c4e; font-weight:600;">Production - Gasoil</span>
+  <a href="{% url 'production_index' %}">Production</a>
+  <i class="bi bi-chevron-right"></i>
+  <span style="color:#1a2c4e; font-weight:600;">Gasoil</span>
 {% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/production.css' %}?v=20260518">
 <style>
-  .loader-bar {
-    background: linear-gradient(90deg, #16a34a, #14532d) !important;
-  }
+.loader-bar { background: linear-gradient(90deg, #1a2c4e, #E87722) !important; }
+
+/* ── Hero Banner ─────────────────────────────────────── */
+.wb {
+  background: linear-gradient(135deg, #0f1e38 0%, #1a2c4e 50%, #1e3460 100%);
+  border-radius: 16px; padding: 28px 32px 24px; margin-bottom: 28px;
+  position: relative; overflow: hidden;
+  display: flex; align-items: center; justify-content: space-between; gap: 20px;
+}
+.wb-deco { position:absolute; border-radius:50%; pointer-events:none; }
+.wb-deco-1 { width:280px;height:280px;right:-70px; top:-90px;   background:rgba(232,119,34,.08); }
+.wb-deco-2 { width:160px;height:160px;right:100px; bottom:-80px;background:rgba(255,255,255,.03); }
+.wb-deco-3 { width:90px; height:90px; left:38%;    top:-28px;   background:rgba(232,119,34,.05); }
+.wb-content { position:relative; z-index:1; }
+.wb-eyebrow {
+  font-size:11px;font-weight:600;letter-spacing:1.8px;text-transform:uppercase;
+  color:rgba(255,255,255,.40);margin-bottom:6px;display:flex;align-items:center;gap:8px;
+}
+.wb-pulse {
+  width:7px;height:7px;border-radius:50%;background:#E87722;
+  box-shadow:0 0 0 3px rgba(232,119,34,.22);animation:pulseOrange 2.2s infinite;
+}
+@keyframes pulseOrange {
+  0%,100%{ box-shadow:0 0 0 3px rgba(232,119,34,.22); }
+  50%    { box-shadow:0 0 0 7px rgba(232,119,34,.08); }
+}
+.wb-title { font-size:24px;font-weight:800;color:#fff;line-height:1.2;margin-bottom:4px; }
+.wb-title span { color:#E87722; }
+.wb-sub { font-size:13px;color:rgba(255,255,255,.42);display:flex;align-items:center;gap:6px; }
+.wb-right { position:relative;z-index:1;text-align:right;flex-shrink:0; }
+.wb-logo-ghost { font-size:44px;font-weight:900;letter-spacing:6px;color:rgba(255,255,255,.06);user-select:none;line-height:1; }
+.wb-badge {
+  display:inline-flex;align-items:center;gap:6px;
+  background:rgba(232,119,34,.18);border:1px solid rgba(232,119,34,.32);
+  color:#f5a24b;border-radius:99px;padding:5px 16px;font-size:11px;font-weight:600;letter-spacing:.4px;margin-top:8px;
+}
+
+/* ── KPI Cards ───────────────────────────────────────── */
+.kpi-grid { display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px; }
+.kpi-card {
+  background:#f8fafc;border-radius:12px;padding:16px;
+  border:1px solid #e8ecf0;position:relative;overflow:hidden;
+}
+.kpi-card::before {
+  content:'';position:absolute;top:0;left:0;right:0;height:3px;
+  background:linear-gradient(90deg,#1a2c4e,#E87722);
+}
+.kpi-label { font-size:11px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;color:#6b7280;margin-bottom:8px; }
+.kpi-value { font-size:26px;font-weight:800;color:#1a2c4e;line-height:1; }
+.kpi-icon  { position:absolute;right:16px;top:50%;transform:translateY(-50%);font-size:34px;opacity:.08;color:#1a2c4e; }
+.kpi-green .kpi-value { color:#059669; }
+.kpi-red   .kpi-value { color:#DC2626; }
+
+/* ── Active filter badges ────────────────────────────── */
+.active-filters { display:flex;flex-wrap:wrap;gap:6px;margin-top:14px; }
+.filter-badge {
+  display:inline-flex;align-items:center;gap:5px;
+  background:rgba(232,119,34,.12);border:1px solid rgba(232,119,34,.28);
+  color:#b45309;border-radius:99px;padding:3px 10px;font-size:11px;font-weight:600;
+}
+.filter-badge-remove {
+  cursor:pointer;color:#b45309;font-size:13px;line-height:1;
+  border:none;background:none;padding:0;margin-left:2px;
+}
+.filter-badge-remove:hover { color:#DC2626; }
+
+@media (max-width:992px) { .kpi-grid { grid-template-columns:repeat(2,1fr); } }
+@media (max-width:640px)  { .kpi-grid { grid-template-columns:1fr; } .wb-right { display:none; } }
+
+/* Pied du tableau : lisible + totaux alignés sous chaque colonne (évite colspan large + scroll) */
+#tblGasoil tfoot.gasoil-tfoot-totals tr {
+  background: #f1f5f9 !important;
+  border-top: 2px solid #e87722;
+}
+#tblGasoil tfoot.gasoil-tfoot-totals th,
+#tblGasoil tfoot.gasoil-tfoot-totals td {
+  background: #f1f5f9 !important;
+  color: #1a2c4e !important;
+  font-weight: 700;
+  padding: 12px 14px;
+  vertical-align: middle;
+}
+#tblGasoil tfoot.gasoil-tfoot-totals .gasoil-tfoot-amt {
+  text-align: right;
+  font-weight: 800;
+  color: #e87722 !important;
+  font-variant-numeric: tabular-nums;
+}
 </style>
 {% endblock %}
 
 {% block content %}
-<span class="page-title">Gasoil</span>
 {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
 
-<div class="filters-card">
-  <form method="get" class="row g-3 align-items-end">
+<!-- ══ HERO ═══════════════════════════════════════════════ -->
+<div class="wb">
+  <div class="wb-deco wb-deco-1"></div>
+  <div class="wb-deco wb-deco-2"></div>
+  <div class="wb-deco wb-deco-3"></div>
+  <div class="wb-content">
+    <div class="wb-eyebrow"><span class="wb-pulse"></span>Module Production</div>
+    <div class="wb-title">Production — <span>Gasoil</span></div>
+    <div class="wb-sub"><i class="bi bi-fuel-pump-fill"></i>Consommation carburant par engin</div>
+  </div>
+  <div class="wb-right">
+    <div class="wb-logo-ghost">PROD</div>
+    <div><span class="wb-badge"><i class="bi bi-activity"></i>Production active</span></div>
+  </div>
+</div>
+
+<!-- ══ KPIs ═══════════════════════════════════════════════ -->
+<div class="kpi-grid">
+  <div class="kpi-card">
+    <div class="kpi-label">Total bons</div>
+    <div class="kpi-value">{{ total_rows|num_plain:0 }}</div>
+    <i class="bi bi-file-earmark-text kpi-icon"></i>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">Total litres</div>
+    <div class="kpi-value">{{ total_litres|num_plain:2 }}</div>
+    <i class="bi bi-droplet-fill kpi-icon"></i>
+  </div>
+  <div class="kpi-card {% if conso_moyenne > 20 %}kpi-red{% else %}kpi-green{% endif %}">
+    <div class="kpi-label">Conso moyenne</div>
+    <div class="kpi-value">{{ conso_moyenne|num_plain:2 }}</div>
+    <i class="bi bi-speedometer2 kpi-icon"></i>
+  </div>
+  <div class="kpi-card kpi-red">
+    <div class="kpi-label">Anomalies</div>
+    <div class="kpi-value">{{ nb_anomalies|num_plain:0 }}</div>
+    <i class="bi bi-exclamation-triangle-fill kpi-icon"></i>
+  </div>
+</div>
+
+<div class="kpi-summary">
+  <strong>{{ total_rows|num_plain:0 }}</strong> bons · <strong>{{ total_litres|num_plain:2 }}</strong> L · conso moy. <strong>{{ conso_moyenne|num_plain:2 }}</strong> L · <strong>{{ nb_anomalies|num_plain:0 }}</strong> anomalies
+</div>
+
+<!-- ══ FILTRES ════════════════════════════════════════════ -->
+<div class="filters-card filters-section">
+  <form method="get" id="filter-form" class="row g-3 align-items-end">
     <div class="col-md-2"><label class="form-label">Date début</label><input type="date" name="date_debut" class="form-control" value="{{ date_debut }}"></div>
     <div class="col-md-2"><label class="form-label">Date fin</label><input type="date" name="date_fin" class="form-control" value="{{ date_fin }}"></div>
-    <div class="col-md-3">
+    <div class="col-md-2">
       <label class="form-label">Société</label>
       <select name="societe" class="form-select">
         <option value="">Toutes</option>
-        {% for s in societes %}
-          <option value="{{ s }}" {% if societe == s %}selected{% endif %}>{{ s }}</option>
-        {% endfor %}
+        {% for s in societes %}<option value="{{ s }}" {% if societe == s %}selected{% endif %}>{{ s }}</option>{% endfor %}
       </select>
     </div>
-    <div class="col-md-3">
+    <div class="col-md-2">
       <label class="form-label">Site</label>
       <select name="site" class="form-select">
         <option value="">Tous</option>
-        {% for s in sites %}
-          <option value="{{ s }}" {% if site == s %}selected{% endif %}>{{ s }}</option>
-        {% endfor %}
+        {% for s in sites %}<option value="{{ s }}" {% if site == s %}selected{% endif %}>{{ s }}</option>{% endfor %}
       </select>
     </div>
     <div class="col-md-2">
       <label class="form-label">Statut</label>
       <select name="statut" class="form-select">
         <option value="" {% if not statut %}selected{% endif %}>Tous</option>
-        <option value="ok" {% if statut == 'ok' %}selected{% endif %}>OK</option>
+        <option value="ok"       {% if statut == 'ok'       %}selected{% endif %}>OK</option>
         <option value="anomalie" {% if statut == 'anomalie' %}selected{% endif %}>Anomalie</option>
       </select>
     </div>
-    <div class="col-md-3">
-      <label class="form-label">Chauffeur/Opérateur</label>
+    <div class="col-md-2">
+      <label class="form-label">Chauffeur</label>
       <select name="chauffeur" class="form-select">
         <option value="">Tous</option>
-        {% for c in chauffeurs %}
-          <option value="{{ c }}" {% if chauffeur == c %}selected{% endif %}>{{ c }}</option>
-        {% endfor %}
+        {% for c in chauffeurs %}<option value="{{ c }}" {% if chauffeur == c %}selected{% endif %}>{{ c }}</option>{% endfor %}
       </select>
     </div>
     <div class="col-md-3">
       <label class="form-label">Ouvrage / Analytique</label>
       <select name="ouvrage" class="form-select">
         <option value="">Tous</option>
-        {% for o in ouvrages %}
-          <option value="{{ o }}" {% if ouvrage == o %}selected{% endif %}>{{ o }}</option>
-        {% endfor %}
+        {% for o in ouvrages %}<option value="{{ o }}" {% if ouvrage == o %}selected{% endif %}>{{ o }}</option>{% endfor %}
       </select>
     </div>
-    <div class="col-md-2">
-      <label class="form-label">Activité</label>
-      <select name="activite" class="form-select">
-        <option value="production" selected>Production</option>
-      </select>
+    <div class="col-12 d-flex gap-2 flex-wrap">
+      <button class="btn btn-primary btn-filtrer" type="submit">
+        <i class="bi bi-funnel-fill me-1"></i>Filtrer
+      </button>
+      <a class="btn btn-outline-secondary" href="{% url 'production_gasoil' %}">
+        <i class="bi bi-arrow-counterclockwise me-1"></i>Réinitialiser
+      </a>
     </div>
-    <div class="col-12 d-flex gap-2">
-      <button class="btn btn-primary btn-filtrer" type="submit">Filtrer</button>
-      <a class="btn btn-outline-secondary" href="{% url 'production_gasoil' %}">Réinitialiser</a>
-      <button class="btn btn-outline-success" type="submit" name="export" value="excel">Export Excel</button>
-      <button class="btn btn-outline-dark" type="submit" name="export" value="csv">Export CSV</button>
+
+    {% if date_debut or date_fin or societe or site or statut or chauffeur or ouvrage %}
+    <div class="col-12">
+      <div class="active-filters">
+        {% if date_debut %}<span class="filter-badge"><i class="bi bi-calendar3"></i>Début : {{ date_debut }}<button type="button" class="filter-badge-remove" onclick="prodRemoveFilter('date_debut')" title="Supprimer">×</button></span>{% endif %}
+        {% if date_fin   %}<span class="filter-badge"><i class="bi bi-calendar3"></i>Fin : {{ date_fin }}<button type="button" class="filter-badge-remove" onclick="prodRemoveFilter('date_fin')" title="Supprimer">×</button></span>{% endif %}
+        {% if societe    %}<span class="filter-badge"><i class="bi bi-building"></i>{{ societe }}<button type="button" class="filter-badge-remove" onclick="prodRemoveFilter('societe')" title="Supprimer">×</button></span>{% endif %}
+        {% if site       %}<span class="filter-badge"><i class="bi bi-geo-alt"></i>{{ site }}<button type="button" class="filter-badge-remove" onclick="prodRemoveFilter('site')" title="Supprimer">×</button></span>{% endif %}
+        {% if statut     %}<span class="filter-badge"><i class="bi bi-toggle-on"></i>{{ statut|capfirst }}<button type="button" class="filter-badge-remove" onclick="prodRemoveFilter('statut')" title="Supprimer">×</button></span>{% endif %}
+        {% if chauffeur  %}<span class="filter-badge"><i class="bi bi-person"></i>{{ chauffeur }}<button type="button" class="filter-badge-remove" onclick="prodRemoveFilter('chauffeur')" title="Supprimer">×</button></span>{% endif %}
+        {% if ouvrage    %}<span class="filter-badge"><i class="bi bi-diagram-3"></i>{{ ouvrage }}<button type="button" class="filter-badge-remove" onclick="prodRemoveFilter('ouvrage')" title="Supprimer">×</button></span>{% endif %}
+      </div>
     </div>
+    {% endif %}
   </form>
 </div>
 
-<div class="card">
-  <div class="mb-3">
-    <strong>{{ total_rows|num_plain:0 }}</strong> N° Bon |
-    Litres: <strong>{{ total_litres|num_plain:2 }}</strong> |
-    Conso moyenne: <strong>{{ conso_moyenne|num_plain:2 }}</strong> |
-    Bons en anomalie: <strong>{{ nb_anomalies|num_plain:0 }}</strong> |
-    Montant: <strong>{{ total_montant|num_plain:2 }}</strong>
+<!-- ══ TABLE — rendu type référence (cadre 1px, en-tête jusqu'aux bords) ══ -->
+<div class="gasoil-prod-datatable gasoil-prod-datatable--flush-main">
+
+  <div class="prod-table-toolbar">
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+      <div class="prod-table-title">
+        <i class="bi bi-fuel-pump-fill" style="color:#E87722;"></i>
+        Sorties Gasoil
+      </div>
+      <span class="prod-table-count" id="gasoilTblCount">{{ total_rows }} ligne(s)</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <div class="prod-rpp">
+        <label for="rppGasoil">Lignes :</label>
+        <select id="rppGasoil" aria-label="Nombre de lignes par page">
+          <option value="25">25</option>
+          <option value="50">50</option>
+          <option value="100">100</option>
+          <option value="9999">Tous</option>
+        </select>
+      </div>
+      <div class="prod-search-wrap">
+        <i class="bi bi-search prod-search-icon"></i>
+        <input type="text" id="searchGasoil" class="prod-search-input" placeholder="Rechercher...">
+        <button type="button" class="prod-search-clear" title="Effacer">×</button>
+      </div>
+      <div class="prod-export-group">
+        <a class="prod-btn-exp prod-btn-excel" href="{% url 'production_gasoil' %}?{% if gasoil_export_qs %}{{ gasoil_export_qs }}&amp;{% endif %}export=excel">
+          <i class="bi bi-file-earmark-excel"></i> Excel
+        </a>
+        <a class="prod-btn-exp prod-btn-pdf" href="{% url 'production_gasoil' %}?{% if gasoil_export_qs %}{{ gasoil_export_qs }}&amp;{% endif %}export=pdf">
+          <i class="bi bi-file-earmark-pdf"></i> PDF
+        </a>
+        <a class="prod-btn-exp prod-btn-csv" href="{% url 'production_gasoil' %}?{% if gasoil_export_qs %}{{ gasoil_export_qs }}&amp;{% endif %}export=csv">
+          <i class="bi bi-filetype-csv"></i> CSV
+        </a>
+      </div>
+    </div>
   </div>
+
   <div class="table-responsive">
-    <table class="table table-sm table-striped align-middle">
-      <thead class="table-dark">
+    <table class="prod-table somatrin-table" id="tblGasoil">
+      <thead>
         <tr>
-          <th>Date</th>
-          <th>Véhicule</th>
-          <th>Chauffeur/Opérateur</th>
-          <th>Société</th>
-          <th>Site</th>
-          <th>Ouvrage</th>
-          <th class="text-end">Litres</th>
-          <th class="text-end">Montant</th>
-          <th class="text-end">Compteur</th>
-          <th>Statut</th>
+          <th class="pt-sort" data-col="0">Date</th>
+          <th class="pt-sort" data-col="1">Véhicule</th>
+          <th class="pt-sort pt-col-tablet-hide" data-col="2">Chauffeur</th>
+          <th class="pt-col-tablet-hide">Société</th>
+          <th class="pt-sort" data-col="4">Site</th>
+          <th class="pt-col-tablet-hide">Ouvrage</th>
+          <th class="pt-sort" data-col="6" style="text-align:right">Litres</th>
+          <th class="pt-sort" data-col="7" style="text-align:right">Montant</th>
+          <th style="text-align:right" class="pt-col-tablet-hide">Compteur</th>
+          <th style="text-align:center">Statut</th>
         </tr>
       </thead>
       <tbody>
       {% for row in rows %}
-        <tr>
-          <td>{{ row.date }}</td>
-          <td>{{ row.vehicule|matricule_only }}</td>
-          <td>{{ row.conducteur }}</td>
-          <td>{{ row.societe }}</td>
-          <td>{{ row.site }}</td>
-          <td>{{ row.ouvrage }}</td>
-          <td class="text-end">{{ row.litres|num_plain:2 }}</td>
-          <td class="text-end">{{ row.montant|num_plain:2 }}</td>
-          <td class="text-end">{{ row.compteur|num_plain:0 }}</td>
-          <td>{{ row.anomalie }}</td>
+        <tr data-row class="{% if row.anomalie == 'Anomalie' %}pt-row-overdue{% endif %}">
+          <td class="pt-date" data-label="Date">{{ row.date }}</td>
+          <td class="pt-id" data-label="Véhicule"><strong>{{ row.vehicule|matricule_only }}</strong></td>
+          <td data-label="Chauffeur" class="pt-col-tablet-hide">{{ row.conducteur }}</td>
+          <td data-label="Société" class="pt-col-tablet-hide">{{ row.societe }}</td>
+          <td data-label="Site">{{ row.site }}</td>
+          <td data-label="Ouvrage" class="pt-col-tablet-hide">{{ row.ouvrage }}</td>
+          <td class="pt-amt" data-label="Litres">{{ row.litres|num_plain:2 }} L</td>
+          <td class="pt-amt" data-label="Montant">{{ row.montant|num_plain:2 }}</td>
+          <td class="pt-amt-navy pt-col-tablet-hide" data-label="Compteur">{{ row.compteur|num_plain:0 }}</td>
+          <td style="text-align:center;" data-label="Statut">
+            {% if row.anomalie == 'Anomalie' %}
+              <span class="pt-badge pt-badge-anomalie"><i class="bi bi-exclamation-circle"></i>Anomalie</span>
+            {% else %}
+              <span class="pt-badge pt-badge-ok"><i class="bi bi-check-circle"></i>OK</span>
+            {% endif %}
+          </td>
         </tr>
       {% empty %}
-        <tr><td colspan="10" class="text-center text-muted">Aucune donnée</td></tr>
+        <tr>
+          <td colspan="10" style="padding:0;">
+            <div class="pt-empty">
+              <i class="bi bi-inbox"></i>
+              <p>Aucune donnée pour ces filtres</p>
+            </div>
+          </td>
+        </tr>
       {% endfor %}
       </tbody>
-      <tfoot>
+      {% if rows %}
+      <tfoot class="gasoil-tfoot-totals">
         <tr>
-          <th colspan="6">TOTAL</th>
-          <th class="text-end">{{ total_rows|num_plain:0 }}</th>
-          <th class="text-end">{{ total_litres|num_plain:2 }}</th>
-          <th class="text-end">{{ total_montant|num_plain:2 }}</th>
-          <th></th>
-          <th></th>
+          <th scope="row">Total</th>
+          <td></td>
+          <td class="pt-col-tablet-hide"></td>
+          <td class="pt-col-tablet-hide"></td>
+          <td></td>
+          <td class="pt-col-tablet-hide"></td>
+          <td class="gasoil-tfoot-amt">{{ total_litres|num_plain:2 }} L</td>
+          <td class="gasoil-tfoot-amt">{{ total_montant|num_plain:2 }}</td>
+          <td class="pt-col-tablet-hide"></td>
+          <td></td>
         </tr>
       </tfoot>
+      {% endif %}
     </table>
   </div>
+
+  <div class="prod-pager-bar">
+    <div class="prod-pager" id="gasoilTblPager"></div>
+  </div>
 </div>
+{% endblock %}
+
+{% block extra_css_after_shell %}
+<style>
+/* Chargé après somatrin_unified_shell.css — rendu aligné référence dashboard */
+.gasoil-prod-datatable {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  background: #fff;
+  border: 1px solid #dee2e6;
+  border-radius: 0;
+  box-shadow: none;
+  overflow-x: visible;
+  overflow-y: visible;
+}
+
+/* Compense le padding horizontal du .main : le bloc tableau touche les bords (plus de bandes grises) */
+@media (min-width: 769px) {
+  .gasoil-prod-datatable.gasoil-prod-datatable--flush-main {
+    width: calc(100% + 64px);
+    max-width: none;
+    margin-left: -32px;
+    margin-right: -32px;
+  }
+}
+@media (max-width: 768px) {
+  .gasoil-prod-datatable.gasoil-prod-datatable--flush-main {
+    width: calc(100% + 32px);
+    max-width: none;
+    margin-left: -16px;
+    margin-right: -16px;
+  }
+}
+
+.gasoil-prod-datatable > .table-responsive {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  display: block;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Toolbar : pas d’écart latéral excessif par rapport au cadre */
+.gasoil-prod-datatable .prod-table-toolbar {
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0;
+  padding-left: 14px !important;
+  padding-right: 14px !important;
+}
+
+.gasoil-prod-datatable .prod-pager-bar {
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0;
+  padding-left: 14px !important;
+  padding-right: 14px !important;
+}
+
+/* Un seul cadre extérieur : pas de bordure sur <table> (shell impose 2px) */
+.gasoil-prod-datatable table#tblGasoil.prod-table.somatrin-table,
+.gasoil-prod-datatable table#tblGasoil {
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  border-left: none !important;
+  border-right: none !important;
+  border-top: none !important;
+  border-collapse: collapse !important;
+  box-sizing: border-box !important;
+}
+
+/* Fond en-tête sur toute la ligne jusqu’aux bords intérieurs du wrapper */
+.gasoil-prod-datatable #tblGasoil thead tr {
+  background: #1a2c4e !important;
+}
+.gasoil-prod-datatable #tblGasoil thead th {
+  background: transparent !important;
+  background-image: none !important;
+}
+
+/* Pas de double trait avec le cadre 1px du conteneur */
+.gasoil-prod-datatable #tblGasoil thead th:first-child,
+.gasoil-prod-datatable #tblGasoil tbody td:first-child,
+.gasoil-prod-datatable #tblGasoil tfoot.gasoil-tfoot-totals th:first-child,
+.gasoil-prod-datatable #tblGasoil tfoot.gasoil-tfoot-totals td:first-child {
+  border-left: none !important;
+}
+.gasoil-prod-datatable #tblGasoil thead th:last-child,
+.gasoil-prod-datatable #tblGasoil tbody td:last-child,
+.gasoil-prod-datatable #tblGasoil tfoot.gasoil-tfoot-totals th:last-child,
+.gasoil-prod-datatable #tblGasoil tfoot.gasoil-tfoot-totals td:last-child {
+  border-right: none !important;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/production.js' %}"></script>
+<script>
+initProdTable({
+  tableId:  'tblGasoil',
+  searchId: 'searchGasoil',
+  countId:  'gasoilTblCount',
+  pagerId:  'gasoilTblPager',
+  rppId:    'rppGasoil',
+  pageSize: 25
+});
+</script>
 {% endblock %}

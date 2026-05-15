@@ -1,0 +1,187 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Finance — Dashboard{% endblock %}
+{% block breadcrumb %}
+<a href="{% url 'accueil' %}">Accueil</a><i class="bi bi-chevron-right"></i>
+<a href="{% url 'finance_dashboard' %}">Finance</a><i class="bi bi-chevron-right"></i>
+<span style="color:#1a2c4e;font-weight:600;">Dashboard</span>
+{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/finance.css' %}">
+{% endblock %}
+{% block content %}
+
+<section class="fin-hero">
+  <div>
+    <small style="opacity:.55;letter-spacing:1.4px;font-size:.75rem;text-transform:uppercase;">Module Finance</small>
+    <h1 class="mt-1">Tableau de Bord Finance</h1>
+    <p>Suivi en temps réel des flux financiers · {% now "d/m/Y" %}</p>
+  </div>
+  <div class="fin-hero-right">
+    <div class="fin-hero-icon"><i class="bi bi-calculator-fill"></i></div>
+  </div>
+</section>
+
+{% if error %}<div class="alert alert-danger mb-3">{{ error }}</div>{% endif %}
+
+<!-- ALERTE FACTURES EN RETARD — grande bannière pulsante -->
+{% if kpis.nb_overdue %}
+<div class="fin-alert-big">
+  <div class="fa-ico"><i class="bi bi-exclamation-triangle-fill"></i></div>
+  <div>
+    <div class="fa-title">
+      ⚠️ {{ kpis.nb_overdue }} facture{% if kpis.nb_overdue > 1 %}s{% endif %} en retard —
+      {{ kpis.mt_overdue|floatformat:"0" }} MAD impayés
+    </div>
+    <div class="fa-sub">
+      {% if overdue_30j %}{{ overdue_30j }} facture{% if overdue_30j > 1 %}s{% endif %} &gt; 30j{% endif %}
+      {% if overdue_60j %} &nbsp;|&nbsp; <strong>{{ overdue_60j }} facture{% if overdue_60j > 1 %}s{% endif %} &gt; 60j — Risque élevé !</strong>{% endif %}
+    </div>
+  </div>
+  <a href="{% url 'finance_rapports' %}#impayees" class="fa-btn">Voir détails →</a>
+</div>
+{% endif %}
+
+<!-- KPI ESSENTIELS -->
+<div class="row g-3 mb-2 fin-kpi-uniform">
+  <div class="col-lg-3 col-md-6">
+    <div class="fin-kpi" style="border-top-color:#1a2c4e;">
+      <div class="fl">Chiffre d'affaires HT</div>
+      <div class="fv">{{ kpis.ca_total|default:0|floatformat:"0" }} <small style="font-size:14px;font-weight:600;">MAD</small></div>
+      <div class="fs">Toutes périodes · {{ kpis.nb_factures_clients|default:0 }} factures</div>
+      <span class="fb fb-blue">Ce mois : {{ kpis.ca_month|default:0|floatformat:"0" }} MAD</span>
+    </div>
+  </div>
+  <div class="col-lg-3 col-md-6">
+    <div class="fin-kpi" style="border-top-color:#E87722;">
+      <div class="fl">Achats fournisseurs HT</div>
+      <div class="fv" style="color:#E87722;">{{ kpis.achats|default:0|floatformat:"0" }} <small style="font-size:14px;font-weight:600;">MAD</small></div>
+      <div class="fs">{{ kpis.nb_factures_fournisseurs|default:0 }} factures fournisseurs</div>
+      <span class="fb fb-orange">Payé : {{ kpis.pct_paye_f|default:0 }}%</span>
+    </div>
+  </div>
+  <div class="col-lg-3 col-md-6">
+    <div class="fin-kpi">
+      <div class="fl">Encaissements</div>
+      <div class="fv">{{ kpis.encaiss|default:0|floatformat:"0" }} <small style="font-size:14px;font-weight:600;">MAD</small></div>
+      <div class="fs">Paiements reçus clients</div>
+      <span class="fb fb-blue">{{ kpis.pct_encaisse|default:0 }}% du CA encaissé</span>
+    </div>
+  </div>
+  <div class="col-lg-3 col-md-6">
+    <div class="fin-kpi">
+      <div class="fl">Dettes fournisseurs</div>
+      <div class="fv">{{ kpis.dettes|default:0|floatformat:"0" }} <small style="font-size:14px;font-weight:600;">MAD</small></div>
+      <div class="fs">Reste à payer fournisseurs</div>
+      <span class="fb fb-orange">{{ kpis.pct_paye_f|default:0 }}% payé</span>
+    </div>
+  </div>
+</div>
+
+<!-- SANTÉ FINANCIÈRE GLOBALE (version compacte) -->
+<div class="row g-3 mb-3">
+  <div class="col-12">
+    <div class="fin-chart-box" style="border-left: 5px solid {{ health_color }};">
+      <div class="row align-items-center">
+        <div class="col-lg-3 text-center">
+          <div class="fin-chart-title"><i class="bi bi-heart-pulse-fill" style="color:{{ health_color }};"></i> Santé Financière Globale</div>
+          <div class="fin-gauge-wrap">
+            <canvas id="chartGauge" class="fin-gauge-canvas"></canvas>
+            <div class="fin-gauge-score" style="color:{{ health_color }};">{{ health_score }}<small style="font-size:1rem;">/100</small></div>
+            <div class="fin-gauge-label" style="color:{{ health_color }};">{{ health_label }}</div>
+          </div>
+        </div>
+        <div class="col-lg-9">
+          <div style="font-size:.82rem;color:#64748b;margin-bottom:12px;">{{ health_desc }}</div>
+          <div style="font-size:.78rem;color:#94a3b8;margin-bottom:8px;">Indicateurs clés :</div>
+          <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;">
+            <div>
+              <div style="display:flex;justify-content:space-between;font-size:.76rem;color:#374151;margin-bottom:3px;">
+                <span>Taux d'encaissement (40%)</span>
+                <span>{{ kpis.pct_encaisse|default:0 }}%</span>
+              </div>
+              <div class="fin-progress"><div class="fin-progress-fill fp-full" style="width:{{ kpis.pct_encaisse|default:0 }}%;"></div></div>
+            </div>
+            <div>
+              <div style="display:flex;justify-content:space-between;font-size:.76rem;color:#374151;margin-bottom:3px;">
+                <span>Ratio liquidité (30%)</span>
+                <span>{{ kpis.liquidite|default:0 }}%</span>
+              </div>
+              <div class="fin-progress"><div class="fin-progress-fill {% if kpis.liquidite >= 100 %}fp-full{% else %}fp-partial{% endif %}" style="width:{% widthratio kpis.liquidite|default:0 200 100 %}%;"></div></div>
+            </div>
+            <div>
+              <div style="display:flex;justify-content:space-between;font-size:.76rem;color:#374151;margin-bottom:3px;">
+                <span>Marge nette (20%)</span>
+                <span>{{ kpis.marge|default:0 }}%</span>
+              </div>
+              <div class="fin-progress"><div class="fin-progress-fill fp-full" style="width:{% if kpis.marge > 0 %}{% widthratio kpis.marge 50 100 %}{% else %}0{% endif %}%;"></div></div>
+            </div>
+            <div>
+              <div style="display:flex;justify-content:space-between;font-size:.76rem;color:#374151;margin-bottom:3px;">
+                <span>Factures en retard (−10%)</span>
+                <span>{{ kpis.nb_overdue|default:0 }} factures</span>
+              </div>
+              <div class="fin-progress"><div class="fin-progress-fill fp-empty" style="width:{% widthratio kpis.nb_overdue|default:0 kpis.nb_creances|default:1 100 %}%;"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Graphiques principaux -->
+<div class="row g-3 mb-3">
+  <div class="col-lg-6">
+    <div class="fin-chart-box">
+      <div class="fin-chart-title"><i class="bi bi-graph-up" style="color:#1a2c4e;"></i> Chiffre d'affaires — 12 derniers mois</div>
+      <div class="fin-chart-wrap"><canvas id="chartCA"></canvas></div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="fin-chart-box">
+      <div class="fin-chart-title"><i class="bi bi-bar-chart-fill" style="color:#E87722;"></i> Factures vs Paiements (6 mois)</div>
+      <div class="fin-chart-wrap"><canvas id="chartVS"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- Accès rapides essentiels -->
+<div class="row g-3">
+  <div class="col-lg-12">
+    <div class="row g-3">
+      {% for it in fin_menu %}
+      {% if it.key != 'dashboard' and it.key != 'configuration' %}
+      <div class="col-lg-3 col-md-6">
+        <a href="{% url it.url %}" class="fin-card {{ card_colors|slice:forloop.counter0 }}">
+          <div class="fin-card-icon"><i class="bi {{ it.icon }}"></i></div>
+          <h3>{{ it.label }}</h3>
+          <p>{{ it.desc }}</p>
+          <span class="fin-go">Accéder →</span>
+        </a>
+      </div>
+      {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="{% static 'js/finance.js' %}"></script>
+<script>
+finLine('chartCA', {{ chart_ca_json|safe }}, null, '#1a2c4e');
+
+(function(){
+  var d = {{ chart_vs_json|safe }};
+  if (!d || !d.labels || !d.labels.length) return;
+  finBarMulti('chartVS', [
+    { label: 'Factures HT', data: d.factures,  backgroundColor: '#1a2c4e', borderRadius: 5 },
+    { label: 'Paiements',   data: d.paiements, backgroundColor: '#E87722', borderRadius: 5 },
+  ], d.labels, null);
+})();
+
+finGauge('chartGauge', {{ health_score|default:0 }});
+</script>
+{% endblock %}

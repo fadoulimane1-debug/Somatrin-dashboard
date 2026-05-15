@@ -1,0 +1,435 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Action #{{ action.id }} — SOMATRIN{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/qhse.css' %}">
+<style>
+  .action-form-card {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 1px 8px rgba(26,44,78,.08);
+    overflow: hidden;
+  }
+  .action-form-header {
+    background: linear-gradient(90deg,#1a2c4e 0%,#243d6b 100%);
+    padding: 18px 24px;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .action-form-header .action-id-badge {
+    background: rgba(232,119,34,.25);
+    border: 1.5px solid #E87722;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 4px 12px;
+    color: #E87722;
+    letter-spacing: .5px;
+  }
+  .action-form-header .action-name-display {
+    font-size: 16px;
+    font-weight: 700;
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .action-status-bar {
+    background: #f0f4f8;
+    border-bottom: 1px solid #e5e7eb;
+    padding: 10px 24px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .btn-teal {
+    background: #0d9488;
+    color: #fff;
+    border: none;
+    border-radius: 7px;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 7px 14px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: background .15s;
+  }
+  .btn-teal:hover { background: #0f766e; }
+  .btn-traite {
+    background: #10B981;
+    color: #fff;
+    border: none;
+    border-radius: 7px;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 7px 14px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .btn-nouveau {
+    background: #1a2c4e;
+    color: #fff;
+    border: none;
+    border-radius: 7px;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 7px 14px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .action-pag {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: #6B7280;
+  }
+  .action-pag a {
+    width: 28px;
+    height: 28px;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    background: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #1a2c4e;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 13px;
+    transition: background .15s, border-color .15s;
+  }
+  .action-pag a:hover { background: #e8edf5; border-color: #1a2c4e; }
+  .action-pag a.disabled { opacity: .35; pointer-events: none; }
+
+  .action-state-pipeline {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    padding: 16px 24px 0;
+    overflow-x: auto;
+  }
+  .pipeline-step {
+    flex: 1;
+    min-width: 100px;
+    text-align: center;
+    padding: 10px 6px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #9CA3AF;
+    position: relative;
+    border-bottom: 3px solid #e5e7eb;
+    white-space: nowrap;
+    cursor: default;
+  }
+  .pipeline-step.active {
+    color: #1a2c4e;
+    border-bottom-color: #E87722;
+  }
+  .pipeline-step.done {
+    color: #10B981;
+    border-bottom-color: #10B981;
+  }
+
+  .action-body {
+    padding: 24px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px 32px;
+  }
+  @media (max-width:700px){ .action-body { grid-template-columns: 1fr; } }
+
+  .field-group { display: flex; flex-direction: column; gap: 4px; }
+  .field-group label {
+    font-size: 11px;
+    font-weight: 700;
+    color: #9CA3AF;
+    text-transform: uppercase;
+    letter-spacing: .6px;
+  }
+  .field-group .field-val {
+    font-size: 14px;
+    color: #1F2937;
+    font-weight: 600;
+    padding: 8px 12px;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 7px;
+    min-height: 38px;
+    word-break: break-word;
+  }
+  .field-group .field-val.full-text {
+    min-height: 70px;
+    align-items: flex-start;
+  }
+  .field-group-full { grid-column: 1 / -1; }
+
+  .priority-stars { font-size: 18px; }
+  .star-on  { color: #E87722; }
+  .star-off { color: #d1d5db; }
+
+  .action-meta-footer {
+    border-top: 1px solid #e5e7eb;
+    padding: 14px 24px;
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+    background: #f9fafb;
+    border-radius: 0 0 12px 12px;
+  }
+  .meta-item { font-size: 12px; color: #6B7280; }
+  .meta-item strong { color: #374151; }
+
+  .efficacite-bar-wrap {
+    margin-top: 4px;
+    height: 8px;
+    background: #e5e7eb;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .efficacite-bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    background: linear-gradient(90deg,#E87722,#10B981);
+    transition: width .5s ease;
+  }
+
+  .qhse-alert-info {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 13px;
+    color: #1e40af;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+</style>
+{% endblock %}
+
+{% block breadcrumb %}
+<a href="{% url 'accueil' %}">Accueil</a>
+<i class="bi bi-chevron-right"></i>
+<a href="/qhse/dashboard/">QHSE</a>
+<i class="bi bi-chevron-right"></i>
+<a href="/qhse/plan-actions/">Plan d'actions</a>
+<i class="bi bi-chevron-right"></i>
+<span style="color:#1a2c4e;font-weight:600;">Action #{{ action.id }}</span>
+{% endblock %}
+
+{% block content %}
+
+{% if error %}
+<div class="qhse-alert-info mb-3">
+  <i class="bi bi-info-circle-fill"></i>
+  <span>{{ error }} — Données de démonstration affichées.</span>
+</div>
+{% endif %}
+
+<div class="action-form-card">
+
+  <!-- ── Header ── -->
+  <div class="action-form-header">
+    <span class="action-id-badge">#{{ action.id }}</span>
+    <span class="action-name-display" title="{{ action.name }}">{{ action.name }}</span>
+    <span style="font-size:11px;opacity:.6;white-space:nowrap;">{{ action.model }}</span>
+  </div>
+
+  <!-- ── Status / Action bar ── -->
+  <div class="action-status-bar">
+    <button class="btn-teal" title="Remettre en brouillon">
+      <i class="bi bi-arrow-counterclockwise"></i> Remettre en brouillon
+    </button>
+    <button class="btn-nouveau">
+      <i class="bi bi-plus-circle"></i> Nouveau
+    </button>
+    {% if action.state != "done" %}
+    <button class="btn-traite">
+      <i class="bi bi-check-circle-fill"></i> TRAITÉ
+    </button>
+    {% endif %}
+    {% if action.state == "done" %}
+    <span class="badge-etat badge-done ms-1"><i class="bi bi-check-circle-fill"></i> Traité</span>
+    {% elif action.state == "in_progress" %}
+    <span class="badge-etat badge-en_cours ms-1"><i class="bi bi-play-circle-fill"></i> En cours</span>
+    {% elif action.state == "cancel" %}
+    <span class="badge-etat badge-cancel ms-1"><i class="bi bi-x-circle"></i> Annulé</span>
+    {% else %}
+    <span class="badge-etat badge-ouvert ms-1"><i class="bi bi-circle"></i> Nouveau</span>
+    {% endif %}
+
+    <!-- Pagination links -->
+    <div class="action-pag">
+      <a href="/qhse/action/{{ action.id|add:"-1" }}/" title="Précédent"
+         class="{% if action.id <= 1 %}disabled{% endif %}">
+        <i class="bi bi-chevron-left"></i>
+      </a>
+      <span>{{ action.id }}</span>
+      <a href="/qhse/action/{{ action.id|add:"1" }}/" title="Suivant">
+        <i class="bi bi-chevron-right"></i>
+      </a>
+    </div>
+  </div>
+
+  <!-- ── Pipeline steps ── -->
+  <div class="action-state-pipeline">
+    <div class="pipeline-step {% if action.state == 'draft' %}active{% elif action.state != 'draft' %}done{% endif %}">
+      <i class="bi bi-circle{% if action.state != 'draft' %}-fill{% endif %} me-1"></i>Nouveau
+    </div>
+    <div class="pipeline-step {% if action.state == 'in_progress' %}active{% elif action.state == 'done' %}done{% endif %}">
+      <i class="bi bi-play-circle{% if action.state == 'done' %}-fill{% endif %} me-1"></i>En cours
+    </div>
+    <div class="pipeline-step {% if action.state == 'done' %}done{% endif %}">
+      <i class="bi bi-check-circle{% if action.state == 'done' %}-fill{% endif %} me-1"></i>Traité
+    </div>
+    <div class="pipeline-step {% if action.state == 'cancel' %}active{% endif %}">
+      <i class="bi bi-x-circle me-1"></i>Annulé
+    </div>
+  </div>
+
+  <!-- ── Form fields ── -->
+  <div class="action-body">
+
+    <!-- Action (full width) -->
+    <div class="field-group field-group-full">
+      <label><i class="bi bi-list-task me-1"></i>Action</label>
+      <div class="field-val full-text">{{ action.name }}</div>
+    </div>
+
+    <!-- Priorité -->
+    <div class="field-group">
+      <label><i class="bi bi-star me-1"></i>Priorité</label>
+      <div class="field-val">
+        <span class="priority-stars">
+          {% if action.priority == "3" %}
+            <span class="star-on">★★★</span>
+          {% elif action.priority == "2" %}
+            <span class="star-on">★★</span><span class="star-off">★</span>
+          {% else %}
+            <span class="star-on">★</span><span class="star-off">★★</span>
+          {% endif %}
+        </span>
+        <span style="font-size:12px;color:#6B7280;margin-left:6px;">
+          {% if action.priority == "3" %}Haute{% elif action.priority == "2" %}Moyenne{% else %}Normale{% endif %}
+        </span>
+      </div>
+    </div>
+
+    <!-- Assigné à -->
+    <div class="field-group">
+      <label><i class="bi bi-person me-1"></i>Assigné à</label>
+      <div class="field-val" style="display:flex;align-items:center;gap:8px;">
+        <span style="width:32px;height:32px;background:#e8edf5;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#1a2c4e;flex-shrink:0;">
+          {{ action.assignee|slice:":1" }}
+        </span>
+        {{ action.assignee|default:"—" }}
+      </div>
+    </div>
+
+    <!-- Processus -->
+    <div class="field-group">
+      <label><i class="bi bi-diagram-3 me-1"></i>Processus / Projet</label>
+      <div class="field-val">{{ action.project|default:"—" }}</div>
+    </div>
+
+    <!-- Origine -->
+    <div class="field-group">
+      <label><i class="bi bi-link-45deg me-1"></i>Origine</label>
+      <div class="field-val">
+        <span style="background:#f3f4f6;padding:3px 10px;border-radius:5px;font-size:13px;">
+          {{ action.origin|default:"—" }}
+        </span>
+      </div>
+    </div>
+
+    <!-- Type de l'action -->
+    <div class="field-group">
+      <label><i class="bi bi-tag me-1"></i>Type de l'action</label>
+      <div class="field-val">{{ action.task_type|default:"—" }}</div>
+    </div>
+
+    <!-- Date échéance -->
+    <div class="field-group">
+      <label><i class="bi bi-calendar-event me-1"></i>Date d'échéance</label>
+      <div class="field-val {% if action.overdue %}text-danger{% endif %}">
+        {{ action.date_deadline|default:"—" }}
+        {% if action.overdue %}
+          <span style="font-size:10px;background:#fef2f2;color:#b91c1c;padding:2px 6px;border-radius:4px;margin-left:6px;font-weight:700;">EN RETARD</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Date de traitement -->
+    <div class="field-group">
+      <label><i class="bi bi-calendar-check me-1"></i>Date de traitement</label>
+      <div class="field-val">{{ action.date_done|default:"—" }}</div>
+    </div>
+
+    <!-- Anomalie (full width) -->
+    <div class="field-group field-group-full">
+      <label><i class="bi bi-exclamation-circle me-1"></i>Anomalie / Description</label>
+      <div class="field-val full-text">{{ action.anomaly|default:"—" }}</div>
+    </div>
+
+    <!-- Efficacité -->
+    <div class="field-group field-group-full">
+      <label><i class="bi bi-speedometer2 me-1"></i>Efficacité</label>
+      <div class="field-val">
+        {% if action.efficacite %}
+          <div style="display:flex;align-items:center;gap:12px;">
+            <span style="font-size:15px;font-weight:700;color:#1a2c4e;">{{ action.efficacite }}%</span>
+            <div style="flex:1;">
+              <div class="efficacite-bar-wrap">
+                <div class="efficacite-bar-fill" style="width:{{ action.efficacite }}%;"></div>
+              </div>
+            </div>
+          </div>
+        {% else %}
+          <span style="color:#9CA3AF;font-size:13px;">Non renseignée</span>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Meta footer ── -->
+  <div class="action-meta-footer">
+    <div class="meta-item">
+      <strong>Source : </strong>{{ action.model }}
+    </div>
+    {% if action.create_date %}
+    <div class="meta-item">
+      <strong>Créé le : </strong>{{ action.create_date }}
+    </div>
+    {% endif %}
+    {% if action.stage %}
+    <div class="meta-item">
+      <strong>Étape : </strong>{{ action.stage }}
+    </div>
+    {% endif %}
+    <div class="meta-item ms-auto">
+      <a href="/qhse/plan-actions/" style="color:#1a2c4e;text-decoration:none;font-weight:600;font-size:12px;">
+        <i class="bi bi-arrow-left me-1"></i>Retour au plan d'actions
+      </a>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/qhse.js' %}"></script>
+{% endblock %}

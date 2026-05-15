@@ -1,132 +1,367 @@
 {% extends 'base.html' %}
 {% load vehicle_extras %}
 
-{% block title %}Transport - Coûts par nature{% endblock %}
+{% block title %}Transport — Coûts par nature{% endblock %}
 
 {% block breadcrumb %}
   <a href="{% url 'accueil' %}">Accueil</a>
   <i class="bi bi-chevron-right"></i>
-  <span style="color:#1a2c4e; font-weight:600;">Transport - Coûts par nature</span>
+  <a href="{% url 'transport_index' %}">Transport &amp; Logistique</a>
+  <i class="bi bi-chevron-right"></i>
+  <span style="color:#1a2c4e; font-weight:600;">Coûts par nature</span>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+@keyframes fadeInUp {
+  from { opacity:0; transform:translateY(16px); }
+  to { opacity:1; transform:translateY(0); }
+}
+.anim-block { animation: fadeInUp .55s ease-out both; }
+.anim-delay-1 { animation-delay: .08s; }
+.anim-delay-2 { animation-delay: .14s; }
+
+.hero {
+  background: linear-gradient(135deg, #0f1e38 0%, #1a2c4e 60%, #1e3460 100%);
+  border-radius: 14px; padding: 28px 32px; margin-bottom: 24px;
+  position: relative; overflow: hidden;
+  display: flex; align-items: center; justify-content: space-between; gap: 20px;
+}
+.hero-deco { position:absolute; border-radius:50%; pointer-events:none; }
+.hero-deco-1 { width:280px;height:280px;right:-70px;top:-90px; background:rgba(232,119,34,.08); }
+.hero-deco-2 { width:160px;height:160px;right:100px;bottom:-80px; background:rgba(255,255,255,.03); }
+.hero-deco-3 { width:90px; height:90px; left:38%; top:-28px; background:rgba(232,119,34,.05); }
+.hero-content { position:relative; z-index:1; }
+.hero-eyebrow {
+  font-size:11px; font-weight:600; letter-spacing:1.8px; text-transform:uppercase;
+  color:rgba(255,255,255,.40); margin-bottom:6px;
+  display:flex; align-items:center; gap:8px;
+}
+.hero-pulse { width:7px; height:7px; border-radius:50%; background:#E87722; box-shadow:0 0 0 3px rgba(232,119,34,.22); }
+.hero-title { font-size:24px; font-weight:800; color:#fff; line-height:1.2; margin-bottom:4px; }
+.hero-title span { color:#E87722; }
+.hero-sub { font-size:13px; color:rgba(255,255,255,.55); display:flex; align-items:flex-start; gap:6px; max-width:520px; line-height:1.45; white-space:pre-line; }
+.hero-right { position:relative; z-index:1; text-align:right; flex-shrink:0; }
+.hero-ghost { font-size:42px; font-weight:900; letter-spacing:5px; color:rgba(255,255,255,.06); user-select:none; line-height:1; }
+.hero-badge {
+  display:inline-flex; align-items:center; gap:6px;
+  background:#E87722; color:#fff; border-radius:99px;
+  padding:6px 16px; font-size:12px; font-weight:700; margin-top:8px;
+}
+
+.kpi-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:20px; }
+.kpi-card {
+  background:#fff; border:1px solid #e5e7eb; border-radius:12px;
+  padding:18px 20px; border-left:3px solid #1a2c4e;
+  box-shadow:0 2px 8px rgba(0,0,0,0.06);
+}
+.kpi-card-orange { border-left-color:#E87722; }
+.kpi-card-green { border-left-color:#16a34a; }
+.kpi-card-amber { border-left-color:#b45309; }
+.kpi-ico {
+  width:40px; height:40px; border-radius:10px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:18px; margin-bottom:12px;
+}
+.ico-navy { background:rgba(26,44,78,.08); color:#1a2c4e; }
+.ico-orange { background:rgba(232,119,34,.10); color:#E87722; }
+.ico-green { background:rgba(22,163,74,.10); color:#16a34a; }
+.ico-amber { background:rgba(180,83,9,.10); color:#b45309; }
+.kpi-label { font-size:12px; color:#6b7280; margin-bottom:4px; }
+.kpi-value { font-size:26px; font-weight:700; color:#1a2c4e; line-height:1; word-break:break-word; }
+.kpi-sub { font-size:11px; color:#9ca3af; margin-top:4px; }
+
+.filter-card {
+  background:#fff; border:1px solid #e5e7eb; border-radius:14px;
+  padding:20px 24px; margin-bottom:20px;
+  box-shadow:0 2px 8px rgba(0,0,0,.04);
+}
+.filter-label {
+  display:block; font-size:11px; font-weight:600; color:#6b7280;
+  text-transform:uppercase; letter-spacing:.5px; margin-bottom:4px;
+}
+.filter-input {
+  height:38px; border:1px solid #e5e7eb; border-radius:8px;
+  font-size:13px; padding:0 12px; width:100%;
+  background:#fff; color:#111827; outline:none;
+}
+.filter-input:focus { border-color:#1a2c4e; box-shadow:0 0 0 3px rgba(26,44,78,.07); }
+select.filter-input {
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 16 16'%3E%3Cpath fill='%236b7280' d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+  background-repeat:no-repeat; background-position:right 10px center;
+  padding-right:30px; appearance:none; -webkit-appearance:none;
+}
+.btn-filtrer {
+  height:38px; background:#1a2c4e; color:#fff; border:none;
+  border-radius:8px; padding:0 20px; font-weight:600; font-size:13px;
+  cursor:pointer; display:inline-flex; align-items:center; gap:6px;
+}
+.btn-filtrer:hover { background:#E87722; color:#fff; }
+.btn-reset {
+  height:38px; background:transparent; color:#374151;
+  border:1px solid #e5e7eb; border-radius:8px; padding:0 16px;
+  font-size:13px; text-decoration:none; cursor:pointer;
+  display:inline-flex; align-items:center; gap:6px;
+}
+.btn-export-excel {
+  height:38px; background:#dcfce7; color:#15803d;
+  border:1px solid #bbf7d0; border-radius:8px; padding:0 16px;
+  font-size:13px; text-decoration:none; display:inline-flex; align-items:center; gap:6px;
+}
+.btn-export-csv {
+  height:38px; background:#dbeafe; color:#1d4ed8;
+  border:1px solid #bfdbfe; border-radius:8px; padding:0 16px;
+  font-size:13px; text-decoration:none; display:inline-flex; align-items:center; gap:6px;
+}
+.btn-export-pdf {
+  height:38px; background:#fee2e2; color:#dc2626;
+  border:1px solid #fecaca; border-radius:8px; padding:0 16px;
+  font-size:13px; text-decoration:none; display:inline-flex; align-items:center; gap:6px;
+}
+
+.table-card {
+  background:#fff; border:1px solid #e5e7eb; border-radius:14px;
+  padding:16px; box-shadow:0 2px 8px rgba(0,0,0,.04);
+}
+.table-wrap { border-radius:14px; overflow:hidden; border:0.5px solid #e5e7eb; }
+.table-smt thead th {
+  background:#1a2c4e !important; color:#fff !important;
+  font-size:11px; font-weight:600; text-transform:uppercase;
+  padding:10px 12px; border:none;
+}
+.table-smt tbody tr:nth-child(even) { background:#fff; }
+.table-smt tbody tr:nth-child(odd) { background:#f8fafc; }
+.table-smt tbody tr:hover { background:#f0f4ff !important; }
+.table-smt td { padding:10px 12px; font-size:13px; border:0.5px solid #e5e7eb; }
+.table-smt tfoot td {
+  background:#1a2c4e !important; color:#fff !important;
+  font-weight:700; border-color:rgba(255,255,255,.15);
+}
+
+.perim-badge {
+  display:inline-flex; align-items:center; gap:6px;
+  background:#fff7ed; color:#c2410c; border:1px solid #fed7aa;
+  border-radius:99px; padding:4px 12px; font-size:11px; font-weight:600; margin-bottom:16px;
+}
+
+.search-table {
+  width:100%; padding:10px 14px; border:1px solid #e5e7eb; border-radius:8px;
+  margin-bottom:12px; font-size:13px; outline:none; box-sizing:border-box;
+}
+.search-table:focus { border-color:#1a2c4e; box-shadow:0 0 0 3px rgba(26,44,78,.07); }
+
+.empty-state { text-align:center; padding:48px 20px; }
+.empty-state i { font-size:48px; color:#d1d5db; display:block; margin-bottom:12px; }
+.empty-state p { color:#6b7280; font-size:14px; margin:0; }
+
+@media (max-width:992px) { .kpi-grid { grid-template-columns:repeat(2,1fr); } }
+@media (max-width:576px) {
+  .kpi-grid { grid-template-columns:1fr 1fr; }
+  .hero-right { display:none; }
+  .hero { padding:20px; }
+}
+</style>
 {% endblock %}
 
 {% block content %}
-<span class="page-title">Coûts par nature</span>
+
+<div class="hero anim-block">
+  <div class="hero-deco hero-deco-1"></div>
+  <div class="hero-deco hero-deco-2"></div>
+  <div class="hero-deco hero-deco-3"></div>
+  <div class="hero-content">
+    <div class="hero-eyebrow"><span class="hero-pulse"></span>Transport &amp; Logistique</div>
+    <div class="hero-title">Coûts par <span>nature</span></div>
+    <div class="hero-sub"><i class="bi bi-pie-chart-fill mt-1"></i>Analyse des coûts
+par catégorie</div>
+  </div>
+  <div class="hero-right">
+    <div class="hero-ghost">CST</div>
+    <span class="hero-badge"><i class="bi bi-calculator-fill"></i>Analytique</span>
+  </div>
+</div>
+
+<div class="perim-badge anim-block anim-delay-1"><i class="bi bi-geo-alt"></i>Périmètre : Transport &amp; Logistique</div>
+
 {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
 
-<div class="filters-card">
+<div class="kpi-grid anim-block anim-delay-1">
+  <div class="kpi-card">
+    <div class="kpi-ico ico-navy"><i class="bi bi-list-ul"></i></div>
+    <div class="kpi-label">Total coûts</div>
+    <div class="kpi-value">{{ total_rows }}</div>
+    <div class="kpi-sub">lignes analytiques</div>
+  </div>
+  <div class="kpi-card kpi-card-orange">
+    <div class="kpi-ico ico-orange"><i class="bi bi-currency-exchange"></i></div>
+    <div class="kpi-label">Montant total (MAD)</div>
+    <div class="kpi-value">{{ total_montant|floatformat:"2g" }}</div>
+  </div>
+  <div class="kpi-card kpi-card-green">
+    <div class="kpi-ico ico-green"><i class="bi bi-tag-fill"></i></div>
+    <div class="kpi-label">Nature principale</div>
+    <div class="kpi-value" style="font-size:18px;">{{ nature_principale }}</div>
+  </div>
+  <div class="kpi-card kpi-card-amber">
+    <div class="kpi-ico ico-amber"><i class="bi bi-graph-up-arrow"></i></div>
+    <div class="kpi-label">Moyenne / ligne</div>
+    <div class="kpi-value">{{ moyenne_ligne|floatformat:"2g" }}</div>
+    <div class="kpi-sub">MAD</div>
+  </div>
+</div>
+
+<div class="filter-card anim-block anim-delay-2">
   <form method="get" class="row g-3 align-items-end">
-    <div class="col-md-3"><label class="form-label">Date début</label><input type="date" name="date_debut" class="form-control" value="{{ date_debut }}"></div>
-    <div class="col-md-3"><label class="form-label">Date fin</label><input type="date" name="date_fin" class="form-control" value="{{ date_fin }}"></div>
-    <div class="col-md-3">
-      <label class="form-label">Catégorie produit</label>
-      <select name="nature" class="form-select">
+    <div class="col-lg-3 col-md-6">
+      <label class="filter-label">Date début</label>
+      <input type="date" name="date_debut" value="{{ date_debut }}" class="filter-input">
+    </div>
+    <div class="col-lg-3 col-md-6">
+      <label class="filter-label">Date fin</label>
+      <input type="date" name="date_fin" value="{{ date_fin }}" class="filter-input">
+    </div>
+    <div class="col-lg-3 col-md-6">
+      <label class="filter-label">Catégorie produit</label>
+      <select name="nature" class="filter-input">
         <option value="">— Toutes —</option>
         {% for n in nature_options %}
           <option value="{{ n }}" {% if nature == n %}selected{% endif %}>{{ n }}</option>
         {% endfor %}
       </select>
     </div>
-    <div class="col-md-3">
-      <label class="form-label">Véhicule</label>
-      <select name="vehicule" class="form-select">
+    <div class="col-lg-3 col-md-6">
+      <label class="filter-label">Véhicule</label>
+      <select name="vehicule" class="filter-input">
         <option value="">— Tous —</option>
         {% for v in vehicules %}
           <option value="{{ v }}" {% if vehicule == v %}selected{% endif %}>{{ v }}</option>
         {% endfor %}
       </select>
     </div>
-    <div class="col-md-3">
-      <label class="form-label">Produit</label>
-      <select name="product_id" class="form-select">
+    <div class="col-lg-3 col-md-6">
+      <label class="filter-label">Produit</label>
+      <select name="product_id" class="filter-input">
         <option value="">— Tous —</option>
         {% for p in product_options %}
           <option value="{{ p.id }}" {% if product_id == p.id|stringformat:"d" %}selected{% endif %}>{{ p.name }}</option>
         {% endfor %}
       </select>
     </div>
-    <div class="col-md-3">
-      <label class="form-label">Société</label>
-      <select name="company_id" class="form-select">
+    <div class="col-lg-3 col-md-6">
+      <label class="filter-label">Société</label>
+      <select name="company_id" class="filter-input">
         <option value="">— Toutes —</option>
         {% for c in company_options %}
           <option value="{{ c.id }}" {% if company_id == c.id|stringformat:"d" %}selected{% endif %}>{{ c.name }}</option>
         {% endfor %}
       </select>
     </div>
-    <div class="col-md-3">
-      <label class="form-label">Regroupement</label>
-      <select name="group_by" class="form-select">
+    <div class="col-lg-3 col-md-6">
+      <label class="filter-label">Regroupement</label>
+      <select name="group_by" class="filter-input">
         <option value="" {% if not group_by %}selected{% endif %}>Détail (ligne à ligne)</option>
         <option value="nature" {% if group_by == 'nature' %}selected{% endif %}>Catégorie produit</option>
         <option value="month" {% if group_by == 'month' %}selected{% endif %}>Mois</option>
         <option value="vehicle" {% if group_by == 'vehicle' %}selected{% endif %}>Véhicule</option>
       </select>
     </div>
-    <div class="col-12 d-flex gap-2">
-      <button class="btn btn-primary" type="submit">Filtrer</button>
-      <a class="btn btn-outline-secondary" href="{% url 'transport_couts_nature' %}">Réinitialiser</a>
+    <div class="col-12 d-flex gap-2 flex-wrap">
+      <button type="submit" class="btn-filtrer"><i class="bi bi-funnel-fill"></i>Filtrer</button>
+      <a href="{% url 'transport_couts_nature' %}" class="btn-reset"><i class="bi bi-arrow-counterclockwise"></i>Réinitialiser</a>
     </div>
   </form>
+  <div class="mt-3 d-flex gap-2 flex-wrap">
+    <a class="btn-export-excel" href="?date_debut={{ date_debut }}&amp;date_fin={{ date_fin }}&amp;nature={{ nature|urlencode }}&amp;vehicule={{ vehicule|urlencode }}&amp;product_id={{ product_id|urlencode }}&amp;company_id={{ company_id|urlencode }}&amp;group_by={{ group_by|urlencode }}&amp;export=excel"><i class="bi bi-file-earmark-excel"></i>Export Excel</a>
+    <a class="btn-export-csv" href="?date_debut={{ date_debut }}&amp;date_fin={{ date_fin }}&amp;nature={{ nature|urlencode }}&amp;vehicule={{ vehicule|urlencode }}&amp;product_id={{ product_id|urlencode }}&amp;company_id={{ company_id|urlencode }}&amp;group_by={{ group_by|urlencode }}&amp;export=csv"><i class="bi bi-filetype-csv"></i>Export CSV</a>
+    <a class="btn-export-pdf" href="?date_debut={{ date_debut }}&amp;date_fin={{ date_fin }}&amp;nature={{ nature|urlencode }}&amp;vehicule={{ vehicule|urlencode }}&amp;product_id={{ product_id|urlencode }}&amp;company_id={{ company_id|urlencode }}&amp;group_by={{ group_by|urlencode }}&amp;export=pdf"><i class="bi bi-file-pdf"></i>Export PDF</a>
+  </div>
 </div>
 
-<div class="card">
-  <div class="mb-2">
-    <strong>{{ total_rows|num_plain:0 }}</strong> N° Bon
-    {% if group_by and grouped_rows %} · <strong>{{ grouped_rows|length|num_plain:0 }}</strong> groupe(s){% endif %}
-    <span class="ms-2">| Total : <strong>{{ total_montant|num_plain:2 }}</strong></span>
+<input type="text" id="searchTable" class="search-table anim-block anim-delay-2" placeholder="Rechercher...">
+
+<div class="table-card anim-block anim-delay-2">
+  <div class="mb-2" style="font-size:12px;color:#6b7280;">
+    <strong>{{ total_rows }}</strong> ligne(s)
+    {% if group_by and grouped_rows %}· <strong>{{ grouped_rows|length }}</strong> groupe(s){% endif %}
+    · Total : <strong>{{ total_montant|floatformat:"2g" }}</strong> MAD
   </div>
-  <div class="table-responsive">
-    <table class="table table-sm table-striped align-middle">
+  <div class="table-responsive table-wrap">
+    <table class="table table-smt align-middle mb-0" id="data-table">
       {% if group_by and grouped_rows %}
-      <thead class="table-dark">
+      <thead>
         <tr>
           <th>{% if group_by == 'nature' %}Catégorie produit{% elif group_by == 'month' %}Mois{% else %}Véhicule{% endif %}</th>
-          <th class="text-end">N° Bon</th>
+          <th class="text-end">N° lignes</th>
           <th class="text-end">Montant</th>
         </tr>
       </thead>
       <tbody>
       {% for row in grouped_rows %}
-        <tr>
+        <tr data-row>
           <td>{{ row.label }}</td>
-          <td class="text-end">{{ row.count|num_plain:0 }}</td>
-          <td class="text-end">{{ row.montant|num_plain:2 }}</td>
+          <td class="text-end">{{ row.count }}</td>
+          <td class="text-end">{{ row.montant|floatformat:"2g" }}</td>
         </tr>
       {% empty %}
-        <tr><td colspan="3" class="text-center text-muted">Aucune donnée</td></tr>
+        <tr><td colspan="3" class="p-0"><div class="empty-state"><i class="bi bi-inbox"></i><p>Aucune donnée</p></div></td></tr>
       {% endfor %}
       </tbody>
-      <tfoot class="table-secondary">
+      {% if grouped_rows %}
+      <tfoot>
         <tr>
-          <th>Total</th>
-          <th class="text-end">{{ total_rows|num_plain:0 }}</th>
-          <th class="text-end">{{ total_montant|num_plain:2 }}</th>
+          <td>TOTAL</td>
+          <td class="text-end">{{ total_rows }}</td>
+          <td class="text-end">{{ total_montant|floatformat:"2g" }}</td>
         </tr>
       </tfoot>
+      {% endif %}
       {% else %}
-      <thead class="table-dark">
-        <tr><th>Date</th><th>Véhicule</th><th>Catégorie produit</th><th class="text-end">Montant</th></tr>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Véhicule</th>
+          <th>Catégorie produit</th>
+          <th class="text-end">Montant</th>
+        </tr>
       </thead>
       <tbody>
       {% for row in rows %}
-        <tr>
+        <tr data-row>
           <td>{{ row.date }}</td>
           <td>{{ row.vehicule|matricule_only }}</td>
           <td>{{ row.nature }}</td>
-          <td class="text-end">{{ row.montant|num_plain:2 }}</td>
+          <td class="text-end">{{ row.montant|floatformat:"2g" }}</td>
         </tr>
       {% empty %}
-        <tr><td colspan="4" class="text-center text-muted">Aucune donnée</td></tr>
+        <tr><td colspan="4" class="p-0"><div class="empty-state"><i class="bi bi-inbox"></i><p>Aucune donnée</p></div></td></tr>
       {% endfor %}
       </tbody>
-      <tfoot class="table-secondary">
+      {% if rows %}
+      <tfoot>
         <tr>
-          <th colspan="3">Total</th>
-          <th class="text-end">{{ total_montant|num_plain:2 }}</th>
+          <td colspan="3">TOTAL</td>
+          <td class="text-end">{{ total_montant|floatformat:"2g" }}</td>
         </tr>
       </tfoot>
+      {% endif %}
       {% endif %}
     </table>
   </div>
 </div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  var el = document.getElementById('searchTable');
+  if (!el) return;
+  el.addEventListener('input', function () {
+    var q = this.value.toLowerCase();
+    document.querySelectorAll('#data-table tbody tr').forEach(function (row) {
+      row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+  });
+})();
+</script>
 {% endblock %}

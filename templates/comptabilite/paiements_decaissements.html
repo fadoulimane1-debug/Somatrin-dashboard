@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Comptabilité — Paiements (décaissements){% endblock %}
+{% block breadcrumb %}<a href="{% url 'accueil' %}">Accueil</a><i class="bi bi-chevron-right"></i><span style="color:#1a2c4e;font-weight:600;">Paiements (décaissements)</span>{% endblock %}
+{% block extra_css %}<style>.hero{background:linear-gradient(135deg,#0f1e38,#1a2c4e);border-radius:16px;padding:22px 26px;color:#fff;display:flex;justify-content:space-between}.kpi{background:#fff;border:1px solid #E5E7EB;border-radius:12px;padding:14px}.kpi .v{font-size:28px;font-weight:900;color:#1a2c4e}.cardx{background:#fff;border:1px solid #E5E7EB;border-radius:14px;padding:14px}.wrap{max-height:62vh;overflow:auto}.tb thead th{position:sticky;top:0;background:#1a2c4e;color:#fff;white-space:nowrap}.tb td,.tb th{padding:9px 10px;font-size:13px}.tb tbody tr:nth-child(even){background:#f8fafc}</style><link rel="stylesheet" href="{% static 'css/comptabilite.css' %}">{% endblock %}
+{% block content %}
+<div class="hero mb-3"><div><small style="opacity:.7">COMPTABILITE</small><h2 class="mb-0">Paiements (décaissements)</h2></div><div style="font-size:40px;font-weight:900;color:rgba(255,255,255,.08)">OUT</div></div>
+{% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+<div class="row g-3 mb-3 kpi-row-uniform"><div class="col-lg-6 col-6"><div class="kpi"><div>Total paiements</div><div class="v">{{ kpi_total }}</div></div></div><div class="col-lg-6 col-6"><div class="kpi"><div>Montant total</div><div class="v">{{ kpi_montant }}</div></div></div></div>
+<div class="cardx"><div class="wrap"><table class="table table-sm tb mb-0"><thead><tr><th>Date</th><th>Tiers</th><th>Référence</th><th>Journal</th><th>Montant</th></tr></thead><tbody>{% for r in rows %}<tr><td>{{ r.date }}</td><td>{{ r.tiers }}</td><td>{{ r.reference }}</td><td>{{ r.journal }}</td><td>{{ r.montant }}</td></tr>{% empty %}<tr><td colspan="5" class="text-center text-muted py-4">Aucun décaissement.</td></tr>{% endfor %}</tbody></table></div></div>
+{% endblock %}

@@ -1,0 +1,309 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Parc — Fournisseurs{% endblock %}
+{% block breadcrumb %}
+<a href="{% url 'accueil' %}">Accueil</a>
+<i class="bi bi-chevron-right"></i>
+<a href="{% url 'parc_module' %}">Parc &amp; Maintenance</a>
+<i class="bi bi-chevron-right"></i>
+<span style="color:#1a2c4e;font-weight:600;">Fournisseurs</span>
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/parc.css' %}">
+<style>
+.hero {
+    background: linear-gradient(135deg, #0f1e38, #1a2c4e);
+    border-radius: 16px;
+    padding: 22px 26px;
+    color: #fff;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.kpi-grid .kpi {
+    background: #fff;
+    border: 1px solid #E5E7EB;
+    border-radius: 12px;
+    padding: 16px 20px;
+    height: 100%;
+    box-shadow: 0 2px 8px rgba(0,0,0,.05);
+}
+.kpi-grid .kpi .lbl { font-size: 0.83rem; color: #666; text-transform: uppercase; letter-spacing: .4px; font-weight: 700; }
+.kpi-grid .kpi .v  { font-size: 30px; line-height: 1.2; font-weight: 800; color: #1a2c4e; margin-top: 6px; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Hero -->
+<div class="hero mb-4">
+    <div>
+        <small style="opacity:.6;letter-spacing:1.4px;font-size:.78rem;text-transform:uppercase;">Module Parc</small>
+        <h2 class="mb-0 mt-1">Fournisseurs &amp; Partenaires</h2>
+        <p style="margin:4px 0 0;opacity:.8;font-size:.9rem;">Gestion des fournisseurs d'équipements et de maintenance</p>
+    </div>
+    <div style="font-size:48px;font-weight:900;color:rgba(255,255,255,.06)">FRN</div>
+</div>
+
+{% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+
+<!-- KPIs -->
+<div class="row g-3 mb-4 kpi-grid">
+    <div class="col-lg-4 col-md-6">
+        <div class="kpi">
+            <div class="lbl">Total fournisseurs</div>
+            <div class="v">{{ total_suppliers }}</div>
+            <div style="font-size:.8rem;color:#94a3b8;margin-top:4px;">référencés dans Odoo</div>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-6">
+        <div class="kpi" style="border-top:3px solid #16a34a;">
+            <div class="lbl">Actifs</div>
+            <div class="v" style="color:#16a34a;">{{ active_suppliers }}</div>
+            <div style="font-size:.8rem;color:#94a3b8;margin-top:4px;">partenaires actifs</div>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-6">
+        <div class="kpi" style="border-top:3px solid #dc2626;">
+            <div class="lbl">Inactifs</div>
+            <div class="v" style="color:#dc2626;">{{ inactive_suppliers }}</div>
+            <div style="font-size:.8rem;color:#94a3b8;margin-top:4px;">hors service</div>
+        </div>
+    </div>
+</div>
+
+<!-- Filtres rapides -->
+<div class="filters-section">
+    <div class="card-filters">
+        <div class="filters-title">
+            <i class="bi bi-funnel-fill" style="color:#E87722;"></i> Filtres
+        </div>
+        <div class="row g-3">
+            <div class="col-lg-4 col-md-6">
+                <label class="form-label">Recherche</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input type="text" class="form-control" id="f-search"
+                           placeholder="Nom, ville, téléphone...">
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-4">
+                <label class="form-label">État</label>
+                <select class="form-select" id="f-state">
+                    <option value="">Tous</option>
+                    <option value="actif">Actifs seulement</option>
+                    <option value="inactif">Inactifs seulement</option>
+                </select>
+            </div>
+            <div class="col-lg-3 col-md-4">
+                <label class="form-label">Trier par</label>
+                <select class="form-select" id="f-sort">
+                    <option value="name">Nom (A→Z)</option>
+                    <option value="-name">Nom (Z→A)</option>
+                    <option value="-rank">Rang fournisseur (élevé)</option>
+                </select>
+            </div>
+            <div class="col-lg-2 d-flex align-items-end">
+                <button type="button" class="btn btn-outline-secondary w-100"
+                        onclick="resetFilters()">
+                    <i class="bi bi-arrow-counterclockwise"></i> Reset
+                </button>
+            </div>
+        </div>
+        <div class="active-filters mt-2" id="active-filters"></div>
+    </div>
+</div>
+
+<!-- Tableau fournisseurs -->
+<div class="table-container">
+    <div class="table-header-container">
+        <h5 class="table-header-title">
+            <i class="bi bi-briefcase"></i> Liste des fournisseurs
+        </h5>
+        <div class="table-stats">
+            <div class="stat-item">
+                <span class="stat-label">Affichés</span>
+                <span class="stat-value" id="stat-count">{{ total_suppliers }}</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Actifs</span>
+                <span class="stat-value" style="color:#6ee7b7;">{{ active_suppliers }}</span>
+            </div>
+        </div>
+    </div>
+    <div class="table-count" id="row-count">{{ total_suppliers }} fournisseur(s)</div>
+
+    <div class="table-responsive">
+        <table class="table-modern" id="tbl">
+            <thead>
+                <tr>
+                    <th style="width:30%">Nom fournisseur</th>
+                    <th style="width:15%">Ville</th>
+                    <th style="width:18%">Téléphone</th>
+                    <th style="width:22%">Email</th>
+                    <th style="width:8%;text-align:center">Rang</th>
+                    <th style="width:7%;text-align:center">État</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in suppliers %}
+                <tr data-row
+                    data-name="{{ s.name|lower }}"
+                    data-city="{{ s.city|lower }}"
+                    data-active="{% if s.is_active %}actif{% else %}inactif{% endif %}"
+                    data-rank="{{ s.rank }}">
+                    <td class="col-numero">
+                        <i class="bi bi-building me-1" style="color:#E87722;"></i>
+                        {{ s.name }}
+                    </td>
+                    <td class="col-date">
+                        {% if s.city and s.city != '—' and s.city != '-' %}
+                            {{ s.city }}
+                        {% else %}
+                            <span class="text-muted">Non renseigné</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if s.phone and s.phone != '—' and s.phone != '-' %}
+                            <a href="tel:{{ s.phone }}" class="text-decoration-none text-dark">
+                                <i class="bi bi-telephone me-1" style="color:#64748b;"></i>{{ s.phone }}
+                            </a>
+                        {% else %}
+                            <span class="text-muted">Non renseigné</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if s.email and s.email != '—' and s.email != '-' %}
+                            <a href="mailto:{{ s.email }}" class="text-decoration-none">
+                                <small>{{ s.email|truncatechars:30 }}</small>
+                            </a>
+                        {% else %}
+                            <span class="text-muted">Non renseigné</span>
+                        {% endif %}
+                    </td>
+                    <td style="text-align:center">
+                        <span class="badge bg-info text-dark">{{ s.rank }}</span>
+                    </td>
+                    <td style="text-align:center">
+                        {% if s.is_active %}
+                            <span class="badge-statut badge-termine" style="font-size:.75rem;padding:4px 10px;">
+                                <i class="bi bi-check-circle"></i> Actif
+                            </span>
+                        {% else %}
+                            <span class="badge-statut badge-request" style="font-size:.75rem;padding:4px 10px;">
+                                <i class="bi bi-x-circle"></i> Inactif
+                            </span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center text-muted py-5">
+                        <i class="bi bi-building" style="font-size:2rem;display:block;margin-bottom:8px;"></i>
+                        Aucun fournisseur trouvé dans Odoo
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="table-pager" id="pager"></div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    const allRows = Array.from(document.querySelectorAll('#tbl tbody tr[data-row]'));
+    let currentVisible = allRows.slice();
+    let page = 1;
+    const PAGE_SIZE = 50;
+
+    function applyFilters() {
+        const search = (document.getElementById('f-search').value || '').toLowerCase().trim();
+        const state  = (document.getElementById('f-state').value || '').toLowerCase();
+        const sort   = document.getElementById('f-sort').value || 'name';
+
+        let visible = allRows.filter(function (tr) {
+            if (search) {
+                const hay = (tr.dataset.name || '') + ' ' + (tr.dataset.city || '') + ' ' + tr.textContent.toLowerCase();
+                if (!hay.includes(search)) return false;
+            }
+            if (state && tr.dataset.active !== state) return false;
+            return true;
+        });
+
+        visible.sort(function (a, b) {
+            if (sort === 'name' || sort === '-name') {
+                const r = (a.dataset.name || '').localeCompare(b.dataset.name || '');
+                return sort === 'name' ? r : -r;
+            }
+            if (sort === '-rank') {
+                return parseInt(b.dataset.rank || 0) - parseInt(a.dataset.rank || 0);
+            }
+            return 0;
+        });
+
+        currentVisible = visible;
+        page = 1;
+        render();
+        updateBadges(search, state);
+    }
+
+    function render() {
+        const total = currentVisible.length;
+        const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+        if (page > totalPages) page = totalPages;
+
+        allRows.forEach(function (tr) { tr.style.display = 'none'; });
+        currentVisible.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+                      .forEach(function (tr) { tr.style.display = ''; });
+
+        var countEl = document.getElementById('row-count');
+        if (countEl) countEl.textContent = total + ' fournisseur(s)';
+        var statEl = document.getElementById('stat-count');
+        if (statEl) statEl.textContent = total;
+
+        var pager = document.getElementById('pager');
+        pager.innerHTML = '';
+        if (totalPages > 1) {
+            for (var i = 1; i <= totalPages; i++) {
+                var btn = document.createElement('button');
+                btn.className = 'btn btn-sm ' + (i === page ? 'btn-dark' : 'btn-outline-secondary');
+                btn.textContent = i;
+                btn.onclick = (function (p) { return function () { page = p; render(); }; })(i);
+                pager.appendChild(btn);
+            }
+        }
+    }
+
+    function updateBadges(search, state) {
+        var el = document.getElementById('active-filters');
+        if (!el) return;
+        var parts = [];
+        if (search) parts.push('Recherche : "' + search + '"');
+        if (state) parts.push('État : ' + state);
+        el.innerHTML = parts.length
+            ? '<span style="color:#888;font-size:.82rem;font-weight:600;">Filtres actifs :</span> ' +
+              parts.map(function (p) { return '<span class="filter-badge">' + p + '</span>'; }).join('')
+            : '';
+    }
+
+    window.resetFilters = function () {
+        document.getElementById('f-search').value = '';
+        document.getElementById('f-state').value = '';
+        document.getElementById('f-sort').value = 'name';
+        applyFilters();
+    };
+
+    ['f-search', 'f-state', 'f-sort'].forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el) el.addEventListener('input', applyFilters);
+    });
+
+    applyFilters();
+}());
+</script>
+{% endblock %}

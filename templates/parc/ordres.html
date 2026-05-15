@@ -1,0 +1,580 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Parc — Ordres &amp; Coûts{% endblock %}
+{% block breadcrumb %}
+<a href="{% url 'accueil' %}">Accueil</a>
+<i class="bi bi-chevron-right"></i>
+<a href="{% url 'parc_module' %}">Parc &amp; Maintenance</a>
+<i class="bi bi-chevron-right"></i>
+<span style="color:#1a2c4e;font-weight:600;">Ordres &amp; Coûts</span>
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/parc.css' %}">
+<style>
+.hero{background:linear-gradient(135deg,#0f1e38,#1a2c4e);border-radius:16px;padding:22px 26px;color:#fff;display:flex;justify-content:space-between;align-items:center}
+/* Tabs */
+.nav-tabs-parc{border:none;gap:6px;margin-bottom:0}
+.nav-tabs-parc .nav-link{border:1px solid #dbe3ef;border-radius:10px 10px 0 0;color:#475569;font-weight:600;font-size:.88rem;padding:10px 20px;background:#f8fafc;transition:.2s}
+.nav-tabs-parc .nav-link.active{background:#1a2c4e;color:#fff;border-color:#1a2c4e}
+.nav-tabs-parc .nav-link:hover:not(.active){background:#e2e8f0;color:#1a2c4e}
+.tab-panel-wrap{background:#fff;border:1px solid #dbe3ef;border-radius:0 12px 12px 12px;padding:22px}
+/* KPI */
+.kpi{background:#fff;border:1px solid #E5E7EB;border-radius:12px;padding:14px 18px;box-shadow:0 2px 8px rgba(0,0,0,.05)}
+.kpi .l{font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.4px}
+.kpi .v{font-size:26px;font-weight:900;color:#1a2c4e;line-height:1.1;margin-top:2px}
+.kpi .s{font-size:11px;color:#94a3b8;margin-top:2px}
+/* Charts */
+.chart-box{background:#f8fafc;border-radius:10px;padding:14px}
+.chart-title{font-size:.78rem;font-weight:700;color:#1a2c4e;text-transform:uppercase;letter-spacing:.4px;margin-bottom:10px}
+.chart-wrap{position:relative;height:200px}
+/* Filters */
+.f-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;background:#f8fafc;border-radius:10px;padding:14px}
+.f-bar .form-control,.f-bar .form-select{height:34px;font-size:.85rem}
+.f-label{font-size:.75rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:3px}
+/* Badges */
+.badge-type-C{background:#fde8e8;color:#991b1b;border-radius:6px;padding:3px 9px;font-size:.78rem;font-weight:700}
+.badge-type-P{background:#dcfce7;color:#14532d;border-radius:6px;padding:3px 9px;font-size:.78rem;font-weight:700}
+.badge-type-D{background:#dbeafe;color:#1e40af;border-radius:6px;padding:3px 9px;font-size:.78rem;font-weight:700}
+.badge-type-X{background:#f1f5f9;color:#475569;border-radius:6px;padding:3px 9px;font-size:.78rem;font-weight:700}
+.badge-etat-O{background:#fef3c7;color:#92400e;border-radius:6px;padding:3px 9px;font-size:.78rem;font-weight:700}
+.badge-etat-T{background:#dcfce7;color:#14532d;border-radius:6px;padding:3px 9px;font-size:.78rem;font-weight:700}
+.badge-etat-R{background:#fee2e2;color:#991b1b;border-radius:6px;padding:3px 9px;font-size:.78rem;font-weight:700}
+/* Table */
+.tbl-parc{width:100%;border-collapse:separate;border-spacing:0}
+.tbl-parc thead th{background:#1a2c4e;color:#fff;font-size:.78rem;font-weight:700;padding:10px 12px;position:sticky;top:0;z-index:2;white-space:nowrap}
+.tbl-parc thead th:first-child{border-radius:8px 0 0 0}
+.tbl-parc thead th:last-child{border-radius:0 8px 0 0}
+.tbl-parc tbody td{padding:9px 12px;border-top:1px solid #f1f5f9;font-size:.85rem;vertical-align:middle;color:#1f2937}
+.tbl-parc tbody tr:nth-child(even){background:#fafbfc}
+.tbl-parc tbody tr:hover{background:#eef4ff}
+.tbl-parc .row-retard{background:#fff8f8 !important}
+.tbl-parc .row-cost-high{background:#fff8f8 !important}
+.tbl-parc .row-cost-mid{background:#fffbf0 !important}
+.tbl-parc .row-dur-long{background:#f0f8ff !important}
+.tbl-wrap{max-height:52vh;overflow:auto;border-radius:10px;border:1px solid #e2e8f0}
+.pager{display:flex;gap:4px;padding:10px 0 0;flex-wrap:wrap}
+.export-bar{display:flex;gap:8px;align-items:center;padding:10px 0 0;flex-wrap:wrap}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Hero -->
+<div class="hero mb-3">
+  <div>
+    <small style="opacity:.6;letter-spacing:1.4px;font-size:.78rem;text-transform:uppercase;">Module Parc</small>
+    <h2 class="mb-0 mt-1">Ordres &amp; Coûts maintenance</h2>
+    <p style="margin:4px 0 0;opacity:.8;font-size:.88rem;">{{ kpi_total }} ordres · {{ total_heures }}h · {{ total_cout|floatformat:"0" }} MAD</p>
+  </div>
+  <div style="font-size:42px;font-weight:900;color:rgba(255,255,255,.07)">OC</div>
+</div>
+
+{% if error %}<div class="alert alert-danger mb-3">{{ error }}</div>{% endif %}
+
+<!-- Nav tabs -->
+<ul class="nav nav-tabs-parc" id="mainTabs" role="tablist">
+  <li class="nav-item">
+    <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-toutes" type="button">
+      <i class="bi bi-list-ul"></i> Toutes les ordres
+      <span class="badge rounded-pill ms-1" style="background:#E87722;color:#fff;font-size:.7rem;">{{ kpi_total }}</span>
+    </button>
+  </li>
+  <li class="nav-item">
+    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-couts" type="button" id="tab-couts-btn">
+      <i class="bi bi-cash-coin"></i> Par coûts
+    </button>
+  </li>
+  <li class="nav-item">
+    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-duree" type="button" id="tab-duree-btn">
+      <i class="bi bi-clock-history"></i> Par durée
+    </button>
+  </li>
+</ul>
+
+<div class="tab-content">
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- ONGLET 1 — TOUTES LES ORDRES                  -->
+<!-- ═══════════════════════════════════════════════ -->
+<div class="tab-pane fade show active tab-panel-wrap" id="tab-toutes" role="tabpanel">
+
+  <!-- KPI -->
+  <div class="row g-2 mb-3">
+    <div class="col-lg-3 col-6">
+      <div class="kpi" style="border-top:3px solid #1a2c4e;">
+        <div class="l">Total ordres</div><div class="v">{{ kpi_total }}</div>
+      </div>
+    </div>
+    <div class="col-lg-3 col-6">
+      <div class="kpi" style="border-top:3px solid #E87722;">
+        <div class="l">En cours</div><div class="v" style="color:#E87722;">{{ kpi_en_cours }}</div>
+      </div>
+    </div>
+    <div class="col-lg-3 col-6">
+      <div class="kpi" style="border-top:3px solid #16a34a;">
+        <div class="l">Terminées</div><div class="v" style="color:#16a34a;">{{ kpi_termines }}</div>
+      </div>
+    </div>
+    <div class="col-lg-3 col-6">
+      <div class="kpi" style="border-top:3px solid #dc2626;">
+        <div class="l">En retard (&gt;30j)</div><div class="v" style="color:#dc2626;">{{ kpi_retard }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts row -->
+  <div class="row g-3 mb-3">
+    <div class="col-lg-4 col-md-5">
+      <div class="chart-box">
+        <div class="chart-title"><i class="bi bi-pie-chart-fill" style="color:#E87722;"></i> Statut ordres</div>
+        <div class="chart-wrap"><canvas id="c1-statut"></canvas></div>
+      </div>
+    </div>
+    <div class="col-lg-8 col-md-7">
+      <div class="chart-box">
+        <div class="chart-title"><i class="bi bi-bar-chart-fill" style="color:#1a2c4e;"></i> Top 5 techniciens (nombre d'ordres)</div>
+        <div class="chart-wrap"><canvas id="c1-tech"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="f-bar mb-2">
+    <div style="flex:2;min-width:180px;">
+      <span class="f-label">Recherche</span>
+      <input type="text" class="form-control" id="f1-search" placeholder="N°, équipement, technicien...">
+    </div>
+    <div style="min-width:110px;">
+      <span class="f-label">Date de</span>
+      <input type="date" class="form-control" id="f1-from">
+    </div>
+    <div style="min-width:110px;">
+      <span class="f-label">Date à</span>
+      <input type="date" class="form-control" id="f1-to">
+    </div>
+    <div style="min-width:130px;">
+      <span class="f-label">Type</span>
+      <select class="form-select" id="f1-type">
+        <option value="">Tous les types</option>
+        <option value="corrective">Corrective</option>
+        <option value="préventive">Préventive</option>
+        <option value="diagnostic">Diagnostic</option>
+      </select>
+    </div>
+    <div style="min-width:130px;">
+      <span class="f-label">État</span>
+      <select class="form-select" id="f1-etat">
+        <option value="">Tous les états</option>
+        <option value="open">En cours</option>
+        <option value="done">Terminée</option>
+        <option value="retard">En retard</option>
+      </select>
+    </div>
+    <div>
+      <span class="f-label">&nbsp;</span>
+      <button type="button" class="btn btn-outline-secondary" style="height:34px;font-size:.82rem;" onclick="reset1()">
+        <i class="bi bi-arrow-counterclockwise"></i> Reset
+      </button>
+    </div>
+  </div>
+  <div style="font-size:.8rem;color:#64748b;margin-bottom:6px;" id="f1-count"></div>
+
+  <!-- Table -->
+  <div class="tbl-wrap">
+    <table class="tbl-parc" id="tbl1">
+      <thead>
+        <tr>
+          <th style="width:14%">N° Ordre</th>
+          <th style="width:9%">Date</th>
+          <th style="width:16%">Équipement</th>
+          <th style="width:10%">Catégorie</th>
+          <th style="width:9%">Type</th>
+          <th style="width:7%;text-align:center">Jours</th>
+          <th style="width:9%;text-align:right">Coût (MAD)</th>
+          <th style="width:6%;text-align:right">Durée</th>
+          <th style="width:11%">Technicien</th>
+          <th style="width:9%;text-align:center">État</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+        <tr data-row
+            data-date="{{ r.date_iso }}"
+            data-type="{{ r.type|lower }}"
+            data-tech="{{ r.technicien|lower }}"
+            data-state="{% if r.is_closed %}done{% elif r.is_retard %}retard{% else %}open{% endif %}"
+            class="{% if r.is_retard %}row-retard{% endif %}">
+          <td style="font-weight:600;font-size:.82rem;">{{ r.name }}</td>
+          <td style="font-size:.82rem;color:#64748b;">{{ r.date }}</td>
+          <td style="font-size:.82rem;">{{ r.equipement }}</td>
+          <td><span style="background:#f1f5f9;color:#334155;border-radius:5px;padding:2px 7px;font-size:.75rem;font-weight:600;">{{ r.categorie }}</span></td>
+          <td>
+            {% if r.type == 'Corrective' %}<span class="badge-type-C">Corrective</span>
+            {% elif 'prév' in r.type|lower or 'prev' in r.type|lower %}<span class="badge-type-P">Préventive</span>
+            {% elif r.type == 'Diagnostic' %}<span class="badge-type-D">Diagnostic</span>
+            {% else %}<span class="badge-type-X">{{ r.type }}</span>{% endif %}
+          </td>
+          <td style="text-align:center;">
+            {% if not r.is_closed and r.days_open > 0 %}
+              <span style="background:{% if r.days_open > 30 %}#fee2e2;color:#991b1b{% elif r.days_open > 14 %}#fef3c7;color:#92400e{% else %}#f0fdf4;color:#14532d{% endif %};border-radius:5px;padding:2px 7px;font-size:.75rem;font-weight:700;">{{ r.days_open }}j</span>
+            {% else %}<span style="color:#94a3b8;font-size:.8rem;">—</span>{% endif %}
+          </td>
+          <td style="text-align:right;font-weight:700;color:{% if r.cout > 1000 %}#E87722{% else %}#64748b{% endif %};font-size:.85rem;">
+            {% if r.cout > 0 %}{{ r.cout|floatformat:"0" }}{% else %}<span style="color:#94a3b8;">—</span>{% endif %}
+          </td>
+          <td style="text-align:right;font-size:.82rem;color:#64748b;">
+            {% if r.duree > 0 %}{{ r.duree|floatformat:"1" }}h{% else %}—{% endif %}
+          </td>
+          <td><span style="background:#dbeafe;color:#1e40af;border-radius:5px;padding:2px 8px;font-size:.75rem;font-weight:600;">{{ r.technicien }}</span></td>
+          <td style="text-align:center;">
+            {% if r.is_retard %}<span class="badge-etat-R"><i class="bi bi-exclamation-triangle"></i> Retard</span>
+            {% elif r.is_closed %}<span class="badge-etat-T"><i class="bi bi-check-circle"></i> Terminée</span>
+            {% else %}<span class="badge-etat-O"><i class="bi bi-hourglass-split"></i> En cours</span>{% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="10" class="text-center text-muted py-5">Aucun ordre trouvé.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="pager" id="pager1"></div>
+
+  <!-- Export -->
+  <div class="export-bar">
+    <span style="color:#888;font-size:.82rem;">Exporter :</span>
+    <a href="{% url 'parc_ordres_excel' %}" class="btn btn-sm btn-success"><i class="bi bi-file-earmark-excel"></i> Excel</a>
+    <a href="{% url 'parc_ordres_csv' %}"   class="btn btn-sm btn-outline-primary"><i class="bi bi-file-earmark-text"></i> CSV</a>
+    <a href="{% url 'parc_ordres_pdf' %}"   class="btn btn-sm btn-outline-danger"><i class="bi bi-file-earmark-pdf"></i> PDF</a>
+  </div>
+
+</div><!-- /tab-toutes -->
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- ONGLET 2 — PAR COÛTS                          -->
+<!-- ═══════════════════════════════════════════════ -->
+<div class="tab-pane fade tab-panel-wrap" id="tab-couts" role="tabpanel">
+
+  <!-- KPI -->
+  <div class="row g-2 mb-3">
+    <div class="col-lg-3 col-6">
+      <div class="kpi" style="border-top:3px solid #E87722;">
+        <div class="l">Coût total (MAD)</div><div class="v" style="color:#E87722;">{{ total_cout|floatformat:"0" }}</div>
+      </div>
+    </div>
+    <div class="col-lg-3 col-6">
+      <div class="kpi" style="border-top:3px solid #1a2c4e;">
+        <div class="l">Coût moyen / ordre</div><div class="v">{{ cout_moyen|floatformat:"0" }}</div>
+      </div>
+    </div>
+    <div class="col-lg-3 col-6">
+      <div class="kpi" style="border-top:3px solid #dc2626;">
+        <div class="l">Équipement le + coûteux</div>
+        <div style="font-size:.88rem;font-weight:700;color:#dc2626;margin-top:4px;line-height:1.2;">{{ top_eq_name }}</div>
+        <div class="s">{{ top_eq_cost|floatformat:"0" }} MAD</div>
+      </div>
+    </div>
+    <div class="col-lg-3 col-6">
+      <div class="kpi" style="border-top:3px solid #7c3aed;">
+        <div class="l">Mois le plus cher</div>
+        <div style="font-size:.85rem;font-weight:700;color:#7c3aed;margin-top:4px;line-height:1.2;">{{ kpi_top_month }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <div class="row g-3 mb-3">
+    <div class="col-lg-5">
+      <div class="chart-box">
+        <div class="chart-title"><i class="bi bi-bar-chart-line-fill" style="color:#E87722;"></i> Coûts par mois — 12 derniers mois (MAD)</div>
+        <div class="chart-wrap"><canvas id="c2-mois"></canvas></div>
+      </div>
+    </div>
+    <div class="col-lg-3">
+      <div class="chart-box">
+        <div class="chart-title"><i class="bi bi-pie-chart-fill" style="color:#1a2c4e;"></i> Répartition par catégorie</div>
+        <div class="chart-wrap"><canvas id="c2-cat"></canvas></div>
+      </div>
+    </div>
+    <div class="col-lg-4">
+      <div class="chart-box">
+        <div class="chart-title"><i class="bi bi-trophy-fill" style="color:#d97706;"></i> Top 10 ordres les plus chères</div>
+        <div class="chart-wrap"><canvas id="c2-top10"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Table trié par coût desc -->
+  <div class="tbl-wrap">
+    <table class="tbl-parc">
+      <thead>
+        <tr>
+          <th style="width:15%">N° Ordre</th>
+          <th style="width:9%">Date</th>
+          <th style="width:18%">Équipement</th>
+          <th style="width:11%">Catégorie</th>
+          <th style="width:9%">Type</th>
+          <th style="width:11%;text-align:right">Coût (MAD) ★</th>
+          <th style="width:6%;text-align:right">Durée</th>
+          <th style="width:12%">Technicien</th>
+          <th style="width:9%;text-align:center">État</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows_by_cout|slice:":100" %}
+        <tr class="{% if r.cout > 5000 %}row-cost-high{% elif r.cout > 2000 %}row-cost-mid{% endif %}">
+          <td style="font-weight:600;font-size:.82rem;">{{ r.name }}</td>
+          <td style="font-size:.82rem;color:#64748b;">{{ r.date }}</td>
+          <td style="font-size:.82rem;">{{ r.equipement }}</td>
+          <td><span style="background:#f1f5f9;color:#334155;border-radius:5px;padding:2px 7px;font-size:.75rem;font-weight:600;">{{ r.categorie }}</span></td>
+          <td>
+            {% if r.type == 'Corrective' %}<span class="badge-type-C">Corrective</span>
+            {% elif 'prév' in r.type|lower or 'prev' in r.type|lower %}<span class="badge-type-P">Préventive</span>
+            {% else %}<span class="badge-type-X">{{ r.type }}</span>{% endif %}
+          </td>
+          <td style="text-align:right;font-weight:800;color:{% if r.cout > 5000 %}#dc2626{% elif r.cout > 2000 %}#d97706{% elif r.cout > 0 %}#E87722{% else %}#94a3b8{% endif %};font-size:.88rem;">
+            {% if r.cout > 0 %}{{ r.cout|floatformat:"0" }}{% else %}—{% endif %}
+          </td>
+          <td style="text-align:right;font-size:.82rem;color:#64748b;">{% if r.duree > 0 %}{{ r.duree|floatformat:"1" }}h{% else %}—{% endif %}</td>
+          <td><span style="background:#dbeafe;color:#1e40af;border-radius:5px;padding:2px 8px;font-size:.75rem;font-weight:600;">{{ r.technicien }}</span></td>
+          <td style="text-align:center;">
+            {% if r.is_retard %}<span class="badge-etat-R">Retard</span>
+            {% elif r.is_closed %}<span class="badge-etat-T">Terminée</span>
+            {% else %}<span class="badge-etat-O">En cours</span>{% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="9" class="text-center text-muted py-4">Aucune donnée.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="export-bar">
+    <span style="color:#888;font-size:.82rem;">Exporter :</span>
+    <a href="{% url 'parc_couts_excel' %}" class="btn btn-sm btn-success"><i class="bi bi-file-earmark-excel"></i> Excel</a>
+    <a href="{% url 'parc_couts_pdf' %}"   class="btn btn-sm btn-outline-danger"><i class="bi bi-file-earmark-pdf"></i> PDF financier</a>
+  </div>
+
+</div><!-- /tab-couts -->
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- ONGLET 3 — PAR DURÉE                          -->
+<!-- ═══════════════════════════════════════════════ -->
+<div class="tab-pane fade tab-panel-wrap" id="tab-duree" role="tabpanel">
+
+  <!-- KPI -->
+  <div class="row g-2 mb-3">
+    <div class="col-lg-3 col-6">
+      <div class="kpi" style="border-top:3px solid #0ea5e9;">
+        <div class="l">Durée totale (h)</div><div class="v" style="color:#0ea5e9;">{{ total_heures|floatformat:"1" }}</div>
+      </div>
+    </div>
+    <div class="col-lg-3 col-6">
+      <div class="kpi" style="border-top:3px solid #1a2c4e;">
+        <div class="l">Durée moyenne / ordre</div><div class="v">{{ duree_moyenne|floatformat:"2" }}h</div>
+      </div>
+    </div>
+    <div class="col-lg-3 col-6">
+      <div class="kpi" style="border-top:3px solid #7c3aed;">
+        <div class="l">Taux préventif</div><div class="v" style="color:#7c3aed;">{{ preventive_rate }}%</div>
+      </div>
+    </div>
+    <div class="col-lg-3 col-6">
+      <div class="kpi" style="border-top:3px solid #16a34a;">
+        <div class="l">Tech. le plus actif</div>
+        <div style="font-size:.9rem;font-weight:700;color:#16a34a;margin-top:4px;line-height:1.2;">{{ top_tech }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <div class="row g-3 mb-3">
+    <div class="col-lg-4">
+      <div class="chart-box">
+        <div class="chart-title"><i class="bi bi-bar-chart-fill" style="color:#1a2c4e;"></i> Durée / technicien — Top 5 (h)</div>
+        <div class="chart-wrap"><canvas id="c3-tech-dur"></canvas></div>
+      </div>
+    </div>
+    <div class="col-lg-3">
+      <div class="chart-box">
+        <div class="chart-title"><i class="bi bi-pie-chart-fill" style="color:#E87722;"></i> Corrective vs Préventive (h)</div>
+        <div class="chart-wrap"><canvas id="c3-type-h"></canvas></div>
+      </div>
+    </div>
+    <div class="col-lg-5">
+      <div class="chart-box">
+        <div class="chart-title"><i class="bi bi-graph-up" style="color:#0ea5e9;"></i> Tendance durées — 30 derniers jours</div>
+        <div class="chart-wrap"><canvas id="c3-trend"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Table triée par durée desc -->
+  <div class="tbl-wrap">
+    <table class="tbl-parc">
+      <thead>
+        <tr>
+          <th style="width:15%">N° Ordre</th>
+          <th style="width:9%">Date</th>
+          <th style="width:18%">Équipement</th>
+          <th style="width:9%">Type</th>
+          <th style="width:9%;text-align:right">Durée (h) ★</th>
+          <th style="width:11%;text-align:right">Coût (MAD)</th>
+          <th style="width:12%">Technicien</th>
+          <th style="width:9%;text-align:center">État</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows_by_duree|slice:":100" %}
+        <tr class="{% if r.duree > 8 %}row-dur-long{% endif %}">
+          <td style="font-weight:600;font-size:.82rem;">{{ r.name }}</td>
+          <td style="font-size:.82rem;color:#64748b;">{{ r.date }}</td>
+          <td style="font-size:.82rem;">{{ r.equipement }}</td>
+          <td>
+            {% if r.type == 'Corrective' %}<span class="badge-type-C">Corrective</span>
+            {% elif 'prév' in r.type|lower or 'prev' in r.type|lower %}<span class="badge-type-P">Préventive</span>
+            {% else %}<span class="badge-type-X">{{ r.type }}</span>{% endif %}
+          </td>
+          <td style="text-align:right;font-weight:800;color:{% if r.duree > 8 %}#1d4ed8{% else %}#1a2c4e{% endif %};font-size:.88rem;">
+            {% if r.duree > 0 %}{{ r.duree|floatformat:"1" }}h{% else %}—{% endif %}
+          </td>
+          <td style="text-align:right;color:#E87722;font-weight:700;font-size:.85rem;">
+            {% if r.cout > 0 %}{{ r.cout|floatformat:"0" }}{% else %}<span style="color:#94a3b8;">—</span>{% endif %}
+          </td>
+          <td><span style="background:#dbeafe;color:#1e40af;border-radius:5px;padding:2px 8px;font-size:.75rem;font-weight:600;">{{ r.technicien }}</span></td>
+          <td style="text-align:center;">
+            {% if r.is_retard %}<span class="badge-etat-R">Retard</span>
+            {% elif r.is_closed %}<span class="badge-etat-T">Terminée</span>
+            {% else %}<span class="badge-etat-O">En cours</span>{% endif %}
+          </td>
+          <td style="font-size:.78rem;color:#64748b;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ r.description }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="9" class="text-center text-muted py-4">Aucune donnée.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="export-bar">
+    <span style="color:#888;font-size:.82rem;">Exporter :</span>
+    <a href="{% url 'parc_ordres_excel' %}" class="btn btn-sm btn-success"><i class="bi bi-file-earmark-excel"></i> Excel</a>
+    <a href="{% url 'parc_ordres_pdf' %}"   class="btn btn-sm btn-outline-danger"><i class="bi bi-file-earmark-pdf"></i> PDF</a>
+  </div>
+
+</div><!-- /tab-duree -->
+
+</div><!-- /.tab-content -->
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="{% static 'js/parc.js' %}"></script>
+<script>
+/* ── Onglet 1 : charts toujours visibles, on les init au load ── */
+parcPie('c1-statut', {{ chart_statut_json|safe }});
+parcBar('c1-tech',   {{ chart_tech_json|safe }}, null, '#1a2c4e', true);
+
+/* ── Onglets 2 & 3 : init lazy au premier show ── */
+var c2Init = false, c3Init = false;
+
+document.getElementById('tab-couts-btn').addEventListener('shown.bs.tab', function () {
+  if (c2Init) return;
+  c2Init = true;
+  parcLine('c2-mois',  {{ chart_mois_json|safe }});
+  parcPie('c2-cat',    {{ chart_cat_json|safe }});
+  parcBar('c2-top10',  {{ chart_top10_json|safe }}, null, '#E87722', false);
+});
+
+document.getElementById('tab-duree-btn').addEventListener('shown.bs.tab', function () {
+  if (c3Init) return;
+  c3Init = true;
+  parcBar('c3-tech-dur', {{ chart_tech_dur_json|safe }}, null, '#1a2c4e', true);
+  parcPie('c3-type-h',   {{ chart_type_h_json|safe }});
+  parcLine('c3-trend',   {{ chart_trend_json|safe }});
+});
+
+/* ── Pagination + filtres onglet 1 ── */
+(function () {
+  var allRows = Array.from(document.querySelectorAll('#tbl1 tbody tr[data-row]'));
+  var visible = allRows.slice();
+  var page = 1;
+  var PAGE = 50;
+
+  function parseIso(str) {
+    if (!str || str.length < 10) return null;
+    try { return new Date(str); } catch(e) { return null; }
+  }
+
+  function filter() {
+    var q  = (document.getElementById('f1-search').value || '').toLowerCase().trim();
+    var df = document.getElementById('f1-from').value || '';
+    var dt = document.getElementById('f1-to').value || '';
+    var tp = (document.getElementById('f1-type').value || '').toLowerCase();
+    var et = (document.getElementById('f1-etat').value || '').toLowerCase();
+    var dFrom = df ? new Date(df) : null;
+    var dTo   = dt ? new Date(dt + 'T23:59:59') : null;
+
+    visible = allRows.filter(function(tr) {
+      if (q && !tr.textContent.toLowerCase().includes(q)) return false;
+      if (tp && !(tr.dataset.type || '').includes(tp)) return false;
+      if (et) {
+        if (et === 'retard' && tr.dataset.state !== 'retard') return false;
+        else if (et === 'open' && tr.dataset.state !== 'open') return false;
+        else if (et === 'done' && tr.dataset.state !== 'done') return false;
+      }
+      if (dFrom || dTo) {
+        var d = parseIso(tr.dataset.date);
+        if (d) {
+          if (dFrom && d < dFrom) return false;
+          if (dTo   && d > dTo)   return false;
+        }
+      }
+      return true;
+    });
+
+    page = 1;
+    render();
+  }
+
+  function render() {
+    var total = visible.length;
+    var pages = Math.max(1, Math.ceil(total / PAGE));
+    if (page > pages) page = pages;
+    allRows.forEach(function(tr) { tr.style.display = 'none'; });
+    visible.slice((page-1)*PAGE, page*PAGE).forEach(function(tr) { tr.style.display = ''; });
+    var cEl = document.getElementById('f1-count');
+    if (cEl) cEl.textContent = total + ' ordre(s) affiché(s) sur {{ kpi_total }}';
+    var pEl = document.getElementById('pager1');
+    pEl.innerHTML = '';
+    if (pages > 1) {
+      for (var i = 1; i <= pages; i++) {
+        (function(p) {
+          var btn = document.createElement('button');
+          btn.className = 'btn btn-sm ' + (p === page ? 'btn-dark' : 'btn-outline-secondary');
+          btn.textContent = p;
+          btn.onclick = function() { page = p; render(); };
+          pEl.appendChild(btn);
+        })(i);
+      }
+    }
+  }
+
+  ['f1-search','f1-from','f1-to','f1-type','f1-etat'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.addEventListener('input', filter);
+  });
+
+  window.reset1 = function() {
+    ['f1-search','f1-from','f1-to'].forEach(function(id){var e=document.getElementById(id);if(e)e.value='';});
+    ['f1-type','f1-etat'].forEach(function(id){var e=document.getElementById(id);if(e)e.value='';});
+    filter();
+  };
+
+  filter();
+}());
+</script>
+{% endblock %}

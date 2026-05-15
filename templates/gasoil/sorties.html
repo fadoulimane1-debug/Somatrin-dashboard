@@ -199,6 +199,7 @@
   }
   .td-date  { font-family: monospace; font-size: 12px; white-space: nowrap; color: #6b7280; }
   .td-bon   { font-weight: 600; color: #1a2c4e; white-space: nowrap; }
+  .td-engin { white-space: nowrap; min-width: 140px; }
   .td-num   { text-align: right; font-variant-numeric: tabular-nums; }
   .td-conso { text-align: right; font-variant-numeric: tabular-nums; color: #0ea5e9; font-weight: 500; }
   .td-ouvrage { max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -358,7 +359,7 @@
   <div class="kpi-card kpi-card-conso">
     <div class="kpi-icon kpi-icon-sky"><i class="bi bi-speedometer2"></i></div>
     <div class="kpi-body">
-      <div class="kpi-value">{{ conso_moyenne }}</div>
+      <div class="kpi-value">{{ conso_moyenne|num_plain:2 }}</div>
       <div class="kpi-label">Consommation moyenne L/h</div>
     </div>
   </div>
@@ -555,7 +556,7 @@
             <td>{{ bon.societe }}</td>
             <td>{{ bon.site }}</td>
             <td class="td-ouvrage" title="{{ bon.ouvrage }}">{{ bon.ouvrage }}</td>
-            <td>{{ bon.engin|matricule_only }}</td>
+            <td class="td-engin">{{ bon.engin|matricule_only }}</td>
             <td>{{ bon.chauffeur }}</td>
             <td class="td-num">{{ bon.cpt_initial|num_plain:0 }}</td>
             <td class="td-num">{{ bon.cpt_actuel|num_plain:0 }}</td>

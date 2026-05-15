@@ -1,4 +1,4 @@
-{% load humanize %}
+{% load humanize vehicle_extras %}
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -214,11 +214,11 @@
     <div class="lbl">Bons de réception</div>
   </div>
   <div class="kpi-box green">
-    <div class="val">{{ total_litres|floatformat:0|intcomma }}</div>
+    <div class="val">{{ total_litres|num_plain:0 }}</div>
     <div class="lbl">Total litres reçus</div>
   </div>
   <div class="kpi-box navy">
-    <div class="val" style="font-size:16px;">{{ total_cout|floatformat:2|intcomma }}</div>
+    <div class="val" style="font-size:16px;">{{ total_cout|num_plain:2 }}</div>
     <div class="lbl">Coût total (MAD)</div>
   </div>
 </div>
@@ -247,9 +247,9 @@
         <td style="font-size:10px; color:#9ca3af;">{{ bon.ref|default:"—" }}</td>
         <td>{{ bon.fournisseur }}</td>
         <td>{{ bon.product }}</td>
-        <td class="td-right">{{ bon.product_qty|floatformat:1|intcomma }}</td>
-        <td class="td-right">{% if bon.price_unit %}{{ bon.price_unit|floatformat:2|intcomma }}{% else %}—{% endif %}</td>
-        <td class="td-right td-bold">{% if bon.total %}{{ bon.total|floatformat:2|intcomma }}{% else %}—{% endif %}</td>
+        <td class="td-right">{{ bon.product_qty|num_plain:1 }}</td>
+        <td class="td-right">{% if bon.price_unit %}{{ bon.price_unit|num_plain:2 }}{% else %}—{% endif %}</td>
+        <td class="td-right td-bold">{% if bon.total %}{{ bon.total|num_plain:2 }}{% else %}—{% endif %}</td>
         <td class="td-center">{{ bon.statut|default:"—" }}</td>
       </tr>
       {% endfor %}
@@ -265,9 +265,9 @@
   <tfoot>
     <tr>
       <td colspan="5" style="text-align:right; color:#1a2c4e; font-weight: 700;">TOTAL</td>
-      <td class="td-right" style="color:#16a34a; font-weight: 700;">{{ total_litres|floatformat:1|intcomma }}</td>
+      <td class="td-right" style="color:#16a34a; font-weight: 700;">{{ total_litres|num_plain:1 }}</td>
       <td></td>
-      <td class="td-right" style="color:#1a2c4e; font-weight: 700;">{{ total_cout|floatformat:2|intcomma }}</td>
+      <td class="td-right" style="color:#1a2c4e; font-weight: 700;">{{ total_cout|num_plain:2 }}</td>
       <td></td>
     </tr>
   </tfoot>

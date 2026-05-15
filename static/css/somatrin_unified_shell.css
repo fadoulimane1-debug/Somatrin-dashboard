@@ -1,0 +1,461 @@
+/* ═══════════════════════════════════════════════════════════════
+   SOMATRIN — Coque visuelle unifiée (filtres + KPI ligne + tableaux)
+   Chargé en dernier dans base.html — aligné sur Transport Facturation client
+   ═══════════════════════════════════════════════════════════════ */
+
+.filters-section {
+  background: #fff;
+  padding: 0;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.07);
+  margin-bottom: 20px;
+  border: 1px solid #e5e7eb;
+  overflow: hidden;
+}
+
+.qhse-table-section.filters-section .qhse-filters-bar {
+  border-radius: 0;
+}
+
+.filters-section > form {
+  margin: 0;
+}
+
+.kpi-summary {
+  background: #f8f9fa;
+  padding: 14px 18px;
+  border-radius: 10px;
+  border-left: 4px solid #e87722;
+  font-size: 14px;
+  color: #333;
+  margin-bottom: 16px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+}
+
+.kpi-summary strong {
+  color: #1a2c4e;
+}
+
+.somatrin-export-row {
+  padding: 12px 18px;
+  background: #fafbfd;
+  border-top: 1px solid #eef0f3;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.somatrin-export-row .btn-smt-reset {
+  margin-left: auto;
+}
+
+.search-somatrin-row {
+  padding: 0 18px 14px;
+  background: #fafbfd;
+  border-top: 1px solid #eef0f3;
+}
+
+.search-somatrin {
+  width: 100%;
+  max-width: 100%;
+  padding: 10px 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.search-somatrin:focus {
+  border-color: #1a2c4e;
+  box-shadow: 0 0 0 3px rgba(26, 44, 78, 0.08);
+  outline: none;
+}
+
+.btn-smt-excel,
+.btn-smt-csv,
+.btn-smt-pdf {
+  border: none;
+  border-radius: 8px;
+  padding: 7px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: filter 0.15s, transform 0.12s;
+  color: #fff;
+}
+
+.btn-smt-excel {
+  background: #10b981;
+}
+.btn-smt-excel:hover {
+  filter: brightness(0.95);
+  color: #fff;
+}
+
+.btn-smt-csv {
+  background: #0ea5e9;
+}
+.btn-smt-csv:hover {
+  filter: brightness(0.95);
+  color: #fff;
+}
+
+.btn-smt-pdf {
+  background: #dc2626;
+}
+.btn-smt-pdf:hover {
+  filter: brightness(0.95);
+  color: #fff;
+}
+
+.btn-smt-reset {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  color: #374151;
+  border-radius: 8px;
+  padding: 7px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-smt-reset:hover {
+  background: #f3f4f6;
+  color: #1a2c4e;
+}
+
+.somatrin-table-wrap {
+  background: #fff;
+  border-radius: 0 0 12px 12px;
+  overflow-x: auto;
+  overflow-y: visible;
+  border-top: 1px solid #d0d5dd;
+  border-bottom: 1px solid #d0d5dd;
+  border-left: 2px solid #d0d5dd !important;
+  border-right: 2px solid #d0d5dd !important;
+}
+
+/* When .table-responsive is on the same element, allow horizontal scroll */
+.table-responsive.somatrin-table-wrap { overflow-x: auto; overflow-y: visible; }
+
+.qhse-table-wrapper {
+  overflow-x: auto;
+  overflow-y: visible;
+  border-left: 2px solid #d0d5dd !important;
+  border-right: 2px solid #d0d5dd !important;
+  border-radius: 0 0 8px 8px;
+}
+
+.qhse-table-section.filters-section .somatrin-table-wrap {
+  border-top: 1px solid #e5e7eb;
+}
+
+.filters-card.filters-section {
+  padding: 20px 22px;
+}
+
+.prod-chart-card.filters-section {
+  padding: 16px 18px;
+}
+
+/* ── Tableau principal (en-tête bleu #1a2c4e, lignes alternées) ── */
+table.somatrin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  margin-bottom: 0;
+}
+
+table.somatrin-table thead tr {
+  background: #1a2c4e !important;
+  color: #fff !important;
+}
+
+table.somatrin-table thead th {
+  padding: 12px 14px !important;
+  font-weight: 600 !important;
+  font-size: 12px !important;
+  border-right: 0.5px solid rgba(255,255,255,0.15) !important;
+  border-bottom: 3px solid #e87722 !important;
+  color: #fff !important;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+table.somatrin-table thead th:last-child { border-right: none !important; }
+
+table.somatrin-table tbody td {
+  padding: 12px 14px;
+  vertical-align: middle;
+  border-right: 1px solid #e0e3e7;
+  border-bottom: 1px solid #e0e3e7;
+  white-space: nowrap;
+}
+table.somatrin-table tbody td:last-child { border-right: none; }
+
+table.somatrin-table tbody tr:nth-child(odd) td,
+table.somatrin-table tbody tr:nth-child(odd) th {
+  background: #fff !important;
+}
+
+table.somatrin-table tbody tr:nth-child(even) td,
+table.somatrin-table tbody tr:nth-child(even) th {
+  background: #f9f9f9 !important;
+}
+
+table.somatrin-table tbody tr:hover td,
+table.somatrin-table tbody tr:hover th {
+  background: #f0f0f0 !important;
+}
+
+table.somatrin-table.table-striped > tbody > tr:nth-of-type(odd) > * {
+  background: #fff !important;
+}
+
+table.somatrin-table.table-striped > tbody > tr:nth-of-type(even) > * {
+  background: #f9f9f9 !important;
+}
+
+table.somatrin-table tfoot td,
+table.somatrin-table tfoot th {
+  font-weight: 700;
+  background: #f1f5f9 !important;
+  border-top: 2px solid #e5e7eb;
+}
+
+/* Carte autour du tableau (production / ventes) */
+.somatrin-table-card {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(26, 44, 78, 0.10);
+  border: 1.5px solid #d0d5dd;
+  padding: 16px 18px;
+  margin-bottom: 20px;
+}
+
+.somatrin-table-card .table-responsive {
+  border-radius: 8px;
+  overflow-x: auto;
+}
+
+/* ── Priorité sur styles QHSE / Production existants ── */
+table.qhse-table.somatrin-table thead tr {
+  background: #1a2c4e !important;
+}
+table.qhse-table.somatrin-table thead th:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+table.qhse-table.somatrin-table tbody tr {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+table.qhse-table.somatrin-table tbody tr:hover {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+table.prod-data-table.somatrin-table thead th {
+  background: #1a2c4e !important;
+  background-image: none !important;
+  color: #fff !important;
+}
+table.prod-data-table.somatrin-table tbody tr:nth-child(odd) td,
+table.prod-data-table.somatrin-table tbody tr:nth-child(odd) th {
+  background: #fff !important;
+}
+table.prod-data-table.somatrin-table tbody tr:nth-child(even) td,
+table.prod-data-table.somatrin-table tbody tr:nth-child(even) th {
+  background: #f9f9f9 !important;
+}
+table.prod-data-table.somatrin-table tbody tr:hover td,
+table.prod-data-table.somatrin-table tbody tr:hover th {
+  background: #f0f0f0 !important;
+  box-shadow: none !important;
+}
+
+table.prod-table.somatrin-table thead tr,
+table.prod-table.somatrin-table thead th {
+  background: #1a2c4e !important;
+  background-image: none !important;
+  color: #fff !important;
+}
+table.prod-table.somatrin-table tbody tr:nth-child(odd) td {
+  background: #fff !important;
+}
+table.prod-table.somatrin-table tbody tr:nth-child(even) td {
+  background: #f9f9f9 !important;
+}
+table.prod-table.somatrin-table tbody tr:hover td {
+  background: #f0f0f0 !important;
+}
+
+table.table-smt.somatrin-table thead th {
+  background: #1a2c4e !important;
+}
+
+/* ═══════════════════════════════════════════════════════
+   COLUMN WIDTH HELPERS — use on <th> or <td>
+   ═══════════════════════════════════════════════════════ */
+.col-checkbox  { min-width: 40px;  width: 40px;  text-align: center; }
+.col-date      { min-width: 105px; white-space: nowrap; }
+.col-vehicule  { min-width: 80px; }
+.col-chauffeur { min-width: 160px; }
+.col-societe   { min-width: 110px; }
+.col-site      { min-width: 120px; }
+.col-ouvrage   { min-width: 220px; }
+.col-litres    { min-width: 110px; text-align: right; }
+.col-montant   { min-width: 120px; text-align: right; }
+.col-compteur  { min-width: 105px; text-align: right; }
+.col-statut    { min-width: 90px;  text-align: center; }
+.col-reference { min-width: 150px; }
+.col-fournisseur { min-width: 160px; }
+.col-produit   { min-width: 190px; }
+.col-quantite  { min-width: 100px; text-align: right; }
+.col-prix      { min-width: 120px; text-align: right; }
+.col-total,
+.col-montant-total,
+.col-total-ht,
+.col-total-ttc { min-width: 130px; text-align: right !important; font-weight: 700; }
+.col-actions   { min-width: 100px; text-align: center; }
+.col-tonnage   { min-width: 105px; text-align: right; }
+.col-rendement { min-width: 120px; text-align: right; }
+.col-heures    { min-width: 100px; text-align: right; }
+.col-couts     { min-width: 125px; text-align: right; }
+.col-ca        { min-width: 125px; text-align: right; }
+.col-marge     { min-width: 120px; text-align: right; }
+.col-pourcentage { min-width: 80px; text-align: right; }
+.col-roi       { min-width: 90px;  text-align: right; }
+.col-type      { min-width: 120px; }
+.col-assignee  { min-width: 160px; }
+.col-deadline  { min-width: 105px; white-space: nowrap; }
+.col-priority  { min-width: 100px; }
+.col-nature    { min-width: 160px; }
+.col-tendance  { min-width: 100px; text-align: center; }
+.col-zone      { min-width: 120px; }
+.col-validite  { min-width: 105px; white-space: nowrap; }
+.col-jours     { min-width: 80px;  text-align: right; }
+
+/* Force nowrap on all table headers globally */
+.somatrin-table thead th,
+.prod-table thead th,
+.qhse-table thead th,
+.prod-data-table thead th {
+  white-space: nowrap;
+}
+
+/* ═══════════════════════════════════════════════════════
+   TOTAL COLUMN — navy, not orange
+   ═══════════════════════════════════════════════════════ */
+
+/* Data rows: total cells are navy bold, not orange */
+td.col-total,
+td.col-montant-total,
+td.col-total-ht,
+td.col-total-ttc {
+  color: #1a2c4e !important;
+  font-weight: 700 !important;
+  text-align: right !important;
+  padding-right: 20px !important;
+}
+
+/* Stay navy on hover too */
+tr:hover td.col-total,
+tr:hover td.col-montant-total,
+tr:hover td.col-total-ht,
+tr:hover td.col-total-ttc {
+  color: #1a2c4e !important;
+}
+
+/* Any <strong> or <a> inside a total cell stays navy */
+td.col-total strong, td.col-total a,
+td.col-montant-total strong, td.col-montant-total a,
+td.col-total-ht strong, td.col-total-ttc strong {
+  color: inherit !important;
+}
+
+/* Header cells for total columns — white bold (headers are already
+   on dark bg via thead styles, this reinforces it) */
+th.col-total,
+th.col-montant-total,
+th.col-total-ht,
+th.col-total-ttc {
+  text-align: right !important;
+  font-weight: 700 !important;
+  color: #fff !important;
+}
+
+/* ── tfoot totals — always navy text, no orange ── */
+/* Covers Bootstrap .table-secondary tfoot and plain tfoot */
+tfoot td.prod-cell-amount,
+tfoot th.prod-cell-amount,
+tfoot td.pt-amt,
+tfoot th.pt-amt,
+tfoot td.cell-amount,
+tfoot th.cell-amount {
+  color: #1a2c4e !important;
+}
+
+/* Bootstrap .table-secondary tfoot plain th/td */
+tfoot.table-secondary th,
+tfoot.table-secondary td {
+  color: #1a2c4e !important;
+  font-weight: 700;
+  text-align: right;
+}
+tfoot.table-secondary th:first-child,
+tfoot.table-secondary td:first-child {
+  text-align: left;
+}
+
+/* Plain tfoot (no class) inside somatrin/prod tables */
+.somatrin-table tfoot th,
+.somatrin-table tfoot td,
+.prod-data-table tfoot th,
+.prod-data-table tfoot td {
+  color: #1a2c4e !important;
+  font-weight: 700;
+  background: #f1f5f9 !important;
+  border-top: 2px solid #e5e7eb;
+}
+
+/* ═══════════════════════════════════════════════════════
+   BORDURES CADRE COMPLET — 4 côtés garantis sur tous les
+   wrappers de tableaux (chargé en dernier = priorité max)
+   ═══════════════════════════════════════════════════════ */
+
+.prod-table-wrap,
+.somatrin-table-wrap,
+.somatrin-table-card,
+.qhse-table-section {
+  border-top: 1px solid #d0d5dd !important;
+  border-bottom: 1px solid #d0d5dd !important;
+  border-left: 2px solid #d0d5dd !important;
+  border-right: 2px solid #d0d5dd !important;
+  overflow: visible !important;
+}
+
+/* Radii spécifiques conservés */
+.prod-table-wrap     { border-radius: 8px !important; }
+.somatrin-table-wrap { border-radius: 0 0 12px 12px !important; }
+.somatrin-table-card { border-radius: 12px !important; }
+.qhse-table-section  { border-radius: 12px !important; }
+
+/* ═══════════════════════════════════════════════════════
+   BORDURES GAUCHE / DROITE SUR L'ÉLÉMENT <table>
+   Indépendant du wrapper — aucun overflow ne peut les masquer
+   ═══════════════════════════════════════════════════════ */
+table.somatrin-table,
+table.prod-table,
+table.qhse-table,
+table.prod-data-table,
+table.table-smt,
+table.table-recap {
+  border-left:  2px solid #d0d5dd !important;
+  border-right: 2px solid #d0d5dd !important;
+}

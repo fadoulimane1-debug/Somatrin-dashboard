@@ -1,0 +1,146 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Finance — Avoirs{% endblock %}
+{% block breadcrumb %}
+<a href="{% url 'accueil' %}">Accueil</a><i class="bi bi-chevron-right"></i>
+<a href="{% url 'finance_dashboard' %}">Finance</a><i class="bi bi-chevron-right"></i>
+<span style="color:#1a2c4e;font-weight:600;">Avoirs</span>
+{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/finance.css' %}">{% endblock %}
+{% block content %}
+
+<section class="fin-hero">
+  <div>
+    <small style="opacity:.55;letter-spacing:1.4px;font-size:.75rem;text-transform:uppercase;">Finance · Avoirs</small>
+    <h1 class="mt-1">Avoirs</h1>
+    <p>{{ kpi_total }} avoir{% if kpi_total != 1 %}s{% endif %} · {{ kpi_montant|floatformat:"0" }} MAD TTC</p>
+  </div>
+  <div class="fin-hero-right">
+    <div class="fin-hero-icon"><i class="bi bi-arrow-counterclockwise"></i></div>
+  </div>
+</section>
+
+{% if error %}<div class="alert alert-danger mb-3">{{ error }}</div>{% endif %}
+
+<!-- KPI -->
+<div class="row g-3 mb-3 fin-kpi-uniform">
+  <div class="col-lg-4 col-md-6">
+    <div class="fin-kpi">
+      <div class="fl">Total avoirs</div><div class="fv">{{ kpi_total }}</div>
+    </div>
+  </div>
+  <div class="col-lg-4 col-md-6">
+    <div class="fin-kpi" style="border-top-color:#E87722;">
+      <div class="fl">Montant total TTC</div>
+      <div class="fv" style="color:#E87722;">{{ kpi_montant|floatformat:"0" }} <small style="font-size:14px;font-weight:600;">MAD</small></div>
+    </div>
+  </div>
+  <div class="col-lg-4 col-md-6">
+    <div class="fin-kpi" style="border-top-color:#1a2c4e;">
+      <div class="fl">Avoirs clients / fournisseurs</div>
+      <div style="display:flex;gap:14px;margin-top:4px;">
+        <div>
+          <div style="font-size:10px;color:#64748b;font-weight:700;">CLIENTS</div>
+          <div style="font-size:20px;font-weight:800;color:#1a2c4e;">{{ rows|length }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Filtres -->
+<form method="get" class="fin-fbar mb-2">
+  <div style="flex:2;min-width:160px;">
+    <span class="fin-flabel">Recherche</span>
+    <input type="text" name="q" class="form-control" placeholder="N° avoir, partenaire..." value="{{ q }}">
+  </div>
+  <div style="min-width:120px;">
+    <span class="fin-flabel">Date de</span>
+    <input type="date" name="date_from" class="form-control" value="{{ date_from }}">
+  </div>
+  <div style="min-width:120px;">
+    <span class="fin-flabel">Date à</span>
+    <input type="date" name="date_to" class="form-control" value="{{ date_to }}">
+  </div>
+  <div style="min-width:160px;">
+    <span class="fin-flabel">Type</span>
+    <select name="avoir_type" class="form-select">
+      <option value="">Tous les types</option>
+      <option value="Client" {% if avoir_type == 'Client' %}selected{% endif %}>Client</option>
+      <option value="Fournisseur" {% if avoir_type == 'Fournisseur' %}selected{% endif %}>Fournisseur</option>
+    </select>
+  </div>
+  <div>
+    <span class="fin-flabel">&nbsp;</span>
+    <div style="display:flex;gap:6px;">
+      <button type="submit" class="btn btn-sm" style="background:#1a2c4e;color:#fff;height:34px;font-size:.82rem;">
+        <i class="bi bi-funnel"></i> Filtrer
+      </button>
+      <a href="{% url 'finance_avoirs' %}" class="btn btn-sm btn-outline-secondary" style="height:34px;font-size:.82rem;">Reset</a>
+    </div>
+  </div>
+</form>
+
+<!-- Table -->
+<div class="fin-tbl-wrap mb-2">
+  <table class="fin-tbl" id="tbl1">
+    <thead>
+      <tr>
+        <th>N° Avoir</th>
+        <th>Date</th>
+        <th>Partenaire</th>
+        <th>Type</th>
+        <th style="text-align:right">Montant HT</th>
+        <th style="text-align:right">Montant TTC</th>
+        <th style="text-align:center">État paiement</th>
+        <th style="text-align:center">Statut</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in rows %}
+      <tr data-row>
+        <td style="font-weight:700;font-size:.82rem;">
+          <a href="{% url 'finance_facture_detail' r.id %}" style="color:#1a2c4e;text-decoration:none;">{{ r.name }}</a>
+        </td>
+        <td style="font-size:.82rem;color:#64748b;">{{ r.date }}</td>
+        <td style="font-size:.82rem;">{{ r.partner }}</td>
+        <td>
+          {% if r.avoir_type == 'Client' %}
+            <span class="badge-fin bf-posted">Client</span>
+          {% else %}
+            <span class="badge-fin bf-avoir">Fournisseur</span>
+          {% endif %}
+        </td>
+        <td style="text-align:right;font-size:.83rem;">{{ r.amount_ht|floatformat:"0" }}</td>
+        <td style="text-align:right;font-weight:700;color:#1a2c4e;font-size:.83rem;">{{ r.amount_ttc|floatformat:"0" }}</td>
+        <td style="text-align:center;">
+          {% if r.payment_state == 'paid' %}<span class="badge-fin bf-paid">Imputé</span>
+          {% elif r.payment_state == 'partial' %}<span class="badge-fin bf-partial">Partiel</span>
+          {% else %}<span class="badge-fin bf-unpaid">En attente</span>{% endif %}
+        </td>
+        <td style="text-align:center;">
+          {% if r.state == 'posted' %}<span class="badge-fin bf-posted">Validé</span>
+          {% elif r.state == 'draft' %}<span class="badge-fin bf-draft">Brouillon</span>
+          {% else %}<span class="badge-fin bf-cancel">{{ r.state }}</span>{% endif %}
+        </td>
+        <td>
+          <a href="{% url 'finance_facture_detail' r.id %}" class="btn btn-sm btn-outline-secondary" style="font-size:.72rem;padding:2px 7px;"><i class="bi bi-eye"></i></a>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="9" class="text-center text-muted py-5">Aucun avoir trouvé.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<div class="fin-count" id="cnt1"></div>
+<div class="fin-pager" id="pgr1"></div>
+{% endblock %}
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="{% static 'js/finance.js' %}"></script>
+<script>
+setupFinFilter({ tableId:'tbl1', pagerEl:'pgr1', countEl:'cnt1', pageSize:50 });
+</script>
+{% endblock %}

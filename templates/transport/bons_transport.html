@@ -1,59 +1,320 @@
 {% extends 'base.html' %}
-{% load vehicle_extras %}
 
-{% block title %}Transport - Bons transport{% endblock %}
+{% block title %}Transport — Bons transport{% endblock %}
 
 {% block breadcrumb %}
   <a href="{% url 'accueil' %}">Accueil</a>
   <i class="bi bi-chevron-right"></i>
-  <span style="color:#1a2c4e; font-weight:600;">Transport - Bons transport</span>
+  <a href="{% url 'transport_index' %}">Transport &amp; Logistique</a>
+  <i class="bi bi-chevron-right"></i>
+  <span style="color:#1a2c4e; font-weight:600;">Bons transport</span>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+@keyframes fadeInUp {
+  from { opacity:0; transform:translateY(16px); }
+  to { opacity:1; transform:translateY(0); }
+}
+.anim-block { animation: fadeInUp .55s ease-out both; }
+.anim-delay-1 { animation-delay: .08s; }
+.anim-delay-2 { animation-delay: .14s; }
+
+.hero {
+  background: linear-gradient(135deg, #0f1e38 0%, #1a2c4e 60%, #1e3460 100%);
+  border-radius: 14px; padding: 28px 32px; margin-bottom: 24px;
+  position: relative; overflow: hidden;
+  display: flex; align-items: center; justify-content: space-between; gap: 20px;
+}
+.hero-deco { position:absolute; border-radius:50%; pointer-events:none; }
+.hero-deco-1 { width:280px;height:280px;right:-70px;top:-90px; background:rgba(232,119,34,.08); }
+.hero-deco-2 { width:160px;height:160px;right:100px;bottom:-80px; background:rgba(255,255,255,.03); }
+.hero-deco-3 { width:90px; height:90px; left:38%; top:-28px; background:rgba(232,119,34,.05); }
+.hero-content { position:relative; z-index:1; }
+.hero-eyebrow {
+  font-size:11px; font-weight:600; letter-spacing:1.8px; text-transform:uppercase;
+  color:rgba(255,255,255,.40); margin-bottom:6px;
+  display:flex; align-items:center; gap:8px;
+}
+.hero-pulse {
+  width:7px; height:7px; border-radius:50%; background:#E87722;
+  box-shadow:0 0 0 3px rgba(232,119,34,.22);
+}
+.hero-title { font-size:24px; font-weight:800; color:#fff; line-height:1.2; margin-bottom:4px; }
+.hero-title span { color:#E87722; }
+.hero-sub { font-size:13px; color:rgba(255,255,255,.55); display:flex; align-items:flex-start; gap:6px; max-width:520px; line-height:1.45; white-space:pre-line; }
+.hero-right { position:relative; z-index:1; text-align:right; flex-shrink:0; }
+.hero-ghost { font-size:42px; font-weight:900; letter-spacing:5px; color:rgba(255,255,255,.06); user-select:none; line-height:1; }
+.hero-badge {
+  display:inline-flex; align-items:center; gap:6px;
+  background:#E87722; color:#fff; border-radius:99px;
+  padding:6px 16px; font-size:12px; font-weight:700; margin-top:8px;
+}
+
+.kpi-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:20px; }
+.kpi-card {
+  background:#fff; border:1px solid #e5e7eb; border-radius:12px;
+  padding:18px 20px; border-left:3px solid #1a2c4e;
+  box-shadow:0 2px 8px rgba(0,0,0,0.06);
+}
+.kpi-card-orange { border-left-color:#E87722; }
+.kpi-card-green { border-left-color:#16a34a; }
+.kpi-card-amber { border-left-color:#b45309; }
+.kpi-ico {
+  width:40px; height:40px; border-radius:10px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:18px; margin-bottom:12px;
+}
+.ico-navy { background:rgba(26,44,78,.08); color:#1a2c4e; }
+.ico-orange { background:rgba(232,119,34,.10); color:#E87722; }
+.ico-green { background:rgba(22,163,74,.10); color:#16a34a; }
+.ico-amber { background:rgba(180,83,9,.10); color:#b45309; }
+.kpi-label { font-size:12px; color:#6b7280; margin-bottom:4px; }
+.kpi-value { font-size:26px; font-weight:700; color:#1a2c4e; line-height:1; }
+.kpi-sub { font-size:11px; color:#9ca3af; margin-top:4px; }
+
+.filter-card {
+  background:#fff; border:1px solid #e5e7eb; border-radius:14px;
+  padding:20px 24px; margin-bottom:20px;
+  box-shadow:0 2px 8px rgba(0,0,0,.04);
+}
+.filter-label {
+  display:block; font-size:11px; font-weight:600; color:#6b7280;
+  text-transform:uppercase; letter-spacing:.5px; margin-bottom:4px;
+}
+.filter-input {
+  height:38px; border:1px solid #e5e7eb; border-radius:8px;
+  font-size:13px; padding:0 12px; width:100%;
+  background:#fff; color:#111827; outline:none;
+  transition:border-color .15s;
+}
+.filter-input:focus { border-color:#1a2c4e; box-shadow:0 0 0 3px rgba(26,44,78,.07); }
+select.filter-input {
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 16 16'%3E%3Cpath fill='%236b7280' d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+  background-repeat:no-repeat; background-position:right 10px center;
+  padding-right:30px; appearance:none; -webkit-appearance:none;
+}
+.btn-filtrer {
+  height:38px; background:#1a2c4e; color:#fff; border:none;
+  border-radius:8px; padding:0 20px; font-weight:600; font-size:13px;
+  cursor:pointer; display:inline-flex; align-items:center; gap:6px;
+}
+.btn-filtrer:hover { background:#E87722; color:#fff; }
+.btn-reset {
+  height:38px; background:transparent; color:#374151;
+  border:1px solid #e5e7eb; border-radius:8px; padding:0 16px;
+  font-size:13px; text-decoration:none; cursor:pointer;
+  display:inline-flex; align-items:center; gap:6px;
+}
+.btn-reset:hover { border-color:#1a2c4e; color:#1a2c4e; }
+.btn-export-excel {
+  height:38px; background:#dcfce7; color:#15803d;
+  border:1px solid #bbf7d0; border-radius:8px; padding:0 16px;
+  font-size:13px; text-decoration:none; display:inline-flex; align-items:center; gap:6px;
+}
+.btn-export-csv {
+  height:38px; background:#dbeafe; color:#1d4ed8;
+  border:1px solid #bfdbfe; border-radius:8px; padding:0 16px;
+  font-size:13px; text-decoration:none; display:inline-flex; align-items:center; gap:6px;
+}
+.btn-export-pdf {
+  height:38px; background:#fee2e2; color:#dc2626;
+  border:1px solid #fecaca; border-radius:8px; padding:0 16px;
+  font-size:13px; text-decoration:none; display:inline-flex; align-items:center; gap:6px;
+}
+
+.table-card {
+  background:#fff; border:1px solid #e5e7eb; border-radius:14px;
+  padding:16px; overflow:hidden;
+  box-shadow:0 2px 8px rgba(0,0,0,.04);
+}
+.table-wrap { border-radius:14px; overflow:hidden; border:0.5px solid #e5e7eb; }
+.table-smt thead th {
+  background:#1a2c4e !important; color:#fff !important;
+  font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.04em;
+  padding:10px 12px; border:none; white-space:nowrap;
+}
+.table-smt tbody tr:nth-child(even) { background:#fff; }
+.table-smt tbody tr:nth-child(odd) { background:#f8fafc; }
+.table-smt tbody tr:hover { background:#f0f4ff !important; }
+.table-smt td { padding:10px 12px; font-size:13px; border:0.5px solid #e5e7eb; vertical-align:middle; }
+.table-smt tfoot td {
+  background:#1a2c4e !important; color:#fff !important;
+  font-weight:700; border-color:rgba(255,255,255,.15);
+}
+
+.badge-etat {
+  border-radius:99px; padding:3px 12px; font-size:11px; font-weight:600;
+  display:inline-block; white-space:nowrap;
+}
+.bt-done { background:#dcfce7; color:#15803d; }
+.bt-draft { background:#f3f4f6; color:#6b7280; }
+.bt-cancel { background:#fee2e2; color:#dc2626; }
+.bt-assigned { background:#dbeafe; color:#1d4ed8; }
+
+.search-table {
+  width:100%; padding:10px 14px; border:1px solid #e5e7eb; border-radius:8px;
+  margin-bottom:12px; font-size:13px; outline:none; box-sizing:border-box;
+}
+.search-table:focus { border-color:#1a2c4e; box-shadow:0 0 0 3px rgba(26,44,78,.07); }
+
+.empty-state { text-align:center; padding:48px 20px; }
+.empty-state i { font-size:48px; color:#d1d5db; display:block; margin-bottom:12px; }
+.empty-state p { color:#6b7280; font-size:14px; margin:0; }
+
+@media (max-width:992px) { .kpi-grid { grid-template-columns:repeat(2,1fr); } }
+@media (max-width:576px) {
+  .kpi-grid { grid-template-columns:1fr 1fr; }
+  .hero-right { display:none; }
+  .hero { padding:20px; }
+  .hero-title { font-size:20px; }
+}
+</style>
 {% endblock %}
 
 {% block content %}
-<span class="page-title">Bons transport</span>
 
-{% if error %}
-<div class="alert alert-danger">{{ error }}</div>
-{% endif %}
-
-<div class="filters-card">
-  <form method="get" class="row g-3 align-items-end">
-    <div class="col-md-2"><label class="form-label">Date début</label><input type="date" name="date_debut" class="form-control" value="{{ date_debut }}"></div>
-    <div class="col-md-2"><label class="form-label">Date fin</label><input type="date" name="date_fin" class="form-control" value="{{ date_fin }}"></div>
-    <div class="col-md-3"><label class="form-label">Référence</label><input type="text" name="reference" class="form-control" value="{{ reference }}"></div>
-    <div class="col-md-3"><label class="form-label">Partenaire</label><input type="text" name="partenaire" class="form-control" value="{{ partenaire }}"></div>
-    <div class="col-md-2"><label class="form-label">Site</label><input type="text" name="site" class="form-control" value="{{ site }}"></div>
-    <div class="col-12 d-flex gap-2">
-      <button class="btn btn-primary" type="submit">Filtrer</button>
-      <a class="btn btn-outline-secondary" href="{% url 'transport_bons' %}">Réinitialiser</a>
-    </div>
-  </form>
+<div class="hero anim-block">
+  <div class="hero-deco hero-deco-1"></div>
+  <div class="hero-deco hero-deco-2"></div>
+  <div class="hero-deco hero-deco-3"></div>
+  <div class="hero-content">
+    <div class="hero-eyebrow"><span class="hero-pulse"></span>Transport &amp; Logistique</div>
+    <div class="hero-title">Bons <span>transport</span></div>
+    <div class="hero-sub"><i class="bi bi-truck-front-fill mt-1 flex-shrink-0"></i>Suivi des mouvements
+et bons de transport</div>
+  </div>
+  <div class="hero-right">
+    <div class="hero-ghost">BON</div>
+    <span class="hero-badge"><i class="bi bi-geo-alt-fill"></i>SOMATRIN</span>
+  </div>
 </div>
 
-<div class="card">
-  <div class="mb-2"><strong>{{ total_rows|num_plain:0 }}</strong> résultat(s)</div>
-  <div class="table-responsive">
-    <table class="table table-sm table-striped align-middle">
-      <thead class="table-dark">
+{% if error %}
+<div class="alert alert-danger mb-3"><i class="bi bi-exclamation-triangle me-2"></i>{{ error }}</div>
+{% endif %}
+
+<div class="kpi-grid anim-block anim-delay-1">
+  <div class="kpi-card">
+    <div class="kpi-ico ico-navy"><i class="bi bi-file-earmark-text"></i></div>
+    <div class="kpi-label">Total bons</div>
+    <div class="kpi-value">{{ total_bons }}</div>
+  </div>
+  <div class="kpi-card kpi-card-green">
+    <div class="kpi-ico ico-green"><i class="bi bi-check-circle"></i></div>
+    <div class="kpi-label">Bons validés</div>
+    <div class="kpi-value">{{ bons_valides }}</div>
+    <div class="kpi-sub">état terminé (done)</div>
+  </div>
+  <div class="kpi-card kpi-card-orange">
+    <div class="kpi-ico ico-orange"><i class="bi bi-building"></i></div>
+    <div class="kpi-label">Sites uniques</div>
+    <div class="kpi-value">{{ nb_sites }}</div>
+  </div>
+  <div class="kpi-card kpi-card-amber">
+    <div class="kpi-ico ico-amber"><i class="bi bi-calendar-day"></i></div>
+    <div class="kpi-label">Aujourd'hui</div>
+    <div class="kpi-value">{{ bons_aujourdhui }}</div>
+    <div class="kpi-sub">date prévue = jour courant</div>
+  </div>
+</div>
+
+<div class="filter-card anim-block anim-delay-2">
+  <form method="get" class="row g-3 align-items-end">
+    <div class="col-lg-2 col-md-4 col-6">
+      <label class="filter-label">Date début</label>
+      <input type="date" name="date_debut" value="{{ date_debut }}" class="filter-input">
+    </div>
+    <div class="col-lg-2 col-md-4 col-6">
+      <label class="filter-label">Date fin</label>
+      <input type="date" name="date_fin" value="{{ date_fin }}" class="filter-input">
+    </div>
+    <div class="col-lg-2 col-md-4 col-12">
+      <label class="filter-label">Référence</label>
+      <input type="text" name="reference" value="{{ reference }}" class="filter-input" placeholder="Réf. bon">
+    </div>
+    <div class="col-lg-3 col-md-6 col-12">
+      <label class="filter-label">Partenaire</label>
+      <input type="text" name="partenaire" value="{{ partenaire }}" class="filter-input" placeholder="Partenaire">
+    </div>
+    <div class="col-lg-3 col-md-6 col-12">
+      <label class="filter-label">Site</label>
+      <input type="text" name="site" value="{{ site }}" class="filter-input" placeholder="Site / emplacement">
+    </div>
+    <div class="col-12 d-flex gap-2 flex-wrap">
+      <button type="submit" class="btn-filtrer"><i class="bi bi-funnel-fill"></i>Filtrer</button>
+      <a href="{% url 'transport_bons' %}" class="btn-reset"><i class="bi bi-arrow-counterclockwise"></i>Réinitialiser</a>
+    </div>
+  </form>
+  <div class="mt-3 d-flex gap-2 flex-wrap">
+    <a class="btn-export-excel" href="?date_debut={{ date_debut }}&amp;date_fin={{ date_fin }}&amp;reference={{ reference|urlencode }}&amp;partenaire={{ partenaire|urlencode }}&amp;site={{ site|urlencode }}&amp;export=excel"><i class="bi bi-file-earmark-excel"></i>Export Excel</a>
+    <a class="btn-export-csv" href="?date_debut={{ date_debut }}&amp;date_fin={{ date_fin }}&amp;reference={{ reference|urlencode }}&amp;partenaire={{ partenaire|urlencode }}&amp;site={{ site|urlencode }}&amp;export=csv"><i class="bi bi-filetype-csv"></i>Export CSV</a>
+    <a class="btn-export-pdf" href="?date_debut={{ date_debut }}&amp;date_fin={{ date_fin }}&amp;reference={{ reference|urlencode }}&amp;partenaire={{ partenaire|urlencode }}&amp;site={{ site|urlencode }}&amp;export=pdf"><i class="bi bi-file-pdf"></i>Export PDF</a>
+  </div>
+</div>
+
+<input type="text" id="searchTable" class="search-table anim-block anim-delay-2" placeholder="Rechercher...">
+
+<div class="table-card anim-block anim-delay-2">
+  <div class="mb-2" style="font-size:12px;color:#6b7280;"><i class="bi bi-table me-1"></i>{{ total_rows }} résultat(s)</div>
+  <div class="table-responsive table-wrap">
+    <table class="table table-smt align-middle mb-0" id="data-table">
+      <thead>
         <tr>
-          <th>Date</th><th>Référence</th><th>Partenaire</th><th>Site</th><th>Origine</th><th>Etat</th>
+          <th>Date</th>
+          <th>Référence</th>
+          <th>Partenaire</th>
+          <th>Site</th>
+          <th>Origine</th>
+          <th>État</th>
         </tr>
       </thead>
       <tbody>
       {% for row in rows %}
-        <tr>
+        <tr data-row>
           <td>{{ row.date }}</td>
-          <td>{{ row.reference }}</td>
+          <td style="font-weight:700;color:#1a2c4e;">{{ row.reference }}</td>
           <td>{{ row.partenaire }}</td>
           <td>{{ row.site }}</td>
           <td>{{ row.origine }}</td>
-          <td>{{ row.etat }}</td>
+          <td>
+            {% with st=row.state_raw|default:'' %}
+            <span class="badge-etat {% if st == 'done' %}bt-done{% elif st == 'assigned' %}bt-assigned{% elif st == 'cancel' %}bt-cancel{% else %}bt-draft{% endif %}">
+              {% if st == 'done' %}Validé{% elif st == 'draft' %}Brouillon{% elif st == 'cancel' %}Annulé{% elif st == 'assigned' %}Assigné{% else %}{{ row.etat }}{% endif %}
+            </span>
+            {% endwith %}
+          </td>
         </tr>
       {% empty %}
-        <tr><td colspan="6" class="text-center text-muted">Aucune donnée</td></tr>
+        <tr><td colspan="6" class="p-0"><div class="empty-state"><i class="bi bi-inbox"></i><p>Aucune donnée</p></div></td></tr>
       {% endfor %}
       </tbody>
     </table>
   </div>
 </div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  var el = document.getElementById('searchTable');
+  if (!el) return;
+  el.addEventListener('input', function () {
+    var q = this.value.toLowerCase();
+    document.querySelectorAll('#data-table tbody tr[data-row]').forEach(function (row) {
+      row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+  });
+})();
+</script>
+{{ soma_page_data|json_script:"soma-page-data-json" }}
+<script>
+(function () {
+  var el = document.getElementById('soma-page-data-json');
+  if (!el) return;
+  try { window.__SOMA_PAGE_DATA__ = JSON.parse(el.textContent); }
+  catch (e) { window.__SOMA_PAGE_DATA__ = null; }
+})();
+</script>
 {% endblock %}

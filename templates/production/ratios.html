@@ -1,0 +1,197 @@
+﻿{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Production - Ratio Exploitation{% endblock %}
+
+{% block breadcrumb %}
+<a href="{% url 'accueil' %}">Accueil</a>
+<i class="bi bi-chevron-right"></i>
+<a href="{% url 'production_index' %}">Production</a>
+<i class="bi bi-chevron-right"></i>
+<span style="color:#1a2c4e; font-weight:600;">Ratio Exploitation</span>
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/production.css' %}?v=20260512">
+{% endblock %}
+
+{% block content %}
+{% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+
+<!-- ══ Hero ══ -->
+<div style="background:linear-gradient(135deg,#1a2c4e,#e87722);border-radius:14px;padding:22px 28px;color:#fff;margin-bottom:22px;display:flex;align-items:center;justify-content:space-between;gap:16px;">
+  <div>
+    <small style="opacity:.5;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;">Module Production</small>
+    <h1 style="margin:6px 0 4px;font-size:26px;font-weight:800;">Ratio Exploitation</h1>
+    <p style="margin:0;font-size:13px;opacity:.85;">Comparatif par site :
+      {% for lb in site_labels %}{{ lb }}{% if not forloop.last %} · {% endif %}{% endfor %}
+    </p>
+  </div>
+  <div style="font-size:40px;opacity:.85;"><i class="bi bi-sliders"></i></div>
+</div>
+
+<div class="kpi-summary">
+  <strong>{{ rows|length }}</strong> ratios · heatmap <strong>{{ heatmap|length }}</strong> mois · sites
+  {% for lb in site_labels %}{{ lb }}{% if not forloop.last %} / {% endif %}{% endfor %}
+</div>
+
+<!-- ══ Filtres ══ -->
+<div class="filters-card filters-section">
+  <form method="get" class="row g-3 align-items-end">
+    <div class="col-md-3"><label class="form-label">Date début</label><input type="date" name="date_debut" class="form-control" value="{{ date_debut }}"></div>
+    <div class="col-md-3"><label class="form-label">Date fin</label><input type="date" name="date_fin" class="form-control" value="{{ date_fin }}"></div>
+    <div class="col-md-4"><label class="form-label">Site</label>
+      <select name="site" class="form-select">
+        <option value="">Tous les sites</option>
+        {% for s in site_labels %}
+        <option value="{{ s }}" {% if site == s %}selected{% endif %}>{{ s }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-2 d-flex gap-2">
+      <button class="btn btn-primary btn-filtrer flex-fill" type="submit"><i class="bi bi-funnel-fill me-1"></i>Filtrer</button>
+    </div>
+    <div class="col-md-2">
+      <a class="btn btn-outline-secondary w-100" href="{% url 'production_ratios' %}"><i class="bi bi-arrow-counterclockwise me-1"></i>Réinitialiser</a>
+    </div>
+  </form>
+  <div class="somatrin-export-row">
+    <a href="{% url 'export_ratios_excel' %}" class="btn btn-sm btn-smt-excel"><i class="bi bi-file-earmark-excel"></i> Excel</a>
+    <a href="{% url 'export_ratios_csv' %}" class="btn btn-sm btn-smt-csv"><i class="bi bi-filetype-csv"></i> CSV</a>
+    <a href="{% url 'export_ratios_pdf' %}" class="btn btn-sm btn-smt-pdf"><i class="bi bi-file-earmark-pdf"></i> PDF</a>
+  </div>
+</div>
+
+<!-- ══ Table ══ -->
+<div class="prod-table-wrap somatrin-table-wrap" style="border: 1.5px solid #d0d5dd !important;">
+
+  <!-- Toolbar -->
+  <div class="prod-table-toolbar">
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+      <div class="prod-table-title"><i class="bi bi-sliders" style="color:#E87722;"></i> Tableau des ratios</div>
+      <span class="prod-table-count" id="ratiosCount">{{ rows|length }} ligne(s)</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <div class="prod-rpp">
+        <label for="rppRatios">Lignes :</label>
+        <select id="rppRatios">
+          <option value="25">25</option><option value="50">50</option><option value="100">100</option><option value="9999">Tous</option>
+        </select>
+      </div>
+      <div class="prod-search-wrap">
+        <i class="bi bi-search prod-search-icon"></i>
+        <input type="text" id="searchRatios" class="prod-search-input" placeholder="Rechercher...">
+        <button class="prod-search-clear" title="Effacer">×</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-responsive">
+    <table class="prod-table somatrin-table" id="tblRatios">
+      <thead>
+        <tr>
+          <th class="pt-sort" data-col="0"><i class="bi bi-sliders th-icon"></i>Ratio</th>
+          <th class="text-end pt-sort" data-col="1"><i class="bi bi-geo-alt th-icon"></i>{{ site_labels.0 }}</th>
+          <th class="text-end pt-sort" data-col="2"><i class="bi bi-geo-alt th-icon"></i>{{ site_labels.1 }}</th>
+          <th class="text-end pt-sort" data-col="3"><i class="bi bi-geo-alt th-icon"></i>{{ site_labels.2 }}</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for row in rows %}
+        <tr data-row>
+          <td class="prod-cell-id" data-label="Ratio">{{ row.ratio }}</td>
+          <td class="text-end prod-cell-amount" data-label="{{ site_labels.0 }}">{{ row.site1 }}</td>
+          <td class="text-end prod-cell-amount" data-label="{{ site_labels.1 }}">{{ row.site2 }}</td>
+          <td class="text-end prod-cell-amount" data-label="{{ site_labels.2 }}">{{ row.site3 }}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="4" class="text-center text-muted py-4"><i class="bi bi-inbox me-2"></i>Aucune donnée pour ces filtres</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="prod-pager-bar">
+    <div class="prod-pager-info" id="ratiosCount"></div>
+    <div class="prod-pager" id="ratiosPager"></div>
+  </div>
+</div>
+
+<!-- ══ Charts ══ -->
+<div class="row g-3 mt-2">
+  <div class="col-lg-6">
+    <div class="prod-chart-card">
+      <div class="prod-chart-title">Radar - Ratios par site</div>
+      <canvas id="ratiosRadar"></canvas>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="prod-chart-card">
+      <div class="prod-chart-title">Heatmap - Évolution 12 mois</div>
+      <div class="table-responsive">
+        <table class="table table-sm prod-heatmap prod-data-table somatrin-table">
+          <thead>
+            <tr>
+              <th><i class="bi bi-calendar3 th-icon"></i>Mois</th>
+              <th>{{ site_labels.0 }}</th>
+              <th>{{ site_labels.1 }}</th>
+              <th>{{ site_labels.2 }}</th>
+            </tr>
+          </thead>
+          <tbody>
+          {% for row in heatmap %}
+            <tr>
+              <td>{{ row.month }}</td>
+              <td>{{ row.site1 }}</td>
+              <td>{{ row.site2 }}</td>
+              <td>{{ row.site3 }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+{{ radar.labels|json_script:"radar-labels" }}
+{{ radar.series|json_script:"radar-series" }}
+{{ site_labels|json_script:"site-labels" }}
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script src="{% static 'js/production.js' %}"></script>
+<script>
+initProdTable({ tableId:'tblRatios', searchId:'searchRatios', countId:'ratiosCount', pagerId:'ratiosPager', rppId:'rppRatios', pageSize:25 });
+
+(function () {
+  const radarLabels = somaReadJsonScript("radar-labels");
+  const radarSeries = somaReadJsonScript("radar-series");
+  const siteLabels = somaReadJsonScript("site-labels") || [];
+  const canvas = document.getElementById("ratiosRadar");
+  if (canvas && radarLabels && radarSeries && typeof Chart !== "undefined") {
+    const pal = [
+      { borderColor: "#1a2c4e", backgroundColor: "rgba(26,44,78,0.15)" },
+      { borderColor: "#e87722", backgroundColor: "rgba(232,119,34,0.15)" },
+      { borderColor: "#2f5597", backgroundColor: "rgba(47,85,151,0.15)" },
+    ];
+    const datasets = siteLabels.map(function (label, i) {
+      return {
+        label: label,
+        data: radarSeries[label] || [],
+        borderColor: pal[i % pal.length].borderColor,
+        backgroundColor: pal[i % pal.length].backgroundColor,
+      };
+    });
+    new Chart(canvas, {
+      type: "radar",
+      data: {
+        labels: radarLabels,
+        datasets: datasets,
+      },
+    });
+  }
+})();
+</script>
+{% endblock %}

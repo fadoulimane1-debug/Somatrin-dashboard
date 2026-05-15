@@ -1,0 +1,214 @@
+{% extends 'base.html' %}
+{% load static humanize %}
+
+{% block title %}Achats QHSE — SOMATRIN{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/qhse.css' %}">
+{% endblock %}
+
+{% block breadcrumb %}
+<a href="{% url 'accueil' %}">Accueil</a>
+<i class="bi bi-chevron-right"></i>
+<a href="/qhse/dashboard/">QHSE</a>
+<i class="bi bi-chevron-right"></i>
+<span style="color:#1a2c4e;font-weight:600;">Achats QHSE</span>
+{% endblock %}
+
+{% block content %}
+
+<!-- Page Header -->
+<div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+  <div>
+    <span class="page-title mb-0" style="margin-bottom:0!important;">Achats QHSE</span>
+    <div style="font-size:13px;color:#6B7280;margin-top:2px;">
+      Suivi des commandes d'achat de catégorie QHSE récupérées depuis Odoo
+    </div>
+  </div>
+</div>
+
+{% if error %}
+<div class="alert-odoo mb-3">
+  <i class="bi bi-exclamation-triangle-fill"></i>
+  <span>{{ error }} — Données de démonstration affichées.</span>
+</div>
+{% endif %}
+
+<!-- KPI Cards -->
+<div class="qhse-kpi-grid mb-3" style="grid-template-columns:repeat(4,1fr);">
+  <div class="qhse-kpi-card" style="border-top-color:#E87722;">
+    <div class="qhse-kpi-icon" style="background:#fff4e8;color:#E87722;">
+      <i class="bi bi-cart-check-fill"></i>
+    </div>
+    <div>
+      <div class="qhse-kpi-value" style="color:#E87722;">{{ kpi_total_commandes }}</div>
+      <div class="qhse-kpi-label">Commandes QHSE</div>
+    </div>
+  </div>
+  <div class="qhse-kpi-card" style="border-top-color:#1a2c4e;">
+    <div class="qhse-kpi-icon" style="background:#e8edf5;color:#1a2c4e;">
+      <i class="bi bi-building"></i>
+    </div>
+    <div>
+      <div class="qhse-kpi-value" style="color:#1a2c4e;">{{ kpi_fournisseurs }}</div>
+      <div class="qhse-kpi-label">Fournisseurs</div>
+    </div>
+  </div>
+  <div class="qhse-kpi-card" style="border-top-color:#6B7280;">
+    <div class="qhse-kpi-icon" style="background:#f3f4f6;color:#6B7280;">
+      <i class="bi bi-cash-stack"></i>
+    </div>
+    <div>
+      <div class="qhse-kpi-value" style="color:#374151;font-size:18px;">{{ kpi_montant }} MAD</div>
+      <div class="qhse-kpi-label">Montant total</div>
+    </div>
+  </div>
+  <div class="qhse-kpi-card" style="border-top-color:#6B7280;">
+    <div class="qhse-kpi-icon" style="background:#f3f4f6;color:#6B7280;">
+      <i class="bi bi-hourglass-split"></i>
+    </div>
+    <div>
+      <div class="qhse-kpi-value" style="color:#374151;">{{ kpi_en_attente }}</div>
+      <div class="qhse-kpi-label">En attente</div>
+    </div>
+  </div>
+</div>
+
+<div class="kpi-summary">
+  <strong>{{ kpi_total_commandes }}</strong> commandes · <strong>{{ kpi_montant }}</strong> MAD · <strong>{{ kpi_fournisseurs }}</strong> fournisseurs · <strong>{{ kpi_en_attente }}</strong> en attente
+</div>
+
+<!-- Filtres + Tableau -->
+<div class="qhse-table-section filters-section" style="border: 1.5px solid #d0d5dd !important;">
+  <form method="GET" id="filterForm">
+    <div class="qhse-filters-bar">
+      <!-- Statut -->
+      <div>
+        <select name="statut" class="form-select form-select-sm" style="min-width:160px;font-size:13px;"
+                onchange="this.form.submit()">
+          <option value="all" {% if selected_statut == 'all' %}selected{% endif %}>Tous les statuts</option>
+          <option value="draft" {% if selected_statut == 'draft' %}selected{% endif %}>Brouillon</option>
+          <option value="sent" {% if selected_statut == 'sent' %}selected{% endif %}>Envoyé</option>
+          <option value="purchase" {% if selected_statut == 'purchase' %}selected{% endif %}>Confirmé</option>
+          <option value="done" {% if selected_statut == 'done' %}selected{% endif %}>Terminé</option>
+          <option value="cancel" {% if selected_statut == 'cancel' %}selected{% endif %}>Annulé</option>
+        </select>
+      </div>
+      <!-- Fournisseur -->
+      <div>
+        <select name="fournisseur" class="form-select form-select-sm" style="min-width:200px;font-size:13px;"
+                onchange="this.form.submit()">
+          <option value="">Tous les fournisseurs</option>
+          {% for fr in fournisseurs %}
+            <option value="{{ fr }}" {% if selected_fournisseur == fr %}selected{% endif %}>{{ fr }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <!-- Recherche -->
+      <div class="filter-search" style="min-width:200px;max-width:280px;">
+        <i class="bi bi-search"></i>
+        <input type="text" id="achatsSearch" placeholder="Référence, fournisseur…"
+               class="form-control search-somatrin" oninput="qhseInitTableSearch('achatsSearch','achatsTable','rowCount')">
+      </div>
+      <button type="submit" class="btn-export-pdf" style="padding:7px 16px;">
+        <i class="bi bi-funnel"></i> Filtrer
+      </button>
+      <div class="ms-auto">
+        <span class="filter-count"><span id="rowCount">{{ rows|length }}</span> commandes</span>
+      </div>
+    </div>
+    <div class="somatrin-export-row">
+      <button type="button" class="btn btn-sm btn-smt-excel" onclick="qhseExportCSV('achatsTable','achats_qhse.csv')"><i class="bi bi-file-earmark-excel"></i> Export Excel</button>
+      <button type="button" class="btn btn-sm btn-smt-csv" onclick="qhseExportCSV('achatsTable','achats_qhse.csv')"><i class="bi bi-filetype-csv"></i> Export CSV</button>
+      <button type="button" class="btn btn-sm btn-smt-pdf" onclick="window.print()"><i class="bi bi-file-earmark-pdf"></i> Export PDF</button>
+      <a href="/qhse/achats-qhse/" class="btn-smt-reset"><i class="bi bi-arrow-clockwise"></i> Réinitialiser</a>
+    </div>
+  </form>
+
+  <!-- Tableau -->
+  <div class="qhse-table-wrapper somatrin-table-wrap">
+    <table class="qhse-table somatrin-table" id="achatsTable">
+      <thead>
+        <tr>
+          <th data-col="0">Référence <i class="bi bi-chevron-expand"></i></th>
+          <th data-col="1">Acheteur <i class="bi bi-chevron-expand"></i></th>
+          <th data-col="2">Fournisseur <i class="bi bi-chevron-expand"></i></th>
+          <th data-col="3">Société <i class="bi bi-chevron-expand"></i></th>
+          <th data-col="4">Date <i class="bi bi-chevron-expand"></i></th>
+          <th data-col="5">Statut <i class="bi bi-chevron-expand"></i></th>
+          <th data-col="6" style="text-align:center;">Lignes QHSE</th>
+          <th data-col="7" style="text-align:right;">Montant</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <td data-label="Référence">
+            <span class="cell-id">{{ row.reference }}</span>
+          </td>
+          <td data-label="Acheteur">
+            <span style="display:flex;align-items:center;gap:6px;">
+              <span style="width:28px;height:28px;background:#e8edf5;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#1a2c4e;flex-shrink:0;">
+                {{ row.acheteur|slice:":1" }}
+              </span>
+              <span style="font-size:13px;">{{ row.acheteur }}</span>
+            </span>
+          </td>
+          <td data-label="Fournisseur" style="font-weight:600;color:#374151;">{{ row.fournisseur }}</td>
+          <td data-label="Société" style="font-size:12px;color:#6B7280;">{{ row.societe }}</td>
+          <td data-label="Date"><span class="cell-date">{{ row.date_commande }}</span></td>
+          <td data-label="Statut">
+            {% if row.etat == 'done' or row.etat == 'purchase' %}
+              <span class="badge-etat badge-done"><i class="bi bi-check-circle-fill"></i> {% if row.etat == 'done' %}Terminé{% else %}Confirmé{% endif %}</span>
+            {% elif row.etat == 'sent' %}
+              <span class="badge-etat badge-ouvert"><i class="bi bi-send-fill"></i> Envoyé</span>
+            {% elif row.etat == 'draft' %}
+              <span class="badge-etat badge-draft"><i class="bi bi-pencil-square"></i> Brouillon</span>
+            {% elif row.etat == 'cancel' %}
+              <span class="badge-etat badge-cancel"><i class="bi bi-x-circle"></i> Annulé</span>
+            {% else %}
+              <span class="badge-etat badge-pending">{{ row.etat }}</span>
+            {% endif %}
+          </td>
+          <td data-label="Lignes" style="text-align:center;">
+            <span style="font-weight:700;color:#1a2c4e;">{{ row.nb_lignes_qhse }}</span>
+          </td>
+          <td data-label="Montant" class="cell-amount">
+            {{ row.montant_total|floatformat:2|intcomma }} {{ row.devise }}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="8">
+            <div class="qhse-empty">
+              <i class="bi bi-cart-x"></i>
+              <p>Aucun achat QHSE trouvé pour ce filtre.</p>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  {% if rows %}
+  <div class="qhse-pagination">
+    <div class="pag-info" id="pagInfo"></div>
+    <div class="pag-buttons" id="pagBtns"></div>
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/qhse.js' %}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  qhseInitTableSort('achatsTable');
+  qhseInitTableSearch('achatsSearch', 'achatsTable', 'rowCount');
+  qhseInitPagination('achatsTable', 80, 'pagInfo', 'pagBtns');
+});
+</script>
+{% endblock %}

@@ -1,0 +1,783 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Incidents & Accidents — SOMATRIN{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/qhse.css' %}">
+<style>
+/* ── Page specific overrides ── */
+.ia-hero {
+  background:#fff;
+  border-radius:12px;
+  padding:18px 24px;
+  margin-bottom:16px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  box-shadow:0 1px 4px rgba(0,0,0,.07);
+  border-left:5px solid #E87722;
+  flex-wrap:wrap;
+  gap:12px;
+}
+.ia-hero-title {
+  font-size:26px;
+  font-weight:900;
+  color:#E87722;
+  letter-spacing:.5px;
+  text-transform:uppercase;
+  line-height:1.1;
+}
+.ia-hero-sub {
+  font-size:12px;
+  color:#6B7280;
+  margin-top:4px;
+  font-style:italic;
+}
+.ia-hero-right {
+  display:flex;
+  flex-direction:column;
+  align-items:flex-end;
+  gap:8px;
+}
+.ia-hero-date {
+  font-size:13px;
+  color:#6B7280;
+}
+.ia-hero-btns {
+  display:flex;
+  gap:8px;
+}
+.ia-btn {
+  padding:6px 14px;
+  border-radius:7px;
+  border:1px solid #d1d5db;
+  background:#f9fafb;
+  color:#374151;
+  font-size:12px;
+  font-weight:600;
+  cursor:pointer;
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  transition:all .15s;
+}
+.ia-btn:hover { background:#1a2c4e; color:#fff; border-color:#1a2c4e; }
+.ia-btn-primary { background:#1a2c4e; color:#fff; border-color:#1a2c4e; }
+.ia-btn-primary:hover { background:#E87722; border-color:#E87722; }
+
+/* ── Synoptique card ── */
+.ia-synoptic {
+  background:#fff;
+  border-radius:12px;
+  box-shadow:0 1px 4px rgba(0,0,0,.07);
+  padding:14px;
+  border:1px solid #e5e7eb;
+  height:100%;
+}
+.ia-synoptic-title {
+  text-align:center;
+  font-size:11px;
+  font-weight:800;
+  color:#1a2c4e;
+  text-transform:uppercase;
+  letter-spacing:.8px;
+  padding:8px;
+  background:#f0f4f8;
+  border-radius:7px;
+  margin-bottom:12px;
+  border-bottom:2px solid #E87722;
+}
+.ia-synoptic-total {
+  text-align:center;
+  margin-bottom:10px;
+  padding:8px;
+  background:linear-gradient(135deg,#fff4e8,#fff);
+  border-radius:8px;
+  border:1px solid #fde8d0;
+}
+.ia-synoptic-total-num {
+  font-size:36px;
+  font-weight:900;
+  color:#E87722;
+  line-height:1;
+}
+.ia-synoptic-total-label {
+  font-size:10px;
+  color:#9ca3af;
+  display:block;
+  margin-top:2px;
+  text-transform:uppercase;
+  letter-spacing:.5px;
+}
+
+/* ── KPI Cards large ── */
+.ia-kpi-grid {
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:12px;
+  margin-bottom:14px;
+}
+@media(max-width:1100px){.ia-kpi-grid{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:600px){.ia-kpi-grid{grid-template-columns:1fr;}}
+.ia-kpi-card {
+  background:#fff;
+  border-radius:10px;
+  padding:16px 18px;
+  box-shadow:0 1px 4px rgba(0,0,0,.07);
+  border-top:4px solid transparent;
+  transition:box-shadow .2s, transform .15s;
+  cursor:default;
+}
+.ia-kpi-card:hover {
+  box-shadow:0 4px 16px rgba(0,0,0,.10);
+  transform:translateY(-2px);
+}
+.ia-kpi-num {
+  font-size:42px;
+  font-weight:900;
+  line-height:1;
+  margin-bottom:4px;
+}
+.ia-kpi-label {
+  font-size:12px;
+  font-weight:700;
+  color:#374151;
+  margin-bottom:2px;
+}
+.ia-kpi-sub {
+  font-size:11px;
+  color:#9ca3af;
+}
+
+/* ── Month selector ── */
+.ia-month-bar {
+  background:#fff8f0;
+  border:1px solid #fde8d0;
+  border-radius:10px;
+  padding:12px 16px;
+  margin-bottom:14px;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  flex-wrap:wrap;
+}
+.ia-month-label {
+  font-size:12px;
+  font-weight:700;
+  color:#E87722;
+  white-space:nowrap;
+  margin-right:4px;
+}
+.ia-month-btns {
+  display:flex;
+  flex-wrap:wrap;
+  gap:5px;
+  flex:1;
+}
+.ia-m-btn {
+  padding:4px 10px;
+  border-radius:5px;
+  border:1px solid #fde8d0;
+  background:#fff;
+  color:#6B7280;
+  font-size:11px;
+  font-weight:600;
+  cursor:pointer;
+  transition:all .15s;
+  white-space:nowrap;
+}
+.ia-m-btn:hover { background:#fff4e8; border-color:#E87722; color:#E87722; }
+.ia-m-btn.active { background:#E87722; border-color:#E87722; color:#fff; font-weight:700; }
+
+/* ── Chart cards ── */
+.ia-chart-card {
+  background:#fff;
+  border-radius:10px;
+  box-shadow:0 1px 4px rgba(0,0,0,.07);
+  padding:14px 16px;
+  height:100%;
+}
+.ia-chart-title {
+  font-size:12px;
+  font-weight:700;
+  color:#1a2c4e;
+  margin-bottom:10px;
+  padding-bottom:8px;
+  border-bottom:3px solid #E87722;
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+.ia-chart-title i { color:#E87722; }
+
+/* ── Tabs ── */
+.ia-tabs {
+  display:flex;
+  gap:0;
+  border-bottom:2px solid #e5e7eb;
+  margin-bottom:0;
+  background:#f9fafb;
+  border-radius:8px 8px 0 0;
+  overflow-x:auto;
+}
+.ia-tab-btn {
+  padding:10px 18px;
+  border:none;
+  background:transparent;
+  font-size:13px;
+  font-weight:600;
+  color:#6B7280;
+  cursor:pointer;
+  border-bottom:3px solid transparent;
+  white-space:nowrap;
+  transition:all .15s;
+  display:flex;
+  align-items:center;
+  gap:7px;
+}
+.ia-tab-btn:hover { color:#1a2c4e; }
+.ia-tab-btn.active { color:#E87722; border-bottom-color:#E87722; background:#fff; }
+.ia-tab-count {
+  padding:2px 8px;
+  border-radius:20px;
+  font-size:11px;
+  font-weight:700;
+}
+.tc-orange { background:#fff4e8; color:#E87722; }
+.tc-blue   { background:#e8edf5; color:#1a2c4e; }
+.tc-gray   { background:#f3f4f6; color:#6B7280; }
+.tc-red    { background:#fef2f2; color:#DC2626; }
+</style>
+{% endblock %}
+
+{% block breadcrumb %}
+<a href="{% url 'accueil' %}">Accueil</a>
+<i class="bi bi-chevron-right"></i>
+<a href="/qhse/dashboard/">QHSE</a>
+<i class="bi bi-chevron-right"></i>
+<span style="color:#1a2c4e;font-weight:600;">Incidents &amp; Accidents</span>
+{% endblock %}
+
+{% block content %}
+
+<!-- ══ HERO HEADER ══ -->
+<div class="ia-hero">
+  <div>
+    <div class="ia-hero-title">
+      <i class="bi bi-shield-exclamation" style="font-size:22px;vertical-align:middle;margin-right:8px;"></i>La gestion des incidents
+    </div>
+    <div class="ia-hero-sub">Gestion et analyse des incidents, accidents de travail et maladies professionnelles</div>
+  </div>
+  <div class="ia-hero-right">
+    <div class="ia-hero-date" id="iaDateDisplay">
+      <i class="bi bi-calendar3 me-1"></i><span id="todayLabel"></span>
+    </div>
+    {% if error %}
+    <div class="alert-odoo" style="margin:0;padding:8px 12px;font-size:12px;">
+      <i class="bi bi-exclamation-triangle-fill"></i>
+      <span>{{ error }} — Données démo affichées.</span>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- ══ MAIN LAYOUT: 25% LEFT | 75% RIGHT ══ -->
+<div class="row g-3 align-items-start">
+
+  <!-- ─────────────────────────────────
+       GAUCHE : SYNOPTIQUE CORPOREL
+       ───────────────────────────────── -->
+  <div class="col-lg-3">
+    <div class="ia-synoptic">
+      <div class="ia-synoptic-title">
+        <i class="bi bi-person-fill" style="color:#E87722;margin-right:4px;"></i>
+        Synoptique des accidents
+      </div>
+
+      <div class="ia-synoptic-total">
+        <div class="ia-synoptic-total-num">{{ body_total|default:"—" }}</div>
+        <span class="ia-synoptic-total-label">Total accidents corporels</span>
+      </div>
+
+      <!-- SVG Silhouette avec zones labellisées -->
+      <div style="width:100%;display:flex;justify-content:center;overflow:hidden;">
+        <svg viewBox="0 0 260 400" style="width:100%;max-width:230px;height:auto;" xmlns="http://www.w3.org/2000/svg">
+
+          <!-- ══ CORPS ══ -->
+          <!-- Tête -->
+          <ellipse cx="88" cy="34" rx="26" ry="28" fill="#dde6f5" stroke="#1a2c4e" stroke-width="1.5"/>
+          <circle cx="80" cy="28" r="3" fill="#1a2c4e"/>
+          <circle cx="96" cy="28" r="3" fill="#1a2c4e"/>
+          <path d="M81 39 Q88 45 95 39" fill="none" stroke="#1a2c4e" stroke-width="1.2" stroke-linecap="round"/>
+          <!-- Cou -->
+          <rect x="80" y="60" width="16" height="14" rx="3" fill="#c8d8ef" stroke="#1a2c4e" stroke-width="1.2"/>
+          <!-- Épaule gauche -->
+          <path d="M62 74 Q48 72 42 86 L54 106 Q62 94 74 88 L74 74 Z" fill="#c8d8ef" stroke="#1a2c4e" stroke-width="1.2"/>
+          <!-- Épaule droite -->
+          <path d="M114 74 Q128 72 134 86 L122 106 Q114 94 102 88 L102 74 Z" fill="#c8d8ef" stroke="#1a2c4e" stroke-width="1.2"/>
+          <!-- Torse -->
+          <path d="M70 74 L106 74 L110 154 L66 154 Z" fill="#dde6f5" stroke="#1a2c4e" stroke-width="1.5"/>
+          <!-- Bras gauche -->
+          <path d="M54 106 L42 106 L36 162 L52 162 Z" fill="#c8d8ef" stroke="#1a2c4e" stroke-width="1.2"/>
+          <!-- Avant-bras gauche -->
+          <path d="M52 162 L36 162 L32 204 L48 204 Z" fill="#c8d8ef" stroke="#1a2c4e" stroke-width="1.2"/>
+          <!-- Main gauche -->
+          <ellipse cx="40" cy="210" rx="11" ry="8" fill="#b8cce4" stroke="#1a2c4e" stroke-width="1.2"/>
+          <!-- Bras droit -->
+          <path d="M122 106 L134 106 L140 162 L124 162 Z" fill="#c8d8ef" stroke="#1a2c4e" stroke-width="1.2"/>
+          <!-- Avant-bras droit -->
+          <path d="M124 162 L140 162 L144 204 L128 204 Z" fill="#c8d8ef" stroke="#1a2c4e" stroke-width="1.2"/>
+          <!-- Main droite -->
+          <ellipse cx="136" cy="210" rx="11" ry="8" fill="#b8cce4" stroke="#1a2c4e" stroke-width="1.2"/>
+          <!-- Jambe gauche -->
+          <path d="M68 154 L62 154 L60 258 L88 258 L88 154 Z" fill="#c8d8ef" stroke="#1a2c4e" stroke-width="1.2"/>
+          <!-- Jambe droite -->
+          <path d="M108 154 L114 154 L116 258 L88 258 L88 154 Z" fill="#c8d8ef" stroke="#1a2c4e" stroke-width="1.2"/>
+          <!-- Pied gauche -->
+          <ellipse cx="72" cy="265" rx="18" ry="9" fill="#b8cce4" stroke="#1a2c4e" stroke-width="1.2"/>
+          <!-- Pied droit -->
+          <ellipse cx="104" cy="265" rx="18" ry="9" fill="#b8cce4" stroke="#1a2c4e" stroke-width="1.2"/>
+
+          <!-- ══ LABELS DROITE (x=148+) ══ -->
+          <!-- Tête -->
+          <line x1="114" y1="34" x2="146" y2="34" stroke="#cbd5e1" stroke-width="0.8" stroke-dasharray="3 2"/>
+          <text x="148" y="31" font-size="9" fill="#374151" font-family="sans-serif">Tête</text>
+          <text x="148" y="42" font-size="11" font-weight="700" fill="#E87722" font-family="sans-serif">{{ body_zones.tete|default:"0" }}</text>
+
+          <!-- Cou -->
+          <line x1="96" y1="67" x2="146" y2="67" stroke="#cbd5e1" stroke-width="0.8" stroke-dasharray="3 2"/>
+          <text x="148" y="64" font-size="9" fill="#374151" font-family="sans-serif">Cou</text>
+          <text x="148" y="75" font-size="11" font-weight="700" fill="#E87722" font-family="sans-serif">{{ body_zones.cou|default:"0" }}</text>
+
+          <!-- Épaule -->
+          <line x1="134" y1="90" x2="146" y2="98" stroke="#cbd5e1" stroke-width="0.8" stroke-dasharray="3 2"/>
+          <text x="148" y="95" font-size="9" fill="#374151" font-family="sans-serif">Épaule</text>
+          <text x="148" y="106" font-size="11" font-weight="700" fill="#E87722" font-family="sans-serif">{{ body_zones.epaule|default:"0" }}</text>
+
+          <!-- Torse -->
+          <line x1="110" y1="114" x2="146" y2="124" stroke="#cbd5e1" stroke-width="0.8" stroke-dasharray="3 2"/>
+          <text x="148" y="121" font-size="9" fill="#374151" font-family="sans-serif">Torse</text>
+          <text x="148" y="132" font-size="11" font-weight="700" fill="#E87722" font-family="sans-serif">{{ body_zones.torse|default:body_zones.dos|default:"0" }}</text>
+
+          <!-- Dos / Ventre -->
+          <line x1="66" y1="138" x2="146" y2="151" stroke="#cbd5e1" stroke-width="0.8" stroke-dasharray="3 2"/>
+          <text x="148" y="148" font-size="9" fill="#374151" font-family="sans-serif">Dos</text>
+          <text x="148" y="159" font-size="11" font-weight="700" fill="#E87722" font-family="sans-serif">{{ body_zones.dos|default:"0" }}</text>
+
+          <!-- Bras -->
+          <line x1="140" y1="134" x2="146" y2="178" stroke="#cbd5e1" stroke-width="0.8" stroke-dasharray="3 2"/>
+          <text x="148" y="175" font-size="9" fill="#374151" font-family="sans-serif">Bras</text>
+          <text x="148" y="186" font-size="11" font-weight="700" fill="#E87722" font-family="sans-serif">{{ body_zones.bras|default:"0" }}</text>
+
+          <!-- Main -->
+          <line x1="144" y1="206" x2="146" y2="206" stroke="#cbd5e1" stroke-width="0.8" stroke-dasharray="3 2"/>
+          <text x="148" y="203" font-size="9" fill="#374151" font-family="sans-serif">Main</text>
+          <text x="148" y="214" font-size="11" font-weight="700" fill="#E87722" font-family="sans-serif">{{ body_zones.main|default:"0" }}</text>
+
+          <!-- Jambe -->
+          <line x1="116" y1="210" x2="146" y2="234" stroke="#cbd5e1" stroke-width="0.8" stroke-dasharray="3 2"/>
+          <text x="148" y="231" font-size="9" fill="#374151" font-family="sans-serif">Jambe</text>
+          <text x="148" y="242" font-size="11" font-weight="700" fill="#E87722" font-family="sans-serif">{{ body_zones.jambe|default:"0" }}</text>
+
+          <!-- Pied -->
+          <line x1="116" y1="258" x2="146" y2="260" stroke="#cbd5e1" stroke-width="0.8" stroke-dasharray="3 2"/>
+          <text x="148" y="257" font-size="9" fill="#374151" font-family="sans-serif">Pied</text>
+          <text x="148" y="268" font-size="11" font-weight="700" fill="#E87722" font-family="sans-serif">{{ body_zones.pied|default:"0" }}</text>
+
+        </svg>
+      </div>
+
+      <!-- Zones supplémentaires -->
+      <div style="margin-top:8px;border-top:1px solid #f1f3f5;padding-top:8px;">
+        <div style="display:flex;justify-content:space-between;padding:4px 2px;font-size:12px;color:#374151;">
+          <span><i class="bi bi-eye me-1" style="color:#6B7280;"></i>Œil / Vue</span>
+          <span style="background:#f0f0f0;border-radius:20px;padding:1px 10px;font-weight:700;color:#1a2c4e;font-size:12px;">{{ body_zones.oeil|default:"0" }}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:4px 2px;font-size:12px;color:#374151;">
+          <span><i class="bi bi-question-circle me-1" style="color:#6B7280;"></i>Autre / NR</span>
+          <span style="background:#f0f0f0;border-radius:20px;padding:1px 10px;font-weight:700;color:#1a2c4e;font-size:12px;">{{ body_zones.autre|default:"0" }}</span>
+        </div>
+      </div>
+
+      <!-- Légende -->
+      <div style="margin-top:10px;padding-top:8px;border-top:1px solid #f1f3f5;">
+        <div style="font-size:10px;color:#9ca3af;margin-bottom:5px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;">Légende</div>
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <span style="font-size:11px;display:flex;align-items:center;gap:6px;">
+            <span style="width:12px;height:12px;background:#E87722;border-radius:2px;display:inline-block;flex-shrink:0;"></span>
+            <span style="color:#374151;">Fréquent (≥ 5)</span>
+          </span>
+          <span style="font-size:11px;display:flex;align-items:center;gap:6px;">
+            <span style="width:12px;height:12px;background:#1a2c4e;border-radius:2px;display:inline-block;flex-shrink:0;"></span>
+            <span style="color:#374151;">Modéré (2–4)</span>
+          </span>
+          <span style="font-size:11px;display:flex;align-items:center;gap:6px;">
+            <span style="width:12px;height:12px;background:#e5e7eb;border-radius:2px;display:inline-block;flex-shrink:0;border:1px solid #d1d5db;"></span>
+            <span style="color:#374151;">Rare (0–1)</span>
+          </span>
+        </div>
+      </div>
+    </div><!-- /ia-synoptic -->
+  </div><!-- /col-lg-3 -->
+
+  <!-- ─────────────────────────────────
+       DROITE : TOUT LE RESTE
+       ───────────────────────────────── -->
+  <div class="col-lg-9">
+
+    <!-- ── ONGLETS ── -->
+    <div class="ia-tabs mb-0" id="iaTabs">
+      <button class="ia-tab-btn active" data-tab="arret" onclick="iaSelectTab(this,'arret')">
+        <i class="bi bi-person-x-fill"></i> Accident avec arrêt
+        <span class="ia-tab-count tc-orange" id="cnt-arret">{{ kpi_avec_arret }}</span>
+      </button>
+      <button class="ia-tab-btn" data-tab="sanss" onclick="iaSelectTab(this,'sanss')">
+        <i class="bi bi-person-check-fill"></i> Sans arrêt
+        <span class="ia-tab-count tc-blue" id="cnt-sanss">{{ kpi_sans_arret }}</span>
+      </button>
+      <button class="ia-tab-btn" data-tab="incident" onclick="iaSelectTab(this,'incident')">
+        <i class="bi bi-cone-striped"></i> Incident
+        <span class="ia-tab-count tc-gray" id="cnt-incident">{{ kpi_incidents }}</span>
+      </button>
+      <button class="ia-tab-btn" data-tab="jours" onclick="iaSelectTab(this,'jours')">
+        <i class="bi bi-calendar-x-fill"></i> Jours d'arrêts
+        <span class="ia-tab-count tc-red" id="cnt-jours">{{ kpi_jours_arret }}</span>
+      </button>
+    </div>
+
+    <!-- ── KPI CARDS ── -->
+    <div class="ia-kpi-grid mt-2">
+      <div class="ia-kpi-card" style="border-top-color:#E87722;">
+        <div class="ia-kpi-num" style="color:#E87722;" id="kpi-arret">{{ kpi_avec_arret }}</div>
+        <div class="ia-kpi-label">Accident avec arrêt</div>
+        <div class="ia-kpi-sub">Cible : 0 accident</div>
+      </div>
+      <div class="ia-kpi-card" style="border-top-color:#1a2c4e;">
+        <div class="ia-kpi-num" style="color:#1a2c4e;" id="kpi-sanss">{{ kpi_sans_arret }}</div>
+        <div class="ia-kpi-label">Accident sans arrêt</div>
+        <div class="ia-kpi-sub">Cible : 0 accident</div>
+      </div>
+      <div class="ia-kpi-card" style="border-top-color:#6B7280;">
+        <div class="ia-kpi-num" style="color:#6B7280;" id="kpi-inc">{{ kpi_incidents }}</div>
+        <div class="ia-kpi-label">Incidents</div>
+        <div class="ia-kpi-sub">Cible : 0 incidents</div>
+      </div>
+      <div class="ia-kpi-card" style="border-top-color:#DC2626;">
+        <div class="ia-kpi-num" style="color:#DC2626;font-size:32px;" id="kpi-jours">{{ kpi_jours_arret }}</div>
+        <div class="ia-kpi-label">Jours d'arrêts</div>
+        <div class="ia-kpi-sub">Total : 120 heures estimées</div>
+      </div>
+    </div>
+
+    <!-- ── SÉLECTEUR MOIS ── -->
+    <div class="ia-month-bar" id="monthBar">
+      <span class="ia-month-label"><i class="bi bi-calendar3 me-1"></i>Mois :</span>
+      <div class="ia-month-btns" id="monthButtons">
+        {% for m in months_list %}
+        <button type="button" class="ia-m-btn {% if m == selected_month %}active{% endif %}"
+                data-month="{{ m }}" onclick="iaSelectMonth('{{ m }}')">{{ m }}</button>
+        {% empty %}
+        <!-- Fallback: 12 mois hardcodés si pas de données -->
+        <button type="button" class="ia-m-btn" data-month="2025-01" onclick="iaSelectMonth('2025-01')">2025-01</button>
+        <button type="button" class="ia-m-btn" data-month="2025-02" onclick="iaSelectMonth('2025-02')">2025-02</button>
+        <button type="button" class="ia-m-btn" data-month="2025-03" onclick="iaSelectMonth('2025-03')">2025-03</button>
+        <button type="button" class="ia-m-btn" data-month="2025-04" onclick="iaSelectMonth('2025-04')">2025-04</button>
+        <button type="button" class="ia-m-btn" data-month="2025-05" onclick="iaSelectMonth('2025-05')">2025-05</button>
+        <button type="button" class="ia-m-btn" data-month="2025-06" onclick="iaSelectMonth('2025-06')">2025-06</button>
+        <button type="button" class="ia-m-btn" data-month="2025-07" onclick="iaSelectMonth('2025-07')">2025-07</button>
+        <button type="button" class="ia-m-btn" data-month="2025-08" onclick="iaSelectMonth('2025-08')">2025-08</button>
+        <button type="button" class="ia-m-btn" data-month="2025-09" onclick="iaSelectMonth('2025-09')">2025-09</button>
+        <button type="button" class="ia-m-btn" data-month="2025-10" onclick="iaSelectMonth('2025-10')">2025-10</button>
+        <button type="button" class="ia-m-btn active" data-month="2025-11" onclick="iaSelectMonth('2025-11')">2025-11</button>
+        <button type="button" class="ia-m-btn" data-month="2025-12" onclick="iaSelectMonth('2025-12')">2025-12</button>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- ── 4 GRAPHIQUES 2×2 ── -->
+    <div class="row g-3 mb-3">
+      <div class="col-md-6">
+        <div class="ia-chart-card">
+          <div class="ia-chart-title">
+            <i class="bi bi-graph-up-arrow"></i> Évolution mensuelle
+          </div>
+          <canvas id="chartEvol" height="150"></canvas>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="ia-chart-card">
+          <div class="ia-chart-title">
+            <i class="bi bi-people-fill"></i> Top 5 employés impliqués
+          </div>
+          <canvas id="chartEmp" height="150"></canvas>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="ia-chart-card">
+          <div class="ia-chart-title">
+            <i class="bi bi-building"></i> Événements par Unité de Travail
+          </div>
+          <canvas id="chartUnite" height="150"></canvas>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="ia-chart-card">
+          <div class="ia-chart-title">
+            <i class="bi bi-pie-chart-fill"></i> Type de lésion
+          </div>
+          <canvas id="chartLesion" height="150"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="kpi-summary">
+      <strong>{{ kpi_avec_arret|default:"0" }}</strong> accidents avec arrêt · <strong>{{ kpi_sans_arret|default:"0" }}</strong> sans arrêt · <strong>{{ kpi_incidents|default:"0" }}</strong> incidents · <strong>{{ kpi_jours_arret|default:"0" }}</strong> jours d'arrêt
+    </div>
+
+    <!-- ── TABLEAU DÉTAIL ── -->
+    <div class="qhse-table-section filters-section" style="border: 1.5px solid #d0d5dd !important;">
+      <!-- Filter bar -->
+      <div class="qhse-filters-bar">
+        <div class="filter-search" style="min-width:220px;max-width:320px;">
+          <i class="bi bi-search"></i>
+          <input type="text" id="incidentSearch" placeholder="Référence, site, état…" class="form-control search-somatrin">
+        </div>
+        <select class="form-select form-select-sm" id="filterEtat" style="max-width:150px;font-size:13px;">
+          <option value="">Tous les états</option>
+          <option value="draft">Ouvert</option>
+          <option value="in_progress">En cours</option>
+          <option value="done">Résolu</option>
+          <option value="cancel">Annulé</option>
+        </select>
+        <div class="ms-auto d-flex align-items-center gap-2">
+          <span class="filter-count"><span id="rowCount">{{ rows|length }}</span> incidents</span>
+        </div>
+      </div>
+      <div class="somatrin-export-row">
+        <button type="button" class="btn btn-sm btn-smt-excel" onclick="qhseExportCSV('incidentTable','incidents_somatrin.csv')"><i class="bi bi-file-earmark-excel"></i> Export Excel</button>
+        <button type="button" class="btn btn-sm btn-smt-csv" onclick="qhseExportCSV('incidentTable','incidents_somatrin.csv')"><i class="bi bi-filetype-csv"></i> Export CSV</button>
+        <button type="button" class="btn btn-sm btn-smt-pdf" onclick="window.print()"><i class="bi bi-file-earmark-pdf"></i> Export PDF</button>
+      </div>
+
+      <div class="qhse-table-wrapper somatrin-table-wrap">
+        <table class="qhse-table somatrin-table" id="incidentTable">
+          <thead>
+            <tr>
+              <th style="width:42px;">N°</th>
+              <th data-col="1">Date <i class="bi bi-chevron-expand"></i></th>
+              <th data-col="2">Référence <i class="bi bi-chevron-expand"></i></th>
+              <th data-col="3">Site / Lieu <i class="bi bi-chevron-expand"></i></th>
+              <th data-col="4">Catégorie <i class="bi bi-chevron-expand"></i></th>
+              <th data-col="5">Responsable <i class="bi bi-chevron-expand"></i></th>
+              <th data-col="6">État <i class="bi bi-chevron-expand"></i></th>
+              <th data-col="7" style="width:80px;">Priorité</th>
+              <th style="width:80px;text-align:center;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in rows %}
+            {% with state=row.state|default:"draft" %}
+            <tr data-state="{{ state }}">
+              <td data-label="N°">
+                <span style="display:inline-flex;width:26px;height:26px;background:#e8edf5;border-radius:6px;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#1a2c4e;">
+                  {{ forloop.counter }}
+                </span>
+              </td>
+              <td data-label="Date"><span class="cell-date">{{ row.date|default:"—"|slice:":10" }}</span></td>
+              <td data-label="Référence">
+                <span style="font-weight:700;color:#1a2c4e;font-size:13px;">{{ row.name|default:"—" }}</span>
+              </td>
+              <td data-label="Site">
+                <span style="display:flex;align-items:center;gap:4px;">
+                  <i class="bi bi-geo-alt-fill" style="color:#E87722;font-size:11px;flex-shrink:0;"></i>
+                  <span style="font-size:12px;">{{ row.location_id.1|default:"—" }}</span>
+                </span>
+              </td>
+              <td data-label="Catégorie">
+                {% with cat=row.category_id.1|default:"—" %}
+                {% if "chute" in cat|lower %}
+                  <span style="font-size:11px;background:#fef2f2;color:#b91c1c;padding:2px 8px;border-radius:4px;font-weight:600;">{{ cat }}</span>
+                {% elif "coupure" in cat|lower or "plaie" in cat|lower %}
+                  <span style="font-size:11px;background:#fff4e8;color:#c05621;padding:2px 8px;border-radius:4px;font-weight:600;">{{ cat }}</span>
+                {% elif "brûl" in cat|lower %}
+                  <span style="font-size:11px;background:#f3f4f6;color:#374151;padding:2px 8px;border-radius:4px;font-weight:600;">{{ cat }}</span>
+                {% else %}
+                  <span style="font-size:11px;background:#f3f4f6;color:#374151;padding:2px 8px;border-radius:4px;">{{ cat }}</span>
+                {% endif %}
+                {% endwith %}
+              </td>
+              <td data-label="Responsable">
+                <span style="display:flex;align-items:center;gap:5px;">
+                  <span style="width:24px;height:24px;background:#e8edf5;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#1a2c4e;flex-shrink:0;">
+                    {{ row.user_id.1|default:"?"|slice:":1" }}
+                  </span>
+                  <span style="font-size:12px;">{{ row.user_id.1|default:"—" }}</span>
+                </span>
+              </td>
+              <td data-label="État">
+                {% if state == "done" or state == "solved" or state == "closed" %}
+                  <span class="badge-etat badge-done"><i class="bi bi-check-circle-fill"></i> Résolu</span>
+                {% elif state == "in_progress" %}
+                  <span class="badge-etat badge-en_cours"><i class="bi bi-play-circle-fill"></i> En cours</span>
+                {% elif state == "cancel" %}
+                  <span class="badge-etat badge-cancel"><i class="bi bi-x-circle"></i> Annulé</span>
+                {% else %}
+                  <span class="badge-etat badge-ouvert"><i class="bi bi-circle-fill"></i> Ouvert</span>
+                {% endif %}
+              </td>
+              <td data-label="Priorité">
+                {% with p=row.priority|default:"1" %}
+                {% if p == "3" %}<span style="color:#E87722;">★★★</span>
+                {% elif p == "2" %}<span style="color:#E87722;">★★</span><span style="color:#d1d5db;">★</span>
+                {% else %}<span style="color:#E87722;">★</span><span style="color:#d1d5db;">★★</span>
+                {% endif %}
+                {% endwith %}
+              </td>
+              <td data-label="Actions" class="td-actions" style="text-align:center;">
+                <button class="btn-action btn-view" title="Voir"><i class="bi bi-eye"></i></button>
+                <button class="btn-action btn-edit" title="Modifier"><i class="bi bi-pencil"></i></button>
+              </td>
+            </tr>
+            {% endwith %}
+            {% empty %}
+            <!-- Fallback démo data -->
+            {% for demo in demo_rows %}
+            <tr data-state="{{ demo.state }}">
+              <td><span style="display:inline-flex;width:26px;height:26px;background:#e8edf5;border-radius:6px;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#1a2c4e;">{{ forloop.counter }}</span></td>
+              <td><span class="cell-date">{{ demo.date }}</span></td>
+              <td><span style="font-weight:700;color:#1a2c4e;">{{ demo.ref }}</span></td>
+              <td><i class="bi bi-geo-alt-fill" style="color:#E87722;font-size:11px;"></i> {{ demo.site }}</td>
+              <td><span style="font-size:11px;background:#fef2f2;color:#b91c1c;padding:2px 8px;border-radius:4px;font-weight:600;">{{ demo.categorie }}</span></td>
+              <td><i class="bi bi-person-circle" style="color:#6B7280;font-size:11px;"></i> {{ demo.responsable }}</td>
+              <td>
+                {% if demo.state == "done" %}<span class="badge-etat badge-done"><i class="bi bi-check-circle-fill"></i> Résolu</span>
+                {% elif demo.state == "in_progress" %}<span class="badge-etat badge-en_cours"><i class="bi bi-play-circle-fill"></i> En cours</span>
+                {% else %}<span class="badge-etat badge-ouvert"><i class="bi bi-circle-fill"></i> Ouvert</span>{% endif %}
+              </td>
+              <td><span style="color:#E87722;">★★★</span></td>
+              <td style="text-align:center;">
+                <button class="btn-action btn-view"><i class="bi bi-eye"></i></button>
+                <button class="btn-action btn-edit"><i class="bi bi-pencil"></i></button>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="9">
+                <div class="qhse-empty">
+                  <i class="bi bi-inbox"></i>
+                  <p>Aucun incident pour cette période ou ces filtres.</p>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      <div class="qhse-pagination">
+        <div class="pag-info" id="pagInfo"></div>
+        <div class="pag-buttons" id="pagBtns"></div>
+      </div>
+    </div><!-- /table-section -->
+
+  </div><!-- /col-lg-9 -->
+</div><!-- /row -->
+
+<!-- ═════ Chart data JSON ═════ -->
+<script type="application/json" id="q-monthly-labels">{{ monthly_labels_json|default:"[]"|safe }}</script>
+<script type="application/json" id="q-monthly-values">{{ monthly_values_json|default:"[]"|safe }}</script>
+<script type="application/json" id="q-emp-labels">{{ emp_labels_json|default:"[]"|safe }}</script>
+<script type="application/json" id="q-emp-values">{{ emp_values_json|default:"[]"|safe }}</script>
+<script type="application/json" id="q-type-labels">{{ type_labels_json|default:"[]"|safe }}</script>
+<script type="application/json" id="q-type-values">{{ type_values_json|default:"[]"|safe }}</script>
+<script type="application/json" id="q-site-labels">{{ site_labels_json|default:"[]"|safe }}</script>
+<script type="application/json" id="q-site-values">{{ site_values_json|default:"[]"|safe }}</script>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script src="{% static 'js/qhse.js' %}"></script>
+<script>
+(function () {
+
+  /* ── Date display ── */
+  const dl = document.getElementById('todayLabel');
+  if (dl) {
+    const d = new Date();
+    const opts = { weekday:'long', year:'numeric', month:'long', day:'numeric' };
+    dl.textContent = d.toLocaleDateString('fr-FR', opts);
+  }
+
+  /* ── Read JSON chart data with fallbacks ── */
+  const monthLabels = qhseReadJson('q-monthly-labels') || ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+  const monthValues = qhseReadJson('q-monthly-values') || [6, 8, 5, 10, 12, 9, 14, 11, 8, 7, 10, 12];
+  const empLabels   = qhseReadJson('q-emp-labels')     || ['Mohsin','Youssef','Ahmed','Fatima','Ali'];
+  const empValues   = qhseReadJson('q-emp-values')     || [18, 16, 14, 13, 11];
+  const siteLabels  = qhseReadJson('q-site-labels')    || ['Site 1','Site 2','Site 3','Administration','Atelier'];
+  const siteValues  = qhseReadJson('q-site-values')    || [35, 30, 28, 15, 8];
+  const typeLabels  = qhseReadJson('q-type-labels')    || ['Contusion','Brûlure','Plaie','Fracture','Entorse','Autre'];
+  const typeValues  = qhseReadJson('q-type-values')    || [45, 35, 20, 18, 15, 7];
+
+  /* ── Chart 1: Évolution mensuelle (LINE) ── */
+  qhseLineChart('chartEvol', monthLabels, monthValues, 'Incidents', '#E87722');
+
+  /* ── Chart 2: Top 5 employés (BAR horizontal) ── */
+  qhseBarChart('chartEmp', empLabels, empValues, 'Accidents', '#1a2c4e', true);
+
+  /* ── Chart 3: Événements par unité (AREA) ── */
+  qhseAreaChart('chartUnite', siteLabels, siteValues, 'Événements', '#10B981');
+
+  /* ── Chart 4: Type lésion (DOUGHNUT) ── */
+  qhsePieChart('chartLesion', typeLabels, typeValues, true);
+
+  /* ── Month selector ── */
+  window.iaSelectMonth = function(month) {
+    if (!month) return;
+    const u = new URL(window.location.href);
+    u.searchParams.set('mois', month);
+    window.location.href = u.toString();
+  };
+
+  /* ── Tab switcher (simple filter on table) ── */
+  window.iaSelectTab = function(btn, tab) {
+    document.querySelectorAll('.ia-tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const filterMap = { arret: 'with_stop', sanss: 'without_stop', incident: 'incident', jours: '' };
+    /* No server-side per-tab; just visual indicator */
+  };
+
+  /* ── Table search + sort + filter ── */
+  qhseInitTableSearch('incidentSearch', 'incidentTable', 'rowCount');
+  qhseInitTableSort('incidentTable');
+
+  const filterEtat = document.getElementById('filterEtat');
+  if (filterEtat) {
+    filterEtat.addEventListener('change', function () {
+      const val = this.value.toLowerCase();
+      const tbody = document.querySelector('#incidentTable tbody');
+      if (!tbody) return;
+      Array.from(tbody.querySelectorAll('tr')).forEach(row => {
+        const state = (row.dataset.state || '').toLowerCase();
+        row.style.display = (!val || state.includes(val)) ? '' : 'none';
+      });
+      const c = document.getElementById('rowCount');
+      if (c) c.textContent = Array.from(tbody.querySelectorAll('tr')).filter(r => r.style.display !== 'none').length;
+    });
+  }
+
+  /* ── Pagination ── */
+  const pagCtrl = qhseInitPagination('incidentTable', 25, 'pagInfo', 'pagBtns');
+  const searchEl = document.getElementById('incidentSearch');
+  if (searchEl && pagCtrl) searchEl.addEventListener('input', () => setTimeout(() => pagCtrl.refresh(), 50));
+  if (filterEtat && pagCtrl) filterEtat.addEventListener('change', () => setTimeout(() => pagCtrl.refresh(), 50));
+
+  /* ── Body zone hover ── */
+  qhseInitBodyZones();
+
+})();
+</script>
+{% endblock %}

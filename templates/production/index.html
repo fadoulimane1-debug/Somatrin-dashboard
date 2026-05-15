@@ -1,0 +1,225 @@
+{% extends 'base.html' %}
+
+{% block title %}Production - Dashboard{% endblock %}
+
+{% block breadcrumb %}
+  <a href="{% url 'accueil' %}">Accueil</a>
+  <i class="bi bi-chevron-right"></i>
+  <span style="color:#1a2c4e; font-weight:600;">Production</span>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  body { background: #f5f5f5; }
+
+  .prod-hero {
+    background: linear-gradient(135deg, #1b5e20, #2e7d32);
+    border-radius: 14px;
+    padding: 30px 34px;
+    color: #fff;
+    margin-bottom: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    box-shadow: 0 8px 26px rgba(27, 94, 32, 0.22);
+  }
+  .prod-hero h1 {
+    margin: 0 0 6px;
+    font-size: 32px;
+    font-weight: 800;
+    line-height: 1.15;
+  }
+  .prod-hero p {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 15px;
+  }
+  .prod-hero-right {
+    text-align: right;
+    min-width: 220px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+  }
+  .prod-date {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.92);
+    margin-bottom: 10px;
+  }
+  .prod-hero-icon {
+    font-size: 46px;
+    line-height: 1;
+    opacity: 0.95;
+    width: 62px;
+    height: 62px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.16);
+  }
+
+  .prod-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 20px;
+    min-height: 228px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+    border-left: 8px solid #ddd;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    text-decoration: none;
+    color: inherit;
+    transform: translateY(8px);
+    opacity: 0;
+    animation: fadeInUp 0.45s ease forwards;
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+  }
+  .prod-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 16px 28px rgba(0, 0, 0, 0.16);
+    color: inherit;
+  }
+  .prod-card .icon {
+    font-size: 48px;
+    line-height: 1;
+    margin-bottom: 14px;
+    display: block;
+  }
+  .prod-card h3 {
+    font-size: 18px;
+    font-weight: 700;
+    margin: 0 0 8px;
+  }
+  .prod-card p {
+    color: #6b7280;
+    font-size: 14px;
+    margin: 0 0 14px;
+  }
+  .prod-card .go {
+    margin-top: auto;
+    font-weight: 700;
+    color: #1f2937;
+    font-size: 14px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    padding: 8px 12px;
+    align-self: flex-start;
+    background: #ffffff;
+    transition: all 0.2s ease;
+  }
+  .prod-card:hover .go {
+    border-color: #9ca3af;
+    background: #f9fafb;
+  }
+
+  .c1 { border-left-color: #1565c0; }
+  .c1 .icon { color: #1565c0; }
+  .c2 { border-left-color: #e65100; }
+  .c2 .icon { color: #e65100; }
+  .c3 { border-left-color: #2e7d32; }
+  .c3 .icon { color: #2e7d32; }
+  .c4 { border-left-color: #6a1b9a; }
+  .c4 .icon { color: #6a1b9a; }
+  .c5 { border-left-color: #c62828; }
+  .c5 .icon { color: #c62828; }
+  .c6 { border-left-color: #455a64; }
+  .c6 .icon { color: #455a64; }
+
+  .a1 { animation-delay: 0.03s; }
+  .a2 { animation-delay: 0.08s; }
+  .a3 { animation-delay: 0.13s; }
+  .a4 { animation-delay: 0.18s; }
+  .a5 { animation-delay: 0.23s; }
+  .a6 { animation-delay: 0.28s; }
+
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @media (max-width: 768px) {
+    .prod-hero { flex-direction: column; align-items: flex-start; }
+    .prod-hero-right { text-align: left; min-width: auto; }
+    .prod-hero h1 { font-size: 26px; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="prod-hero">
+  <div>
+    <h1>Production — Exploitation Carrière</h1>
+    <p>Suivi et analyse de l'activité carrière</p>
+  </div>
+  <div class="prod-hero-right">
+    <div class="prod-date"><i class="bi bi-calendar3 me-1"></i>{% now "d/m/Y" %}</div>
+    <div class="prod-hero-icon"><i class="bi bi-cone-striped"></i></div>
+  </div>
+</section>
+
+<div class="row g-3">
+  <div class="col-lg-4 col-md-6">
+    <a href="/production/gasoil/" class="prod-card c1 a1">
+      <div>
+        <span class="icon"><i class="bi bi-fuel-pump-fill"></i></span>
+        <h3>Gasoil</h3>
+        <p>Suivi des sorties carburant, filtres opérationnels et indicateurs de consommation.</p>
+      </div>
+      <span class="go">Accéder →</span>
+    </a>
+  </div>
+  <div class="col-lg-4 col-md-6">
+    <a href="/production/couts-par-nature/" class="prod-card c2 a2">
+      <div>
+        <span class="icon"><i class="bi bi-pie-chart-fill"></i></span>
+        <h3>Coûts par nature</h3>
+        <p>Analyse des coûts de production par catégorie, regroupements et totaux dynamiques.</p>
+      </div>
+      <span class="go">Accéder →</span>
+    </a>
+  </div>
+  <div class="col-lg-4 col-md-6">
+    <a href="/production/facturation-ventes/" class="prod-card c3 a3">
+      <div>
+        <span class="icon"><i class="bi bi-receipt-cutoff"></i></span>
+        <h3>Facturation Ventes</h3>
+        <p>Vue complète des factures, regroupements mensuels et chiffre d'affaires par lieu.</p>
+      </div>
+      <span class="go">Accéder →</span>
+    </a>
+  </div>
+  <div class="col-lg-4 col-md-6">
+    <a href="/production/rentabilite/" class="prod-card c4 a4">
+      <div>
+        <span class="icon"><i class="bi bi-graph-up-arrow"></i></span>
+        <h3>Rentabilité</h3>
+        <p>Suivi de performance économique et lecture rapide des marges opérationnelles.</p>
+      </div>
+      <span class="go">Accéder →</span>
+    </a>
+  </div>
+  <div class="col-lg-4 col-md-6">
+    <a href="/production/sites/" class="prod-card c5 a5">
+      <div>
+        <span class="icon"><i class="bi bi-geo-alt-fill"></i></span>
+        <h3>Sites</h3>
+        <p>Visualisation et pilotage par site de carrière avec accès direct aux activités.</p>
+      </div>
+      <span class="go">Accéder →</span>
+    </a>
+  </div>
+  <div class="col-lg-4 col-md-6">
+    <a href="/production/" class="prod-card c6 a6">
+      <div>
+        <span class="icon"><i class="bi bi-grid-1x2-fill"></i></span>
+        <h3>Vue consolidée</h3>
+        <p>Accès rapide au tableau de bord global pour navigation et suivi transversal.</p>
+      </div>
+      <span class="go">Accéder →</span>
+    </a>
+  </div>
+</div>
+{% endblock %}
