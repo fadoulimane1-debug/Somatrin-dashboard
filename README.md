@@ -53,7 +53,7 @@ Ce projet répond à ce besoin en développant une application web **Django** co
 
 | Outil | Version | Rôle |
 |---|---|---|
-| **Odoo** | 16 | ERP source des données métier |
+| **Odoo** | 19 | ERP source des données métier (migration depuis v16) |
 | **API XML-RPC** | — | Échange Django ↔ Odoo |
 
 ### Environnement
@@ -191,7 +191,20 @@ models = xmlrpc.client.ServerProxy('http://odoo-url/xmlrpc/2/object')
 data = models.execute_kw(db, uid, password, 'stock.move', 'search_read', [domain], {})
 ```
 
-Connexion centralisée dans `reporting/services/odoo_service.py`.
+Connexion centralisée dans `reporting/services/odoo_service.py` (JSON-RPC) et `reporting/views.py` (XML-RPC).
+
+---
+
+## Migration Odoo 16 → 19
+
+L'entreprise a migré l'ERP vers **Odoo 19**. L'application SOMATRIN reste compatible via les API standard (`xmlrpc/2` et `jsonrpc`) ; après migration, vérifier :
+
+- Les **identifiants** et l'**URL** dans `somatrin/settings_local.py` (nouvelle instance Odoo 19)
+- Les **modèles métier** toujours présents (`stock.move`, `quality.check`, champs `x_*` custom)
+- Les **modules Odoo** installés (Qualité, Maintenance, Comptabilité, Achats, etc.)
+- Les écrans qui renvoient une erreur Odoo (logs Django / message dans l'interface)
+
+En cas de changement de nom de modèle ou de champ entre v16 et v19, adapter les services dans `reporting/services/`.
 
 ---
 
@@ -200,7 +213,7 @@ Connexion centralisée dans `reporting/services/odoo_service.py`.
 ### Prérequis
 
 - Python 3.12+
-- Instance **Odoo 16** accessible
+- Instance **Odoo 19** accessible
 - Git
 
 ### Étapes
