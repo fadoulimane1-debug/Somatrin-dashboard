@@ -69,8 +69,7 @@ Ce projet répond à ce besoin en développant une application web **Django** co
 
 ## Modules de l'application
 
-Légende : ✅ opérationnel · 🔧 en cours d'enrichissement · 📋 planifié
-
+Légende : ✅ opérationnel 
 ### ✅ Module 1 — Gasoil
 
 - Entrées, sorties, bilan
@@ -95,7 +94,7 @@ Légende : ✅ opérationnel · 🔧 en cours d'enrichissement · 📋 planifié
 - Ordres de travail, interventions, fournisseurs, coûts
 - Exports PDF / Excel / CSV
 
-### 🔧 Module 5 — Achats & approvisionnement
+### ✅  Module 5 — Achats & approvisionnement
 
 - Vue d'ensemble, demandes d'achat, demandes de prix
 - Bons de commande, suivi livraisons, fournisseurs
@@ -118,12 +117,12 @@ Légende : ✅ opérationnel · 🔧 en cours d'enrichissement · 📋 planifié
 - Achats QHSE, consommations, produits HSE
 - Indicateurs, audits qualité, entrées / sorties / bilan
 
-### 📋 Modules planifiés
+### ✅  Ressources humaines 
+— effectifs, absences, pointage, formations
+### ✅ Système d'information 
+— projets SI, parc informatique, tickets
 
-- **Ressources humaines** — effectifs, absences, pointage, formations
-- **Système d'information** — projets SI, parc informatique, tickets
-
-### Assistants & API
+### ✅ Assistants & API
 
 - Chatbot métier (`/chatbot/`, `/api/soma-ai/chat/`)
 - Endpoints KPI Production et QHSE
